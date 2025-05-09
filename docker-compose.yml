@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  backend:
+    platform: linux/amd64
+    build:
+      context: ./backend
+    container_name: joinmatch-backend
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - joinmatch-net
+
+  frontend:
+    platform: linux/amd64
+    build:
+      context: ./frontend
+    container_name: joinmatch-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - joinmatch-net
+
+  db:
+    image: postgres:15
+    container_name: joinmatch-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - joinmatch-net
+
+volumes:
+  db-data:
+
+networks:
+  joinmatch-net:
+    driver: bridge
