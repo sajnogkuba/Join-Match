@@ -1,6 +1,6 @@
 // src/pages/MainPage.tsx
 import { useState } from 'react'
-import BackgroundImage from '../assets/Background.png'
+import BackgroundImage from '../assets/Background.jpg'
 
 // Mock data for suggested events
 const SUGGESTED_EVENTS = [
@@ -87,7 +87,7 @@ export const MainPage: React.FC = () => {
 		<div className='bg-gray-900'>
 			{/* Hero Section */}
 			<section
-				className="relative text-white py-20 bg-cover bg-center before:content-[''] before:absolute before:inset-0 before:bg-black/80"
+				className="relative text-white py-20 bg-cover bg-center before:content-[''] before:absolute before:inset-0 before:bg-black/45"
 				style={{
 					backgroundImage: `url(${BackgroundImage})`,
 				}}>
