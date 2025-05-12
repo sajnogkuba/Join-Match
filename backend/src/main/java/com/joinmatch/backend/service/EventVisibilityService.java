@@ -3,9 +3,8 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.EventVisibilityRequestDto;
 import com.joinmatch.backend.dto.EventVisibilityResponseDto;
 import com.joinmatch.backend.entity.EventVisibility;
-import jakarta.persistence.EntityManager;
+import com.joinmatch.backend.repository.EventVisibilityRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,66 +15,43 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class EventVisibilityService {
-    private final EntityManager entityManager;
+    private final EventVisibilityRepository repository;
 
-    @SuppressWarnings("unchecked")
     public List<EventVisibilityResponseDto> findAll() {
-        return entityManager
-                .createNativeQuery("SELECT * FROM event_visibility;", EventVisibility.class)
-                .getResultList()
+        return repository.findAll()
                 .stream()
-                .map(ev -> new EventVisibilityResponseDto(((EventVisibility) ev).getId(), ((EventVisibility) ev).getName()))
+                .map(ev -> new EventVisibilityResponseDto(ev.getId(), ev.getName()))
                 .toList();
     }
 
-    @SuppressWarnings("unchecked")
     public Optional<EventVisibilityResponseDto> findById(Integer id) {
-        return entityManager
-                .createNativeQuery("SELECT * FROM event_visibility WHERE id = (:id)", EventVisibility.class)
-                .setParameter("id", id)
-                .getResultList()
-                .stream()
-                .findFirst()
-                .map(ev -> {
-                    EventVisibility eventVisibility = (EventVisibility) ev;
-                    return new EventVisibilityResponseDto(eventVisibility.getId(), eventVisibility.getName());
-                });
+        return repository.findById(id)
+                .map(ev -> new EventVisibilityResponseDto(ev.getId(), ev.getName()));
 
     }
 
     @Transactional
     public void deleteById(Integer id) {
-        int deletedCount = entityManager
-                .createNativeQuery("DELETE FROM event_visibility WHERE id = (:id)", EventVisibility.class)
-                .setParameter("id", id)
-                .executeUpdate();
-        if (deletedCount == 0) {
+        if (!repository.existsById(id)) {
             throw new EntityNotFoundException("EventVisibility with id " + id + " not found");
         }
+        repository.deleteById(id);
     }
 
     @Transactional
     public EventVisibilityResponseDto create(EventVisibilityRequestDto eventVisibilityRequestDto) {
-        EventVisibility eventVisibility = (EventVisibility) entityManager
-                .createNativeQuery("INSERT INTO event_visibility (name) VALUES (:name) RETURNING *", EventVisibility.class)
-                .setParameter("name", eventVisibilityRequestDto.name())
-                .getSingleResult();
-
-        return new EventVisibilityResponseDto(eventVisibility.getId(), eventVisibility.getName());
+        EventVisibility eventVisibility = new EventVisibility();
+        eventVisibility.setName(eventVisibilityRequestDto.name());
+        EventVisibility saved = repository.save(eventVisibility);
+        return new EventVisibilityResponseDto(saved.getId(), saved.getName());
     }
 
     @Transactional
     public EventVisibilityResponseDto update(Integer id, EventVisibilityRequestDto eventVisibilityRequestDto) {
-        try {
-            EventVisibility eventVisibility = (EventVisibility) entityManager
-                    .createNativeQuery("UPDATE event_visibility SET name = (:name) WHERE id = (:id) RETURNING *", EventVisibility.class)
-                    .setParameter("name", eventVisibilityRequestDto.name())
-                    .setParameter("id", id)
-                    .getSingleResult();
-
-            return new EventVisibilityResponseDto(eventVisibility.getId(), eventVisibility.getName());
-        } catch (NoResultException e) {
-            throw new EntityNotFoundException("EventVisibility with id " + id + " not found");
-        }
+        EventVisibility eventVisibility = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("EventVisibility with id " + id + " not found"));
+        eventVisibility.setName(eventVisibilityRequestDto.name());
+        EventVisibility updated = repository.save(eventVisibility);
+        return new EventVisibilityResponseDto(updated.getId(), updated.getName());
     }
 }
