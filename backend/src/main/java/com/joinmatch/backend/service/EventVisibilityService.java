@@ -4,6 +4,7 @@ import com.joinmatch.backend.dto.EventVisibilityRequestDto;
 import com.joinmatch.backend.dto.EventVisibilityResponseDto;
 import com.joinmatch.backend.entity.EventVisibility;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,10 +44,13 @@ public class EventVisibilityService {
 
     @Transactional
     public void deleteById(Integer id) {
-        entityManager
+        int deletedCount = entityManager
                 .createNativeQuery("DELETE FROM event_visibility WHERE id = (:id)", EventVisibility.class)
                 .setParameter("id", id)
                 .executeUpdate();
+        if (deletedCount == 0) {
+            throw new EntityNotFoundException("EventVisibility with id " + id + " not found");
+        }
     }
 
     @Transactional
