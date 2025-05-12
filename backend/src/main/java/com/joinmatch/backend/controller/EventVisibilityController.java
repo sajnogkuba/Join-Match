@@ -3,6 +3,7 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.dto.EventVisibilityRequestDto;
 import com.joinmatch.backend.dto.EventVisibilityResponseDto;
 import com.joinmatch.backend.service.EventVisibilityService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,13 +36,16 @@ public class EventVisibilityController {
     }
 
     @PostMapping
-    public ResponseEntity<EventVisibilityResponseDto> createEventVisibility(@RequestBody EventVisibilityRequestDto eventVisibilityRequestDto) {
+    public ResponseEntity<EventVisibilityResponseDto> createEventVisibility(
+            @Valid @RequestBody EventVisibilityRequestDto eventVisibilityRequestDto) {
         EventVisibilityResponseDto createdEventVisibility = eventVisibilityService.create(eventVisibilityRequestDto);
         return ResponseEntity.status(201).body(createdEventVisibility);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EventVisibilityResponseDto> updateEventVisibility(@PathVariable Integer id, @RequestBody EventVisibilityRequestDto eventVisibilityRequestDto) {
+    public ResponseEntity<EventVisibilityResponseDto> updateEventVisibility(
+            @PathVariable Integer id,
+            @Valid @RequestBody EventVisibilityRequestDto eventVisibilityRequestDto) {
         EventVisibilityResponseDto updatedEventVisibility = eventVisibilityService.update(id, eventVisibilityRequestDto);
         return ResponseEntity.ok(updatedEventVisibility);
     }
