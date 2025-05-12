@@ -5,6 +5,7 @@ import com.joinmatch.backend.dto.EventVisibilityResponseDto;
 import com.joinmatch.backend.entity.EventVisibility;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -65,12 +66,16 @@ public class EventVisibilityService {
 
     @Transactional
     public EventVisibilityResponseDto update(Integer id, EventVisibilityRequestDto eventVisibilityRequestDto) {
-        EventVisibility eventVisibility = (EventVisibility) entityManager
-                .createNativeQuery("UPDATE event_visibility SET name = (:name) WHERE id = (:id) RETURNING *", EventVisibility.class)
-                .setParameter("name", eventVisibilityRequestDto.name())
-                .setParameter("id", id)
-                .getSingleResult();
+        try {
+            EventVisibility eventVisibility = (EventVisibility) entityManager
+                    .createNativeQuery("UPDATE event_visibility SET name = (:name) WHERE id = (:id) RETURNING *", EventVisibility.class)
+                    .setParameter("name", eventVisibilityRequestDto.name())
+                    .setParameter("id", id)
+                    .getSingleResult();
 
-        return new EventVisibilityResponseDto(eventVisibility.getId(), eventVisibility.getName());
+            return new EventVisibilityResponseDto(eventVisibility.getId(), eventVisibility.getName());
+        } catch (NoResultException e) {
+            throw new EntityNotFoundException("EventVisibility with id " + id + " not found");
+        }
     }
 }
