@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/event-visibility")
@@ -19,14 +18,14 @@ public class EventVisibilityController {
 
     @GetMapping
     public ResponseEntity<List<EventVisibilityResponseDto>> getAllEventVisibilities() {
-        List<EventVisibilityResponseDto> allEventVisibility = eventVisibilityService.findAll();
+        List<EventVisibilityResponseDto> allEventVisibility = eventVisibilityService.getAll();
         return ResponseEntity.ok(allEventVisibility);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<EventVisibilityResponseDto> getEventVisibilityById(@PathVariable Integer id) {
-        Optional<EventVisibilityResponseDto> eventVisibility = eventVisibilityService.findById(id);
-        return eventVisibility.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        EventVisibilityResponseDto eventVisibility = eventVisibilityService.getById(id);
+        return ResponseEntity.ok(eventVisibility);
     }
 
     @DeleteMapping("/{id}")
@@ -36,16 +35,13 @@ public class EventVisibilityController {
     }
 
     @PostMapping
-    public ResponseEntity<EventVisibilityResponseDto> createEventVisibility(
-            @Valid @RequestBody EventVisibilityRequestDto eventVisibilityRequestDto) {
+    public ResponseEntity<EventVisibilityResponseDto> createEventVisibility(@RequestBody @Valid EventVisibilityRequestDto eventVisibilityRequestDto) {
         EventVisibilityResponseDto createdEventVisibility = eventVisibilityService.create(eventVisibilityRequestDto);
         return ResponseEntity.status(201).body(createdEventVisibility);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EventVisibilityResponseDto> updateEventVisibility(
-            @PathVariable Integer id,
-            @Valid @RequestBody EventVisibilityRequestDto eventVisibilityRequestDto) {
+    public ResponseEntity<EventVisibilityResponseDto> updateEventVisibility(@PathVariable Integer id, @RequestBody @Valid EventVisibilityRequestDto eventVisibilityRequestDto) {
         EventVisibilityResponseDto updatedEventVisibility = eventVisibilityService.update(id, eventVisibilityRequestDto);
         return ResponseEntity.ok(updatedEventVisibility);
     }

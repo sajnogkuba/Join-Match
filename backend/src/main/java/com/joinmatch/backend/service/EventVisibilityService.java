@@ -10,23 +10,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class EventVisibilityService {
     private final EventVisibilityRepository repository;
 
-    public List<EventVisibilityResponseDto> findAll() {
+    public List<EventVisibilityResponseDto> getAll() {
         return repository.findAll()
                 .stream()
                 .map(ev -> new EventVisibilityResponseDto(ev.getId(), ev.getName()))
                 .toList();
     }
 
-    public Optional<EventVisibilityResponseDto> findById(Integer id) {
+    public EventVisibilityResponseDto getById(Integer id) {
         return repository.findById(id)
-                .map(ev -> new EventVisibilityResponseDto(ev.getId(), ev.getName()));
+                .map(ev -> new EventVisibilityResponseDto(ev.getId(), ev.getName()))
+                .orElseThrow(() -> new EntityNotFoundException("EventVisibility with id " + id + " not found"));
 
     }
 
