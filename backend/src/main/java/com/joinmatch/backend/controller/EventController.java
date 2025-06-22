@@ -16,7 +16,7 @@ public class EventController {
         this.eventRepository = eventRepository;
     }
     @GetMapping("/event/all")
-    public List<Event> getNamesOfEvent(){
+    public List<Integer> getNamesOfEvent(){
         return eventRepository.findAllEvents();
     }
 }
