@@ -18,16 +18,16 @@ export const Navbar: React.FC = () => {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex space-x-8">
-            <Link to="/" className="hover:text-purple-300 transition-colors font-medium">Home</Link>
-            <Link to="/events" className="hover:text-purple-300 transition-colors font-medium">Events</Link>
-            <Link to="/venues" className="hover:text-purple-300 transition-colors font-medium">Venues</Link>
-            <Link to="/about" className="hover:text-purple-300 transition-colors font-medium">About</Link>
+            <Link to="/" className="hover:text-purple-300 transition-colors font-medium">Strona Główna</Link>
+            <Link to="/events" className="hover:text-purple-300 transition-colors font-medium">Eventy</Link>
+            <Link to="/venues" className="hover:text-purple-300 transition-colors font-medium">Mecze</Link>
+            <Link to="/about" className="hover:text-purple-300 transition-colors font-medium">O nas</Link>
           </div>
           
           {/* Login/Register Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/login" className="px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">Login</Link>
-            <Link to="/register" className="bg-purple-600 px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors shadow-md">Register</Link>
+            <Link to="/login" className="px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">Zaloguj</Link>
+            <Link to="/register" className="bg-purple-600 px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors shadow-md">Zarejestruj</Link>
           </div>
           
           {/* Mobile Menu Button */}
