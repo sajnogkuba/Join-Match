@@ -5,19 +5,18 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "\"User\"")
-public class User{
-
+@Table(name = "\"JoinMatchUser\"")
+public class User {
 
     @Id
-    @Column(name = "user_id", nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Integer id;
 
     @Column(name = "name", nullable = false, length = 30)
     private String name;
 
-    @Column(name = "email", nullable = false, length = 50)
+    @Column(name = "email", nullable = false, length = 50, unique = true)
     private String email;
 
     @Column(name = "password", nullable = false, length = 100)
@@ -27,6 +26,7 @@ public class User{
     private LocalDate dateOfBirth;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 255)
     private Role role;
 
     public Integer getId() {
