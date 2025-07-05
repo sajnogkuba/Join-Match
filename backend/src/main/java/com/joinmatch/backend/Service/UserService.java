@@ -8,13 +8,13 @@ import com.joinmatch.backend.Model.Role;
 import com.joinmatch.backend.Model.User;
 import com.joinmatch.backend.Repository.JoinMatchTokenRepository;
 import com.joinmatch.backend.Repository.UserRepository;
+import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -53,6 +53,28 @@ public class UserService {
         if (!passwordEncoder.matches(request.password, user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
+        return generateAndSaveTokens(user);
+    }
+    public RefreshSupportObject refreshToken(String refreshToken){
+        Optional<List<JoinMatchToken>> joinMatchTokenByRefreshToken = joinMatchTokenRepository.getJoinMatchTokenByRefreshToken(refreshToken);
+        if(!joinMatchTokenByRefreshToken.isPresent()){
+            throw new RuntimeException("Wrong refresh token");
+        }
+        List<JoinMatchToken> joinMatchTokens = joinMatchTokenByRefreshToken.get();
+        JoinMatchToken joinMatchToken = null;
+        for(JoinMatchToken token : joinMatchTokens){
+            if(LocalDateTime.now().isBefore(token.getExpireDate())){
+                joinMatchToken = token;
+            }
+        }
+        if(joinMatchToken ==null){
+            throw new RuntimeException("You have to login");
+        }
+        joinMatchToken.setRevoked(true);
+        User user = joinMatchToken.getUser();
+        return new RefreshSupportObject(user,generateAndSaveTokens(user));
+    }
+    private List<String> generateAndSaveTokens(User user){
         String token = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
         List<String> tokens = new ArrayList<>();
