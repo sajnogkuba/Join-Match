@@ -3,6 +3,8 @@ package com.joinmatch.backend.Model;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "\"JoinMatchUser\"")
@@ -28,6 +30,35 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 255)
     private Role role;
+
+
+        // ... Twoje pozostałe pola: name, email, password, dateOfBirth, role ...
+
+        // --- dodajemy relację do tokenów ---
+        @OneToMany(
+                mappedBy = "user",
+                cascade = CascadeType.ALL,
+                orphanRemoval = true
+        )
+        private List<JoinMatchToken> tokens = new ArrayList<>();
+
+        // --- gettery / settery dla tokens ---
+
+        public List<JoinMatchToken> getTokens() {
+            return tokens;
+        }
+
+        public void addToken(JoinMatchToken token) {
+            tokens.add(token);
+            token.setUser(this);
+        }
+
+        public void removeToken(JoinMatchToken token) {
+            tokens.remove(token);
+            token.setUser(null);
+        }
+
+        // ... istniejące gettery i settery ...
 
     public Integer getId() {
         return id;

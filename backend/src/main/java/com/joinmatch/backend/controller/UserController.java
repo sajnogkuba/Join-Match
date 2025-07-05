@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 public class UserController {
@@ -31,10 +33,16 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
-        String token = userService.login(request);
+        List<String> token = userService.login(request);
         JwtResponse response = new JwtResponse();
-        response.token = token;
+        response.token = token.get(0);
+        response.refreshToken = token.get(1);
         response.email = request.email;
         return ResponseEntity.ok(response);
     }
+//    @PostMapping("/refreshToken")
+//    public ResponseEntity<JwtResponse> refreshToken(@RequestBody String refreshToken){
+//
+//        return ResponseEntity.ok();
+//    }
 }
