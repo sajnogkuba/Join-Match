@@ -1,13 +1,10 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://db:5432/${POSTGRES_DB}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+
 server:
   port: 8080
 logging:

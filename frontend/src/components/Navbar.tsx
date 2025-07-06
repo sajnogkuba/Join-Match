@@ -12,7 +12,7 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-2">
           <Link to="/" className="flex items-center">
-            <img src={Logo} alt="JoinMatch Logo" className="h-8" />
+            <img src={Logo} alt="JoinMatch Logo" className="h-9" />
           </Link>
           </div>
           
