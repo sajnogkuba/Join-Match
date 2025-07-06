@@ -99,10 +99,10 @@ export const MainPage: React.FC = () => {
 							zarządzanie zespołem.
 						</p>
 						<div className='flex justify-center'>
-							<button className='bg-white text-purple-900 font-bold py-3 px-8 rounded-lg mr-4 hover:bg-gray-100 transition-colors shadow-lg'>
+							<button className='bg-white text-purple-900 font-bold py-3 px-8 rounded-lg mr-4 hover:bg-gray-100 transition-colors shadow-lg cursor-pointer'>
 								Znajdź Eventy
 							</button>
-							<button className='bg-purple-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-600 transition-colors shadow-lg'>
+							<button className='bg-purple-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-600 transition-colors shadow-lg cursor-pointer'>
 								Znajdź Mecze
 							</button>
 						</div>
@@ -122,7 +122,7 @@ export const MainPage: React.FC = () => {
 							<span className='text-purple-400'>Znajdź</span> idealne wydarzenie
 						</h2>
 						<div className='flex space-x-4'>
-							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition'>
+							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition cursor-pointer'>
 								<svg
 									xmlns='http://www.w3.org/2000/svg'
 									className='h-5 w-5'
@@ -133,7 +133,7 @@ export const MainPage: React.FC = () => {
 								</svg>
 								<span>Filtry</span>
 							</button>
-							<button className='flex items-center space-x-2 bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition'>
+							<button className='flex items-center space-x-2 bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition cursor-pointer'>
 								<svg
 									xmlns='http://www.w3.org/2000/svg'
 									className='h-5 w-5'
@@ -192,7 +192,7 @@ export const MainPage: React.FC = () => {
 							</div>
 
 							{/* Search Button */}
-							<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-4 px-8 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 md:whitespace-nowrap'>
+							<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-4 px-8 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 cursor-pointer'>
 								Szukaj
 							</button>
 						</div>
@@ -200,19 +200,19 @@ export const MainPage: React.FC = () => {
 						{/* Popular Tags */}
 						<div className='mt-6 flex flex-wrap gap-2'>
 							<span className='text-gray-400 self-center'>Popularne:</span>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition'>
+							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
 								Piłka nożna
 							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition'>
+							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
 								Koszykówka
 							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition'>
+							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
 								Siatkówka
 							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition'>
+							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
 								Tenis
 							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition'>
+							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
 								Bieganie
 							</button>
 						</div>
@@ -229,13 +229,13 @@ export const MainPage: React.FC = () => {
 							<p className='text-gray-400'>Odkryj popularne wydarzenia w Twojej okolicy</p>
 						</div>
 						<div className='mt-4 md:mt-0 flex space-x-3'>
-							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition'>
+							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition cursor-pointer'>
 								<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' viewBox='0 0 20 20' fill='currentColor'>
 									<path d='M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z' />
 								</svg>
 								<span>Filtruj</span>
 							</button>
-							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition'>
+							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition cursor-pointer'>
 								<svg
 									xmlns='http://www.w3.org/2000/svg'
 									className='h-5 w-5'
@@ -320,7 +320,7 @@ export const MainPage: React.FC = () => {
 												</svg>
 												<span>Zapisz</span>
 											</button>
-											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition'>
+											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer'>
 												Dołącz
 											</button>
 										</div>
@@ -333,7 +333,7 @@ export const MainPage: React.FC = () => {
 							<div className='text-5xl mb-4 opacity-60'>🔍</div>
 							<h3 className='text-xl font-medium text-white mb-3'>Nie znaleziono wydarzeń</h3>
 							<p className='text-gray-400 mb-6'>Zmień kryteria wyszukiwania lub stwórz własne wydarzenie!</p>
-							<button className='mt-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-8 rounded-lg hover:from-purple-700 hover:to-purple-900 transition'>
+							<button className='mt-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-8 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer'>
 								Stwórz własne wydarzenie
 							</button>
 						</div>
@@ -422,7 +422,7 @@ export const MainPage: React.FC = () => {
 					</div>
 
 					<div className='mt-16 text-center'>
-						<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-10 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40'>
+						<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-10 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 cursor-pointer'>
 							Poznaj wszystkie funkcje
 						</button>
 					</div>
@@ -434,7 +434,7 @@ export const MainPage: React.FC = () => {
 				<div
 					className='absolute inset-0 opacity-30'
 					style={{
-						backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath opacity='0.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+						backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath opacity='0.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
 					}}></div>
 				<div className='container mx-auto px-4 relative z-10'>
 					<div className='max-w-3xl mx-auto text-center'>
@@ -444,7 +444,7 @@ export const MainPage: React.FC = () => {
 							znajomości i rozwijają swoje umiejętności.
 						</p>
 						<div className='flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 justify-center'>
-							<button className='bg-white text-purple-900 font-bold py-4 px-10 rounded-xl hover:bg-gray-100 transition-colors shadow-xl hover:shadow-white/20'>
+							<button className='bg-white text-purple-900 font-bold py-4 px-10 rounded-xl hover:bg-gray-100 transition-colors shadow-xl hover:shadow-white/20 cursor-pointer'>
 								Zarejestruj się za darmo
 							</button>
 							<button className='bg-transparent border-2 border-white text-white font-bold py-4 px-10 rounded-xl hover:bg-white/10 transition-colors'>
