@@ -32,9 +32,6 @@ public class User {
     private Role role;
 
 
-        // ... Twoje pozostałe pola: name, email, password, dateOfBirth, role ...
-
-        // --- dodajemy relację do tokenów ---
         @OneToMany(
                 mappedBy = "user",
                 cascade = CascadeType.ALL,
@@ -42,7 +39,6 @@ public class User {
         )
         private List<JoinMatchToken> tokens = new ArrayList<>();
 
-        // --- gettery / settery dla tokens ---
 
         public List<JoinMatchToken> getTokens() {
             return tokens;
@@ -58,7 +54,6 @@ public class User {
             token.setUser(null);
         }
 
-        // ... istniejące gettery i settery ...
 
     public Integer getId() {
         return id;
