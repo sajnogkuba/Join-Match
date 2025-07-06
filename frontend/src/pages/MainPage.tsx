@@ -93,16 +93,17 @@ export const MainPage: React.FC = () => {
 				}}>
 				<div className='relative z-10 container mx-auto px-4 text-center'>
 					<div className='container mx-auto px-4 text-center'>
-						<h1 className='text-4xl md:text-5xl font-bold mb-4'>Find Your Perfect Sports Event</h1>
+						<h1 className='text-4xl md:text-5xl font-bold mb-4'>Znajdź idealne wydarzenie sportowe</h1>
 						<p className='text-xl md:max-w-2xl mx-auto mb-8'>
-							Join, organize, and discover amateur sports events in your area. Easy booking and team management.
+							Dołącz, organizuj i odkrywaj amatorskie wydarzenia sportowe w swojej okolicy. Łatwe rezerwacje i
+							zarządzanie zespołem.
 						</p>
 						<div className='flex justify-center'>
 							<button className='bg-white text-purple-900 font-bold py-3 px-8 rounded-lg mr-4 hover:bg-gray-100 transition-colors shadow-lg'>
-								Find Events
+								Znajdź Eventy
 							</button>
 							<button className='bg-purple-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-600 transition-colors shadow-lg'>
-								Create Event
+								Znajdź Mecze
 							</button>
 						</div>
 					</div>
@@ -220,101 +221,133 @@ export const MainPage: React.FC = () => {
 			</section>
 
 			{/* Suggested Events Section */}
-      <section className='py-16 bg-black'>
-      <div className='container mx-auto px-4'>
-        <div className='flex flex-col md:flex-row justify-between items-center mb-10'>
-          <div>
-            <h2 className='text-3xl font-bold text-white mb-2'>Wydarzenia polecane</h2>
-            <p className='text-gray-400'>Odkryj popularne wydarzenia w Twojej okolicy</p>
-          </div>
-          <div className='mt-4 md:mt-0'>
-            <button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition'>
-              <svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' viewBox='0 0 20 20' fill='currentColor'>
-                <path d='M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z' />
-              </svg>
-              <span>Filtruj</span>
-            </button>
-          </div>
-        </div>
+			<section className='py-16 bg-black'>
+				<div className='container mx-auto px-4'>
+					<div className='flex flex-col md:flex-row justify-between items-center mb-10'>
+						<div>
+							<h2 className='text-3xl font-bold text-white mb-2'>Wydarzenia polecane</h2>
+							<p className='text-gray-400'>Odkryj popularne wydarzenia w Twojej okolicy</p>
+						</div>
+						<div className='mt-4 md:mt-0 flex space-x-3'>
+							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition'>
+								<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' viewBox='0 0 20 20' fill='currentColor'>
+									<path d='M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z' />
+								</svg>
+								<span>Filtruj</span>
+							</button>
+							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition'>
+								<svg
+									xmlns='http://www.w3.org/2000/svg'
+									className='h-5 w-5'
+									fill='none'
+									viewBox='0 0 24 24'
+									stroke='currentColor'>
+									<path
+										strokeLinecap='round'
+										strokeLinejoin='round'
+										strokeWidth={2}
+										d='M9 20l-5.447-2.724A2 2 0 013 15.382V5.618a2 2 0 011.553-1.894l5-1.25a2 2 0 01.894 0l5 1.25A2 2 0 0121 5.618v9.764a2 2 0 01-1.553 1.894L15 20M9 20V10M9 20l6-2.727M15 10V20'
+									/>
+								</svg>
+								<span>Mapa</span>
+							</button>
+						</div>
+					</div>
 
-        {filteredEvents.length > 0 ? (
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
-            {filteredEvents.map(event => (
-              <div
-                key={event.id}
-                className='bg-black border border-gray-700 rounded-lg overflow-hidden transition hover:bg-gray-900'
-              >
-                {/* image */}
-                <div className='relative'>
-                  <img src={event.image} alt={event.title} className='w-full h-48 object-cover' />
-                  <div className='absolute top-3 right-3'>
-                    <span className='inline-block bg-black/70 backdrop-blur-sm text-purple-400 text-sm font-medium px-3 py-1 rounded-lg border border-gray-700'>
-                      {event.category}
-                    </span>
-                  </div>
-                </div>
-                {/* content */}
-                <div className='p-4 text-gray-300'>
-                  <div className='flex justify-between items-start mb-2'>
-                    <h3 className='text-lg font-bold'>{event.title}</h3>
-                    <span className='text-sm'>{event.date}</span>
-                  </div>
-                  <div className='flex items-center mb-4 text-gray-400'>
-                    <svg className='h-5 w-5 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'/>
-                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'/>
-                    </svg>
-                    <span>{event.location}</span>
-                  </div>
-                  {/* progress */}
-                  <div className='mb-4'>
-                    <div className='flex justify-between text-sm mb-1'>
-                      <span className='text-gray-400'>Zapełnienie</span>
-                      <span className='text-purple-400'>{event.participants}/{event.slots}</span>
-                    </div>
-                    <div className='w-full bg-gray-700 rounded-full h-2'>
-                      <div
-                        className='h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400'
-                        style={{ width: `${(event.participants/event.slots)*100}%` }}
-                      />
-                    </div>
-                  </div>
-                  {/* actions */}
-                  <div className='flex justify-between items-center'>
-                    <button className='text-gray-400 hover:text-white text-sm flex items-center space-x-1 transition'>
-                      <svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z'/>
-                      </svg>
-                      <span>Zapisz</span>
-                    </button>
-                    <button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition'>
-                      Dołącz
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className='text-center py-16 bg-gray-800/50 rounded-xl border border-gray-700'>
-            <div className='text-5xl mb-4 opacity-60'>🔍</div>
-            <h3 className='text-xl font-medium text-white mb-3'>Nie znaleziono wydarzeń</h3>
-            <p className='text-gray-400 mb-6'>Zmień kryteria wyszukiwania lub stwórz własne wydarzenie!</p>
-            <button className='mt-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-8 rounded-lg hover:from-purple-700 hover:to-purple-900 transition'>
-              Stwórz własne wydarzenie
-            </button>
-          </div>
-        )}
+					{filteredEvents.length > 0 ? (
+						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
+							{filteredEvents.map(event => (
+								<div
+									key={event.id}
+									className='bg-black border border-gray-700 rounded-lg overflow-hidden transition hover:bg-gray-900'>
+									{/* image */}
+									<div className='relative'>
+										<img src={event.image} alt={event.title} className='w-full h-48 object-cover' />
+										<div className='absolute top-3 right-3'>
+											<span className='inline-block bg-black/70 backdrop-blur-sm text-purple-400 text-sm font-medium px-3 py-1 rounded-lg border border-gray-700'>
+												{event.category}
+											</span>
+										</div>
+									</div>
+									{/* content */}
+									<div className='p-4 text-gray-300'>
+										<div className='flex justify-between items-start mb-2'>
+											<h3 className='text-lg font-bold'>{event.title}</h3>
+											<span className='text-sm'>{event.date}</span>
+										</div>
+										<div className='flex items-center mb-4 text-gray-400'>
+											<svg className='h-5 w-5 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={2}
+													d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
+												/>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={2}
+													d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
+												/>
+											</svg>
+											<span>{event.location}</span>
+										</div>
+										{/* progress */}
+										<div className='mb-4'>
+											<div className='flex justify-between text-sm mb-1'>
+												<span className='text-gray-400'>Zapełnienie</span>
+												<span className='text-purple-400'>
+													{event.participants}/{event.slots}
+												</span>
+											</div>
+											<div className='w-full bg-gray-700 rounded-full h-2'>
+												<div
+													className='h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400'
+													style={{ width: `${(event.participants / event.slots) * 100}%` }}
+												/>
+											</div>
+										</div>
+										{/* actions */}
+										<div className='flex justify-between items-center'>
+											<button className='text-gray-400 hover:text-white text-sm flex items-center space-x-1 transition'>
+												<svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+													<path
+														strokeLinecap='round'
+														strokeLinejoin='round'
+														strokeWidth={2}
+														d='M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z'
+													/>
+												</svg>
+												<span>Zapisz</span>
+											</button>
+											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition'>
+												Dołącz
+											</button>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
+					) : (
+						<div className='text-center py-16 bg-gray-800/50 rounded-xl border border-gray-700'>
+							<div className='text-5xl mb-4 opacity-60'>🔍</div>
+							<h3 className='text-xl font-medium text-white mb-3'>Nie znaleziono wydarzeń</h3>
+							<p className='text-gray-400 mb-6'>Zmień kryteria wyszukiwania lub stwórz własne wydarzenie!</p>
+							<button className='mt-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-8 rounded-lg hover:from-purple-700 hover:to-purple-900 transition'>
+								Stwórz własne wydarzenie
+							</button>
+						</div>
+					)}
 
-        {filteredEvents.length > 0 && (
-          <div className='text-center mt-12'>
-            <button className='bg-transparent border border-purple-600 text-purple-400 py-3 px-8 rounded-lg hover:bg-purple-900/20 transition'>
-              Zobacz wszystkie wydarzenia
-            </button>
-          </div>
-        )}
-      </div>
-    </section>
+					{filteredEvents.length > 0 && (
+						<div className='text-center mt-12'>
+							<button className='bg-transparent border border-purple-600 text-purple-400 py-3 px-8 rounded-lg hover:bg-purple-900/20 transition'>
+								Zobacz wszystkie wydarzenia
+							</button>
+						</div>
+					)}
+				</div>
+			</section>
 
 			{/* Features Section */}
 			<section className='py-20 bg-black relative'>
