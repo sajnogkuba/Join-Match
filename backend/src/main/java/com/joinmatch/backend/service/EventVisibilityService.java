@@ -2,7 +2,7 @@ package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.EventVisibilityRequestDto;
 import com.joinmatch.backend.dto.EventVisibilityResponseDto;
-import com.joinmatch.backend.entity.EventVisibility;
+import com.joinmatch.backend.model.EventVisibility;
 import com.joinmatch.backend.repository.EventVisibilityRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;

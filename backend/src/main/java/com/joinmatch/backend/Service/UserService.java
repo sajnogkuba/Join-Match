@@ -1,14 +1,15 @@
-package com.joinmatch.backend.Service;
+package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.Config.JwtService;
 import com.joinmatch.backend.DTO.LoginRequest;
 import com.joinmatch.backend.DTO.RegisterRequest;
-import com.joinmatch.backend.Model.JoinMatchToken;
-import com.joinmatch.backend.Model.Role;
-import com.joinmatch.backend.Model.User;
-import com.joinmatch.backend.Repository.JoinMatchTokenRepository;
-import com.joinmatch.backend.Repository.UserRepository;
+import com.joinmatch.backend.model.JoinMatchToken;
+import com.joinmatch.backend.model.Role;
+import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.repository.JoinMatchTokenRepository;
+import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
+import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,18 +18,13 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
+@AllArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final JoinMatchTokenRepository joinMatchTokenRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,JoinMatchTokenRepository joinMatchTokenRepository) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.joinMatchTokenRepository = joinMatchTokenRepository;
-    }
 
     public void register(RegisterRequest request) {
         // Sprawdź, czy email już istnieje

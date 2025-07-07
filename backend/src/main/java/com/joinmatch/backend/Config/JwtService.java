@@ -1,6 +1,6 @@
 package com.joinmatch.backend.Config;
 
-import com.joinmatch.backend.Model.User;
+import com.joinmatch.backend.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
