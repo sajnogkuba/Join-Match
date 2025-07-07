@@ -1,8 +1,8 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.Config.JwtService;
-import com.joinmatch.backend.DTO.LoginRequest;
-import com.joinmatch.backend.DTO.RegisterRequest;
+import com.joinmatch.backend.dto.LoginRequest;
+import com.joinmatch.backend.dto.RegisterRequest;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;

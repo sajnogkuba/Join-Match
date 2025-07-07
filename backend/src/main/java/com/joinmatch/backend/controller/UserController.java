@@ -2,10 +2,11 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.Config.JwtService;
 
-import com.joinmatch.backend.DTO.JwtResponse;
-import com.joinmatch.backend.DTO.LoginRequest;
-import com.joinmatch.backend.DTO.RefreshTokenRequest;
-import com.joinmatch.backend.DTO.RegisterRequest;
+import com.joinmatch.backend.dto.JwtResponse;
+import com.joinmatch.backend.dto.LoginRequest;
+import com.joinmatch.backend.dto.RefreshTokenRequest;
+import com.joinmatch.backend.dto.RegisterRequest;
+import com.joinmatch.backend.dto.LogoutRequest;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import org.springframework.http.ResponseEntity;
