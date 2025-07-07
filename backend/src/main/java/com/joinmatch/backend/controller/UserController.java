@@ -1,9 +1,13 @@
 package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.Config.JwtService;
-import com.joinmatch.backend.DTO.*;
-import com.joinmatch.backend.Model.User;
-import com.joinmatch.backend.Service.UserService;
+
+import com.joinmatch.backend.dto.JwtResponse;
+import com.joinmatch.backend.dto.LoginRequest;
+import com.joinmatch.backend.dto.RefreshTokenRequest;
+import com.joinmatch.backend.dto.RegisterRequest;
+import com.joinmatch.backend.dto.LogoutRequest;
+import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/auth")

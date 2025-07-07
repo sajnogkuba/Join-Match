@@ -1,4 +1,4 @@
-package com.joinmatch.backend.entity;
+package com.joinmatch.backend.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

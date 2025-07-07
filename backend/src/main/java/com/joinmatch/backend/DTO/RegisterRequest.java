@@ -1,4 +1,4 @@
-package com.joinmatch.backend.DTO;
+package com.joinmatch.backend.dto;
 
 public class RegisterRequest {
     public String name;
