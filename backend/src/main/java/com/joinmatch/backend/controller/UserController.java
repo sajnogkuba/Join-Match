@@ -1,10 +1,7 @@
 package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.Config.JwtService;
-import com.joinmatch.backend.DTO.JwtResponse;
-import com.joinmatch.backend.DTO.LoginRequest;
-import com.joinmatch.backend.DTO.RefreshTokenRequest;
-import com.joinmatch.backend.DTO.RegisterRequest;
+import com.joinmatch.backend.DTO.*;
 import com.joinmatch.backend.Model.User;
 import com.joinmatch.backend.Service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
@@ -52,5 +49,14 @@ public class UserController {
         response.refreshToken = refreshObject.getTokens().get(1);
         response.email = refreshObject.getUser().getEmail();
         return ResponseEntity.ok(response);
+    }
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest){
+        try{
+            userService.logoutUser(logoutRequest.getEmail());
+        }catch (RuntimeException runtimeException){
+            return  ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
     }
 }
