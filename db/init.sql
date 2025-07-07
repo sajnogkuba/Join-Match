@@ -7,7 +7,7 @@ CREATE TABLE join_match_user (
                                  role VARCHAR(255) NOT NULL
 );
 CREATE TABLE joinmatch_token (
-                                 id             SERIAL PRIMARY KEY,
+                                 id             BIGSERIAL PRIMARY KEY,
                                  token          TEXT NOT NULL,
                                  user_id        INTEGER NOT NULL
                                      REFERENCES join_match_user(id)

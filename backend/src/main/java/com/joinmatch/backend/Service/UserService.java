@@ -70,6 +70,19 @@ public class UserService {
         User user = joinMatchToken.getUser();
         return new RefreshSupportObject(user,generateAndSaveTokens(user));
     }
+    public void logoutUser(String email){
+        Optional<User> byEmail = userRepository.findByEmail(email);
+        if(byEmail.isEmpty()){
+            throw new RuntimeException("Nie ma takiego usera");
+        }
+        User user = byEmail.get();
+        for(int i = 0 ; i < user.getTokens().size();i++){
+            if(!user.getTokens().get(i).getRevoked()){
+                user.getTokens().get(i).setRevoked(true);
+            }
+        }
+
+    }
     private List<String> generateAndSaveTokens(User user){
         String token = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
