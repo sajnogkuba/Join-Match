@@ -1,6 +1,7 @@
-package com.joinmatch.backend.Model;
+package com.joinmatch.backend.model;
 
 import jakarta.persistence.*;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "\"JoinMatchUser\"")
+@NoArgsConstructor
 public class User {
 
     @Id

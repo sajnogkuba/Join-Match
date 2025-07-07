@@ -2,7 +2,7 @@ package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.SportObjectRequestDto;
 import com.joinmatch.backend.dto.SportObjectResponseDto;
-import com.joinmatch.backend.entity.SportObject;
+import com.joinmatch.backend.model.SportObject;
 import com.joinmatch.backend.repository.SportObjectRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;

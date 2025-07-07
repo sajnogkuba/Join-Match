@@ -2,7 +2,6 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.SportObjectRequestDto;
 import com.joinmatch.backend.dto.SportObjectResponseDto;
-import com.joinmatch.backend.entity.SportObject;
 import com.joinmatch.backend.service.SportObjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

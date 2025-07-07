@@ -1,6 +1,6 @@
 package com.joinmatch.backend.supportObject;
 
-import com.joinmatch.backend.Model.User;
+import com.joinmatch.backend.model.User;
 
 import java.util.List;
 

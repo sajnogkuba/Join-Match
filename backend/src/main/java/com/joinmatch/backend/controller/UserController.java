@@ -5,8 +5,7 @@ import com.joinmatch.backend.DTO.JwtResponse;
 import com.joinmatch.backend.DTO.LoginRequest;
 import com.joinmatch.backend.DTO.RefreshTokenRequest;
 import com.joinmatch.backend.DTO.RegisterRequest;
-import com.joinmatch.backend.Model.User;
-import com.joinmatch.backend.Service.UserService;
+import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/auth")

@@ -1,16 +1,23 @@
-package com.joinmatch.backend.Model;
+package com.joinmatch.backend.model;
 
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "joinmatch_token")
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
 public class JoinMatchToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(name = "token", nullable = false,columnDefinition = "TEXT")
     private String token;
@@ -31,64 +38,4 @@ public class JoinMatchToken {
 
     @Column(name = "refresh_token", columnDefinition = "TEXT")
     private String refreshToken;
-
-    public JoinMatchToken() {}
-
-    public JoinMatchToken(String token,
-                          User user,
-                          LocalDateTime expireDate,
-                          Boolean revoked,
-                          String refreshToken) {
-        this.token = token;
-        this.user = user;
-        this.expireDate = expireDate;
-        this.revoked = revoked;
-        this.refreshToken = refreshToken;
-    }
-
-    // --- getters & setters ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public LocalDateTime getExpireDate() {
-        return expireDate;
-    }
-
-    public void setExpireDate(LocalDateTime expireDate) {
-        this.expireDate = expireDate;
-    }
-
-    public Boolean getRevoked() {
-        return revoked;
-    }
-
-    public void setRevoked(Boolean revoked) {
-        this.revoked = revoked;
-    }
-
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
 }

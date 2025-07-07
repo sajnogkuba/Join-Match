@@ -1,6 +1,6 @@
-package com.joinmatch.backend.Repository;
+package com.joinmatch.backend.repository;
 
-import com.joinmatch.backend.Model.User;
+import com.joinmatch.backend.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

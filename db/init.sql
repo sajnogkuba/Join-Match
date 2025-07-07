@@ -16,6 +16,9 @@ CREATE TABLE joinmatch_token (
                                  revoked        BOOLEAN     NOT NULL DEFAULT FALSE,
                                  refresh_token  TEXT
 );
+INSERT INTO join_match_user(name, email, password, date_of_birth, role) VALUES ('John Doe', 'john.doe@gmail.com', 'password123', '1990-01-01', 'user');
+INSERT INTO join_match_user(name, email, password, date_of_birth, role) VALUES ('test user', 'test.user@gmail.com', 'password123', '2000-01-01', 'user');
+INSERT INTO join_match_user(name, email, password, date_of_birth, role) VALUES ('Kuba Sajnóg', 'kuba.sajnog@gmail.com', 'password123', '2003-03-11', 'user');
 
 create table public.event_visibility
 (
