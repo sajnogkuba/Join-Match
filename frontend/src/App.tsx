@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import MainPage from './pages/MainPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import { AuthProvider } from './Context/authContext';
 
 const EventsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona wydarzeń</div>
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
@@ -15,6 +16,7 @@ const FAQPage = () => <div className='container mx-auto px-4 py-20 mt-20'>FAQ</d
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
 
 const App: React.FC = () => (
+	<AuthProvider>
 	<BrowserRouter>
 		<Routes>
 			<Route path='/' element={<Layout />}>
@@ -31,6 +33,7 @@ const App: React.FC = () => (
 			</Route>
 		</Routes>
 	</BrowserRouter>
+	</AuthProvider>
 )
 
 export default App

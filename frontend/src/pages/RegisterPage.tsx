@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
+import axiosInstance from '../Api/axios'
 
 const RegisterPage = () => {
 	const navigate = useNavigate() // Dodano deklarację zmiennej navigate
@@ -9,10 +10,13 @@ const RegisterPage = () => {
 		email: '',
 		password: '',
 		confirmPassword: '',
-		birthDate: '',
+		dateOfBirth: '',
 	})
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const [success, setSuccess] = useState<string | null>(null)
+	const [loading, setLoading] = useState(false)
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setFormData({
@@ -21,13 +25,35 @@ const RegisterPage = () => {
 		})
 	}
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		// Logika rejestracji
-		console.log('Register:', formData)
+		setError(null)
+		setSuccess(null)
 
-		// Przekierowanie do logowania po udanej rejestracji:
-		navigate('/login')
+		// Prosta walidacja hasła
+		if (formData.password !== formData.confirmPassword) {
+			setError('Hasła nie są takie same!')
+			return
+		}
+
+		setLoading(true)
+		try {
+			await axiosInstance.post('/auth/register', {
+				name: formData.name,
+				email: formData.email,
+				password: formData.password,
+				dateOfBirth: formData.dateOfBirth,
+			})
+			setSuccess('Rejestracja udana! Za chwilę nastąpi przekierowanie do logowania.')
+			setTimeout(() => navigate('/login'), 2000)
+		} catch (err: any) {
+			if (err.response?.data) {
+				setError('Rejestracja nieudana: ' + (err.response.data.message || 'Błąd serwera.'))
+			} else {
+				setError('Nie udało się połączyć z serwerem.')
+			}
+		}
+		setLoading(false)
 	}
 
 	const handleGoogleRegister = () => {
@@ -40,10 +66,12 @@ const RegisterPage = () => {
 			<div className='min-h-screen inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,40,200,0.1),transparent_60%)]'></div>
 			<div className='relative z-10 w-full max-w-md'>
 				<div className='bg-black/80 backdrop-blur-sm rounded-2xl border border-gray-700 p-8 shadow-2xl'>
-					<div className='text-center mb-8'>
+				<div className='text-center mb-8'>
 						<h1 className='text-3xl font-bold text-white mb-2'>Zarejestruj się</h1>
 						<p className='text-gray-400'>Rozpocznij swoją sportową przygodę</p>
 					</div>
+					{error && <div className='mb-4 text-red-400 text-center'>{error}</div>}
+					{success && <div className='mb-4 text-green-400 text-center'>{success}</div>}
 					<form onSubmit={handleSubmit} className='space-y-6'>
 						<div>
 							<label className='block text-gray-300 text-sm font-medium mb-2'>Nazwa</label>
@@ -215,8 +243,8 @@ const RegisterPage = () => {
 								</div>
 								<input
 									type='date'
-									name='birthDate'
-									value={formData.birthDate}
+									name='dateOfBirth'
+									value={formData.dateOfBirth}
 									onChange={handleChange}
 									className='w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
 									required
@@ -247,8 +275,9 @@ const RegisterPage = () => {
 						</div>
 						<button
 							type='submit'
+							disabled={loading}
 							className='w-full bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-4 rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 cursor-pointer'>
-							Zarejestruj się
+							{loading ? 'Rejestracja...' : 'Zarejestruj się'}
 						</button>
 						<div className='relative'>
 							<div className='absolute inset-0 flex items-center'>

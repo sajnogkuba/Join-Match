@@ -1,15 +1,29 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../Context/authContext'
+import { useNavigate } from 'react-router-dom'
 
 const LoginPage = () => {
 	const [email, setEmail] = useState('')
 	const [password, setPassword] = useState('')
 	const [showPassword, setShowPassword] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const [loading, setLoading] = useState(false)
+	const { login } = useAuth()
+	const navigate = useNavigate()
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		// Logika logowania
-		console.log('Login:', { email, password })
+		setLoading(true)
+		setError(null)
+		try {
+			await login(email, password)
+			navigate('/')
+		} catch (err: any) {
+			setError('Nieprawidłowy email lub hasło')
+			// Możesz rozwinąć obsługę errora jeśli backend daje inne info
+		}
+		setLoading(false)
 	}
 
 	const handleGoogleLogin = () => {
@@ -26,6 +40,7 @@ const LoginPage = () => {
 						<h1 className='text-3xl font-bold text-white mb-2'>Zaloguj się</h1>
 						<p className='text-gray-400'>Wróć do swojej sportowej przygody</p>
 					</div>
+					{error && <div className='mb-4 text-red-400 text-center'>{error}</div>}
 					<form onSubmit={handleSubmit} className='space-y-6'>
 						<div>
 							<label className='block text-gray-300 text-sm font-medium mb-2'>Email</label>
@@ -121,9 +136,11 @@ const LoginPage = () => {
 						</div>
 						<button
 							type='submit'
+							disabled={loading}
 							className='w-full bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-4 rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 cursor-pointer'>
-							Zaloguj się
+							{loading ? 'Logowanie...' : 'Zaloguj się'}
 						</button>
+
 						<div className='relative'>
 							<div className='absolute inset-0 flex items-center'>
 								<div className='w-full border-t border-gray-600'></div>
