@@ -13,9 +13,8 @@ import java.util.Date;
 
 @Service
 public class JwtService {
-    public final static int NumOfSeconds = 60;
-    public final static int NumOfMinutes = 60;
-    public final static int NumOfHours = 4;
+    public final static int ACCESS_TOKEN_EXP_MINUTES = 15;
+    public final static int REFRESH_TOKEN_EXP_HOURS = 4;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -25,15 +24,16 @@ public class JwtService {
                 .setSubject(user.getEmail())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * NumOfSeconds * NumOfMinutes * NumOfHours))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * ACCESS_TOKEN_EXP_MINUTES))
                 .signWith(getSignInKey())
                 .compact();
     }
+
     public String generateRefreshToken(User user){
         return Jwts.builder()
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * NumOfSeconds * NumOfMinutes * NumOfHours))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * REFRESH_TOKEN_EXP_HOURS))
                 .signWith(getSignInKey())
                 .compact();
     }
