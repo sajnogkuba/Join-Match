@@ -13,6 +13,9 @@ import java.util.Date;
 
 @Service
 public class JwtService {
+    public final static int NumOfSeconds = 60;
+    public final static int NumOfMinutes = 60;
+    public final static int NumOfHours = 4;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -22,7 +25,7 @@ public class JwtService {
                 .setSubject(user.getEmail())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 4))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * NumOfSeconds * NumOfMinutes * NumOfHours))
                 .signWith(getSignInKey())
                 .compact();
     }
@@ -30,7 +33,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(user.getEmail())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 4))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * NumOfSeconds * NumOfMinutes * NumOfHours))
                 .signWith(getSignInKey())
                 .compact();
     }

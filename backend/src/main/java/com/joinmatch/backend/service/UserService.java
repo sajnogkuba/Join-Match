@@ -95,7 +95,7 @@ public class UserService {
         joinMatchToken.setRefreshToken(refreshToken);
         joinMatchToken.setUser(user);
         joinMatchToken.setRevoked(false);
-        joinMatchToken.setExpireDate(LocalDateTime.now().plusHours(4));
+        joinMatchToken.setExpireDate(LocalDateTime.now().plusHours(JwtService.NumOfHours));
         joinMatchTokenRepository.save(joinMatchToken);
         return tokens;
     }
