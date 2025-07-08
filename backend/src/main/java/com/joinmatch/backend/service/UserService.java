@@ -58,11 +58,6 @@ public class UserService {
         }
         List<JoinMatchToken> joinMatchTokens = joinMatchTokenByRefreshToken.get();
         JoinMatchToken joinMatchToken = null;
-//        for(JoinMatchToken token : joinMatchTokens){
-//            if(LocalDateTime.now().isBefore(token.getExpireDate())){
-//                joinMatchToken = token;
-//            }
-//        }
         for(int i = 0 ; i <joinMatchTokens.size();i++){
             if(LocalDateTime.now().isBefore(joinMatchTokens.get(i).getExpireDate()) && (!joinMatchTokens.get(i).getRevoked())){
                 joinMatchToken = joinMatchTokens.get(i);
