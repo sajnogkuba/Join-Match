@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axiosInstance from '../Api/axios'; // Twój plik z axiosInstance
 import type { JwtResponse } from '../Api/types'
+import {scheduleTokenRefresh} from '../Api/axios';
 
 interface AuthContextType {
   user: string | null;
@@ -28,17 +29,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await axiosInstance.post<JwtResponse>('/auth/login', { email, password });
-    const { token, refreshToken, email: responseEmail } = response.data;
 
-    localStorage.setItem('accessToken', token);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('email', responseEmail);
+const login = async (email: string, password: string) => {
+	const response = await axiosInstance.post<JwtResponse>('/auth/login', { email, password });
+	const { token, refreshToken, email: responseEmail } = response.data;
 
-    setAccessToken(token);
-    setUser(responseEmail);
-  };
+	localStorage.setItem('accessToken', token);
+	localStorage.setItem('refreshToken', refreshToken);
+	localStorage.setItem('email', responseEmail);
+
+	setAccessToken(token);
+	setUser(responseEmail);
+
+	scheduleTokenRefresh(); // <-- TUTAJ! Timer uruchamia się od razu po loginie
+};
+
 
   const logout = async () => {
     try {

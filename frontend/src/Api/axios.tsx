@@ -9,32 +9,82 @@ const axiosInstance: AxiosInstance = axios.create({
 	},
 })
 
-
-// Funkcja do odświeżenia tokena
-const refreshToken = async (): Promise<string> => {
-	const storedRefreshToken = localStorage.getItem('refreshToken') // Avoid shadowing
-	if (!storedRefreshToken) {
-		throw new Error('Brak refresh tokena')
-	}
-
-	try {
-		const response = await axios.post<JwtResponse>(
-			'http://localhost:8080/api/auth/refreshToken', // Match base URL
-			{ refreshToken: storedRefreshToken }
-		)
-		const newAccessToken = response.data.token
-		const newRefreshToken = response.data.refreshToken
-
-		localStorage.setItem('accessToken', newAccessToken)
-		localStorage.setItem('refreshToken', newRefreshToken)
-		return newAccessToken
-	} catch (error) {
-		console.error('Błąd odświeżania tokena:', error)
-		localStorage.removeItem('accessToken') // Clear tokens on failure
-		localStorage.removeItem('refreshToken')
-		throw error
-	}
+// Funkcja do parsowania access tokena (JWT)
+function parseJwt(token: string) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
 }
+
+// Globalna zmienna do timeoutu
+let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+// Funkcja do ustawiania automatycznego odświeżania
+export function scheduleTokenRefresh() {
+    if (refreshTimeout) clearTimeout(refreshTimeout);
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) return;
+
+    const payload = parseJwt(accessToken);
+    if (!payload?.exp) return;
+
+    const expTime = payload.exp * 1000;
+    const now = Date.now();
+    const oneMinute = 60 * 1000;
+
+    const timeUntilRefresh = expTime - now - oneMinute;
+
+    if (timeUntilRefresh <= 0) {
+        refreshToken().then(() => scheduleTokenRefresh());
+    } else {
+        refreshTimeout = setTimeout(async () => {
+            await refreshToken();
+            scheduleTokenRefresh();
+        }, timeUntilRefresh);
+    }
+}
+
+
+const refreshToken = async (): Promise<string> => {
+    const storedRefreshToken = localStorage.getItem('refreshToken');
+    if (!storedRefreshToken) {
+        throw new Error('Brak refresh tokena');
+    }
+
+    try {
+        const response = await axios.post<JwtResponse>(
+            'http://localhost:8080/api/auth/refreshToken',
+            { refreshToken: storedRefreshToken }
+        );
+        const newAccessToken = response.data.token;
+        const newRefreshToken = response.data.refreshToken;
+
+        localStorage.setItem('accessToken', newAccessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+
+        // Wywołanie scheduleTokenRefresh za KAŻDYM razem, gdy masz nowy accessToken:
+        scheduleTokenRefresh();
+
+        return newAccessToken;
+    } catch (error) {
+        console.error('Błąd odświeżania tokena:', error);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        throw error;
+    }
+}
+
 
 // Request Interceptor: dodaj token do każdego zapytania
 axiosInstance.interceptors.request.use(
