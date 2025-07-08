@@ -55,6 +55,17 @@ INSERT INTO public.sport_object (object_id, name, city, street, number, second_n
 INSERT INTO public.sport_object (object_id, name, city, street, number, second_number, capacity) VALUES (4, 'Sala Gimnastyczna LO3', 'Opole', 'Kościuszki', 10, 1, 120);
 INSERT INTO public.sport_object (object_id, name, city, street, number, second_number, capacity) VALUES (5, 'Boisko Osiedlowe', 'Zabrze', 'Sportowa', 3, null, 60);
 
+CREATE TABLE public.sport_type
+(
+    id   bigserial
+        primary key,
+    name varchar(100) not null
+);
+
+INSERT INTO sport_type (id, name) VALUES (1, 'Football');
+INSERT INTO sport_type (id, name) VALUES (2, 'Basketball');
+INSERT INTO sport_type (id, name) VALUES (3, 'Volleyball');
+
 
 create table public.event
 (
@@ -71,16 +82,19 @@ create table public.event
         references public.event_visibility,
     status                 varchar(50)   not null,
     score_team1            integer,
-    score_team2            integer
+    score_team2            integer,
+    sport_type_id          integer       not null
+        references public.sport_type,
+    event_date            timestamp     not null
 );
 
 alter table public.event
     owner to joinuser;
 
 
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2) VALUES (1, 'Event1', 10, 20.00, 1, 1, 1, 'planned', null, null);
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2) VALUES (2, 'Event2', 5, 0.00, 2, 2, 1, 'planned', null, null);
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2) VALUES (3, 'Event3', 15, 15.00, 3, 3, 1, 'planned', null, null);
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (1, 'Event1', 10, 20.00, 1, 1, 1, 'planned', null, null, 1, '2025-10-01 10:00:00');
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (2, 'Event2', 5, 0.00, 2, 2, 1, 'planned', null, null, 2, '2025-10-02 11:00:00');
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (3, 'Event3', 15, 15.00, 3, 3, 1, 'planned', null, null, 3, '2025-10-03 12:00:00');
 
 
 

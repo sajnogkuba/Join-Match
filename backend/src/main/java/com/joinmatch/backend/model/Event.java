@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name= "event")
@@ -47,4 +48,11 @@ public class Event {
 
     @Column(name = "score_team2")
     private Integer scoreTeam2;
+
+    @Column(name = "event_date", nullable = false)
+    private LocalDateTime eventDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sport_type_id", nullable = false)
+    private SportType sportType;
 }
