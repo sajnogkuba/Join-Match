@@ -2,6 +2,8 @@ package com.joinmatch.backend.dto;
 import com.joinmatch.backend.model.Event;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record EventResponseDto(
         Long eventId,
@@ -13,7 +15,9 @@ public record EventResponseDto(
         Integer eventVisibilityId,
         String status,
         Integer scoreTeam1,
-        Integer scoreTeam2
+        Integer scoreTeam2,
+        LocalDateTime eventDate,
+        Integer sportTypeId
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(
@@ -26,7 +30,9 @@ public record EventResponseDto(
                 event.getEventVisibility().getId(),
                 event.getStatus(),
                 event.getScoreTeam1(),
-                event.getScoreTeam2()
+                event.getScoreTeam2(),
+                event.getEventDate(),
+                event.getSportType().getId()
         );
     }
 }
