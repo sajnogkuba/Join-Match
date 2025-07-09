@@ -1,6 +1,11 @@
 // src/pages/MainPage.tsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react';
 import BackgroundImage from '../assets/Background.jpg'
+import type { Event } from '../Api/types.ts';
+import axios from 'axios';
+import dayjs from "dayjs";
+
+
 
 // Mock data for suggested events
 const SUGGESTED_EVENTS = [
@@ -72,13 +77,31 @@ const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Ru
 export const MainPage: React.FC = () => {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [selectedCategory, setSelectedCategory] = useState('All')
+	const [events, setEvents] = useState<Event[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
+	const [error, setError] = useState<string | null>(null);
 
-	const filteredEvents = SUGGESTED_EVENTS.filter(event => {
+	useEffect(() => {
+		axios.get<Event[]>('http://localhost:8080/api/event')
+			.then(response => {
+				setEvents(response.data);
+			})
+			.catch(err => {
+				setError('Nie udało się pobrać wydarzeń. Spróbuj ponownie później.');
+				console.error('Error fetching events:', err);
+			})
+			.finally(() => {
+				setLoading(false);
+			});
+	}, []);
+
+
+	const filteredEvents = events.filter(event => {
 		const matchesSearch =
-			event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			event.location.toLowerCase().includes(searchQuery.toLowerCase())
+			event.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			event.sportObjectName.toLowerCase().includes(searchQuery.toLowerCase())
 
-		const matchesCategory = selectedCategory === 'All' || event.category === selectedCategory
+		const matchesCategory = selectedCategory === 'All' || event.sportTypeName === selectedCategory
 
 		return matchesSearch && matchesCategory
 	})
@@ -258,22 +281,22 @@ export const MainPage: React.FC = () => {
 						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
 							{filteredEvents.map(event => (
 								<div
-									key={event.id}
+									key={event.eventId}
 									className='bg-black border border-gray-700 rounded-lg overflow-hidden transition hover:bg-gray-900'>
 									{/* image */}
 									<div className='relative'>
-										<img src={event.image} alt={event.title} className='w-full h-48 object-cover' />
+										<img src={`/assets/${event.eventName}.jpeg`} alt={event.eventName} className='w-full h-48 object-cover' />
 										<div className='absolute top-3 right-3'>
 											<span className='inline-block bg-black/70 backdrop-blur-sm text-purple-400 text-sm font-medium px-3 py-1 rounded-lg border border-gray-700'>
-												{event.category}
+												{event.sportTypeName}
 											</span>
 										</div>
 									</div>
 									{/* content */}
 									<div className='p-4 text-gray-300'>
 										<div className='flex justify-between items-start mb-2'>
-											<h3 className='text-lg font-bold'>{event.title}</h3>
-											<span className='text-sm'>{event.date}</span>
+											<h3 className='text-lg font-bold'>{event.eventName}</h3>
+											<span className='text-sm'>{dayjs(event.eventDate).format("DD.MM.YYYY HH:mm")}</span>
 										</div>
 										<div className='flex items-center mb-4 text-gray-400'>
 											<svg className='h-5 w-5 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
@@ -290,20 +313,20 @@ export const MainPage: React.FC = () => {
 													d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
 												/>
 											</svg>
-											<span>{event.location}</span>
+											<span>{event.sportObjectName}</span>
 										</div>
 										{/* progress */}
 										<div className='mb-4'>
 											<div className='flex justify-between text-sm mb-1'>
 												<span className='text-gray-400'>Zapełnienie</span>
 												<span className='text-purple-400'>
-													{event.participants}/{event.slots}
+													{event.bookedParticipants}/{event.numberOfParticipants}
 												</span>
 											</div>
 											<div className='w-full bg-gray-700 rounded-full h-2'>
 												<div
 													className='h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400'
-													style={{ width: `${(event.participants / event.slots) * 100}%` }}
+													style={{ width: `${(event.bookedParticipants / event.numberOfParticipants) * 100}%` }}
 												/>
 											</div>
 										</div>

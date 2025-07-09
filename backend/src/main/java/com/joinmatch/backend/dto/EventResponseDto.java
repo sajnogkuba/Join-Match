@@ -11,13 +11,14 @@ public record EventResponseDto(
         Integer numberOfParticipants,
         BigDecimal cost,
         Integer ownerId,
-        Integer sportObjectId,
+        String sportObjectName,
         Integer eventVisibilityId,
         String status,
         Integer scoreTeam1,
         Integer scoreTeam2,
         LocalDateTime eventDate,
-        Integer sportTypeId
+        String sportTypeName,
+        Integer bookedParticipants
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(
@@ -26,13 +27,14 @@ public record EventResponseDto(
                 event.getNumberOfParticipants(),
                 event.getCost(),
                 event.getOwner().getId(),
-                event.getSportObject().getObjectId(),
+                event.getSportObject().getName(),
                 event.getEventVisibility().getId(),
                 event.getStatus(),
                 event.getScoreTeam1(),
                 event.getScoreTeam2(),
                 event.getEventDate(),
-                event.getSportType().getId()
+                event.getSportType().getName(),
+                0
         );
     }
 }
