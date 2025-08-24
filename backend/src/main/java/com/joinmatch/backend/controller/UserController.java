@@ -1,6 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.Config.JwtService;
+import com.joinmatch.backend.config.JwtService;
 
 import com.joinmatch.backend.dto.JwtResponse;
 import com.joinmatch.backend.dto.LoginRequest;
