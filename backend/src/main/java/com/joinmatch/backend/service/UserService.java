@@ -1,6 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.Config.JwtService;
+import com.joinmatch.backend.config.JwtService;
 import com.joinmatch.backend.dto.LoginRequest;
 import com.joinmatch.backend.dto.RegisterRequest;
 import com.joinmatch.backend.model.JoinMatchToken;
@@ -99,4 +99,9 @@ public class UserService {
         joinMatchTokenRepository.save(joinMatchToken);
         return tokens;
     }
+
+    public List<String> issueTokensFor(User user) {
+        return generateAndSaveTokens(user);
+    }
+
 }

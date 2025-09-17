@@ -1,4 +1,4 @@
-package com.joinmatch.backend.Config;
+package com.joinmatch.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

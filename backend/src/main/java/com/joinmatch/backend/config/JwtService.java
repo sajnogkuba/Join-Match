@@ -1,4 +1,4 @@
-package com.joinmatch.backend.Config;
+package com.joinmatch.backend.config;
 
 import com.joinmatch.backend.model.User;
 import io.jsonwebtoken.Claims;
