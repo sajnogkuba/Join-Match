@@ -7,6 +7,7 @@ interface AuthContextType {
   user: string | null;
   accessToken: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (token: string, refreshToken: string, email: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -41,8 +42,20 @@ const login = async (email: string, password: string) => {
 	setAccessToken(token);
 	setUser(responseEmail);
 
-	scheduleTokenRefresh(); // <-- TUTAJ! Timer uruchamia się od razu po loginie
+	scheduleTokenRefresh();
 };
+
+const loginWithGoogle = (token: string, refreshToken: string, email: string) => {
+  localStorage.setItem('accessToken', token);
+  localStorage.setItem('refreshToken', refreshToken);
+  localStorage.setItem('email', email);
+
+  setAccessToken(token);
+  setUser(email);
+
+  scheduleTokenRefresh();
+};
+
 
 
   const logout = async () => {
@@ -79,6 +92,7 @@ const login = async (email: string, password: string) => {
         user,
         accessToken,
         login,
+        loginWithGoogle,
         logout,
         isAuthenticated: !!user,
       }}
