@@ -19,3 +19,35 @@ export interface Event {
 	sportTypeName: string;
 	bookedParticipants: number;
 }
+
+export type EventDetails = {
+	eventId: number;
+	eventName: string;
+	numberOfParticipants: number;
+	cost: number;
+	currency: string;
+	status: 'planned' | 'in_progress' | 'finished' | 'cancelled';
+	eventDate: string;      // ISO
+	scoreTeam1: number | null;
+	scoreTeam2: number | null;
+  
+	sportTypeName: string;
+	sportObjectName: string;
+  
+	sportObjectId: number;
+	city: string;
+	street: string;
+	number: number;
+	secondNumber: number | null;
+	capacity: number;
+  
+	eventVisibilityId: number;
+	eventVisibilityName: string;
+  
+	ownerId: number;
+	ownerName: string;
+  
+	skillLevel: string;
+	paymentMethod: string;
+  };
+  
