@@ -1,8 +1,4 @@
 package com.joinmatch.backend.dto;
 
-public class RegisterRequest {
-    public String name;
-    public String email;
-    public String password;
-    public String dateOfBirth;
+public record RegisterRequest (String name,String email, String password, String dateOfBirth){
 }
