@@ -7,11 +7,12 @@ public record EventRequestDto(
         String eventName,
         Integer numberOfParticipants,
         BigDecimal cost,
-        Integer ownerId,
+        String ownerEmail,
         Integer sportObjectId,
         Integer eventVisibilityId,
         String status,
         LocalDateTime eventDate,
-        Integer sportTypeId
+        Integer sportTypeId,
+        Integer minLevel
 ) {
 }

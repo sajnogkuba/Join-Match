@@ -35,8 +35,8 @@ public class EventService {
     }
 
     private EventResponseDto getEventResponseDto(EventRequestDto eventRequestDto, Event event) {
-        User owner = userRepository.findById(eventRequestDto.ownerId())
-                .orElseThrow(() -> new IllegalArgumentException("User with id " + eventRequestDto.ownerId() + " not found"));
+        User owner = userRepository.findByEmail(eventRequestDto.ownerEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + eventRequestDto.ownerEmail() + " not found"));
         SportObject sportObject = sportObjectRepository.findById(eventRequestDto.sportObjectId())
                 .orElseThrow(() -> new IllegalArgumentException("SportObject with id " + eventRequestDto.sportObjectId() + " not found"));
         SportType sportType = sportTypeRepository.findById(eventRequestDto.sportTypeId())
@@ -52,6 +52,7 @@ public class EventService {
         event.setStatus(eventRequestDto.status());
         event.setSportType(sportType);
         event.setEventDate(eventRequestDto.eventDate());
+        event.setMinLevel(eventRequestDto.minLevel());
 
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);

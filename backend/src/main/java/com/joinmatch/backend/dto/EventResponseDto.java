@@ -18,7 +18,8 @@ public record EventResponseDto(
         Integer scoreTeam2,
         LocalDateTime eventDate,
         String sportTypeName,
-        Integer bookedParticipants
+        Integer bookedParticipants,
+        Integer minLevel
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(
@@ -34,7 +35,8 @@ public record EventResponseDto(
                 event.getScoreTeam2(),
                 event.getEventDate(),
                 event.getSportType().getName(),
-                0
+                0,
+                event.getMinLevel()
         );
     }
 }
