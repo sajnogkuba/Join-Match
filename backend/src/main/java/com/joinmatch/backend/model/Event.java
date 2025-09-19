@@ -52,6 +52,9 @@ public class Event {
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
 
+    @Column(name = "min_level", nullable = false)
+    private Integer minLevel;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_type_id", nullable = false)
     private SportType sportType;
