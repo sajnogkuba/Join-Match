@@ -1,12 +1,14 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.EventRequestDto;
 import com.joinmatch.backend.dto.EventResponseDto;
+import com.joinmatch.backend.dto.SportObjectRequestDto;
+import com.joinmatch.backend.dto.SportObjectResponseDto;
 import com.joinmatch.backend.service.EventService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -23,5 +25,11 @@ public class EventController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(events);
+    }
+
+    @PostMapping
+    public ResponseEntity<EventResponseDto> createEvent(@RequestBody @Valid EventRequestDto eventRequestDto) {
+        EventResponseDto createdEvent = eventService.create(eventRequestDto);
+        return ResponseEntity.status(201).body(createdEvent);
     }
 }
