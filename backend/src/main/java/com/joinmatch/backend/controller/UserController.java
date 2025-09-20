@@ -2,33 +2,29 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.config.JwtService;
 
-import com.joinmatch.backend.dto.JwtResponse;
-import com.joinmatch.backend.dto.LoginRequest;
-import com.joinmatch.backend.dto.RefreshTokenRequest;
-import com.joinmatch.backend.dto.RegisterRequest;
-import com.joinmatch.backend.dto.LogoutRequest;
+import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.model.SportUser;
+import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
+import com.joinmatch.backend.supportObject.TokenSupportObject;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 
 @RestController
 @RequestMapping("/api/auth")
+@AllArgsConstructor
 public class UserController {
 
     private final UserService userService;
     private final JwtService jwtService;
 
-    public UserController(UserService userService, JwtService jwtService) {
-        this.userService = userService;
-        this.jwtService = jwtService;
-    }
+    private final SportService sportService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
@@ -38,29 +34,34 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
-        List<String> token = userService.login(request);
+        TokenSupportObject tokenSupportObject = userService.login(request);
         JwtResponse response = new JwtResponse();
-        response.token = token.get(0);
-        response.refreshToken = token.get(1);
-        response.email = request.email;
+        response.token = tokenSupportObject.getToken();
+        response.refreshToken = tokenSupportObject.getRefreshToken();
+        response.email = request.email();
         return ResponseEntity.ok(response);
     }
     @PostMapping("/refreshToken")
     public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken){
-        RefreshSupportObject refreshObject = userService.refreshToken(refreshToken.getRefreshToken());
+        RefreshSupportObject refreshObject = userService.refreshToken(refreshToken.refreshToken());
         JwtResponse response = new JwtResponse();
-        response.token = refreshObject.getTokens().get(0);
-        response.refreshToken = refreshObject.getTokens().get(1);
+        response.token = refreshObject.getTokenSupportObject().getToken();
+        response.refreshToken = refreshObject.getTokenSupportObject().getRefreshToken();
         response.email = refreshObject.getUser().getEmail();
         return ResponseEntity.ok(response);
     }
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest){
         try{
-            userService.logoutUser(logoutRequest.getEmail());
+            userService.logoutUser(logoutRequest.email());
         }catch (RuntimeException runtimeException){
             return  ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
+    }
+    @GetMapping("/sports")
+    public ResponseEntity<SportResponse> getSportsByUser(@RequestBody RequestSports requestSports){
+        List<SportWithRatingDto> sports = sportService.getSportsForUser(requestSports.token());
+        return ResponseEntity.ok(new SportResponse(sports));
     }
 }

@@ -1,15 +1,17 @@
 package com.joinmatch.backend.model;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @Table(name = "\"JoinMatchUser\"")
 @NoArgsConstructor
+@Data
 public class User {
 
     @Id
@@ -34,79 +36,30 @@ public class User {
     private Role role;
 
 
-        @OneToMany(
-                mappedBy = "user",
-                cascade = CascadeType.ALL,
-                orphanRemoval = true
-        )
-        private List<JoinMatchToken> tokens = new ArrayList<>();
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<JoinMatchToken> tokens = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user",cascade = CascadeType.REMOVE)
+    private Set<SportUser> sportUsers = new HashSet<>();
 
 
-        public List<JoinMatchToken> getTokens() {
-            return tokens;
-        }
-
-        public void addToken(JoinMatchToken token) {
-            tokens.add(token);
-            token.setUser(this);
-        }
-
-        public void removeToken(JoinMatchToken token) {
-            tokens.remove(token);
-            token.setUser(null);
-        }
-
-
-    public Integer getId() {
-        return id;
+    public List<JoinMatchToken> getTokens() {
+        return Collections.unmodifiableList(tokens);
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public void addToken(JoinMatchToken token) {
+        tokens.add(token);
+        token.setUser(this);
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
+    public void removeToken(JoinMatchToken token) {
+        tokens.remove(token);
+        token.setUser(null);
     }
 
 
-    public String getPassword() {
-        return password;
-    }
-
-    public String getUsername() {
-        return email;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-
-    public void setDateOfBirth(LocalDate dateOfBrith) {
-        this.dateOfBirth = dateOfBrith;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
 }
