@@ -6,19 +6,19 @@ import java.util.List;
 
 public class RefreshSupportObject {
     private User user;
-    private List<String> tokens;
+    private TokenSupportObject tokenSupportObject;
 
-    public RefreshSupportObject(User user, List<String> tokens) {
+    public RefreshSupportObject(User user, TokenSupportObject tokenSupportObject) {
         this.user = user;
-        this.tokens = tokens;
+        this.tokenSupportObject = tokenSupportObject;
     }
 
     public User getUser() {
         return user;
     }
 
-    public List<String> getTokens() {
-        return tokens;
-    }
 
+    public TokenSupportObject getTokenSupportObject() {
+        return tokenSupportObject;
+    }
 }

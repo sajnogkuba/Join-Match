@@ -9,6 +9,7 @@ import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.JoinMatchTokenRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
+import com.joinmatch.backend.supportObject.TokenSupportObject;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,14 +29,14 @@ public class UserService {
 
     public void register(RegisterRequest request) {
         // Sprawdź, czy email już istnieje
-        if (userRepository.findByEmail(request.email).isPresent()) {
+        if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new RuntimeException("User already exists");
         }
         User user = new User();
-        user.setName(request.name);
-        user.setEmail(request.email);
-        user.setPassword(passwordEncoder.encode(request.password));
-        user.setDateOfBirth(LocalDate.parse(request.dateOfBirth));
+        user.setName(request.name());
+        user.setEmail(request.email());
+        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setDateOfBirth(LocalDate.parse(request.dateOfBirth()));
         user.setRole(Role.USER);
         userRepository.save(user);
         // Można dodać logikę wysyłania e-maila weryfikacyjnego
@@ -43,10 +44,10 @@ public class UserService {
 /**
  * First in list is token and second is refreshToken
  */
-    public List<String> login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email)
+    public TokenSupportObject login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!passwordEncoder.matches(request.password, user.getPassword())) {
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
         return generateAndSaveTokens(user);
@@ -84,12 +85,10 @@ public class UserService {
         userRepository.save(user);
 
     }
-    private List<String> generateAndSaveTokens(User user){
+    private TokenSupportObject generateAndSaveTokens(User user){
         String token = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-        List<String> tokens = new ArrayList<>();
-        tokens.add(token);
-        tokens.add(refreshToken);
+        TokenSupportObject supportObject = new TokenSupportObject(token,refreshToken);
         JoinMatchToken joinMatchToken = new JoinMatchToken();
         joinMatchToken.setToken(token);
         joinMatchToken.setRefreshToken(refreshToken);
@@ -97,10 +96,10 @@ public class UserService {
         joinMatchToken.setRevoked(false);
         joinMatchToken.setExpireDate(LocalDateTime.now().plusHours(JwtService.REFRESH_TOKEN_EXP_HOURS));
         joinMatchTokenRepository.save(joinMatchToken);
-        return tokens;
+        return supportObject;
     }
 
-    public List<String> issueTokensFor(User user) {
+    public TokenSupportObject issueTokensFor(User user) {
         return generateAndSaveTokens(user);
     }
 

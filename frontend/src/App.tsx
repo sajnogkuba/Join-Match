@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import { AuthProvider } from './Context/authContext';
 import EventPage from './pages/EventPage'
+import CreateEventPage from './pages/CreateEventPage.tsx';
 
 const EventsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona wydarzeń</div>
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
@@ -29,6 +30,7 @@ const App: React.FC = () => (
 				<Route path='faq' element={<FAQPage />} />
 				<Route path='login' element={<LoginPage />} />
 				<Route path='register' element={<RegisterPage />} />
+				<Route path='stworz-wydarzenie' element={<CreateEventPage />} />
 				<Route path='*' element={<NotFoundPage />} />
 			</Route>
 		</Routes>

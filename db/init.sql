@@ -16,6 +16,39 @@ CREATE TABLE joinmatch_token (
                                  revoked        BOOLEAN     NOT NULL DEFAULT FALSE,
                                  refresh_token  TEXT
 );
+-- Table: Sport
+-- Table: Sport
+CREATE TABLE Sport (
+                       ID int  NOT NULL,
+                       name varchar(50)  NOT NULL,
+                       URL varchar(100)  NOT NULL,
+                       CONSTRAINT Sport_pk PRIMARY KEY (ID)
+);
+
+-- Table: Sport_User
+CREATE TABLE Sport_User (
+                            ID int  NOT NULL,
+                            JoinMatchUser_user_ID int  NOT NULL,
+                            Sport_ID int  NOT NULL,
+                            Rating int  NOT NULL,
+                            CONSTRAINT Sport_User_pk PRIMARY KEY (ID)
+);
+-- -- Reference: Sport_User_JoinMatchUser (table: Sport_User)
+-- ALTER TABLE Sport_User ADD CONSTRAINT Sport_User_JoinMatchUser
+--     FOREIGN KEY (JoinMatchUser_user_ID)
+--         REFERENCES JoinMatchUser (user_ID)
+--         NOT DEFERRABLE
+--             INITIALLY IMMEDIATE
+-- ;
+--
+-- -- Reference: Sport_User_Sport (table: Sport_User)
+-- ALTER TABLE Sport_User ADD CONSTRAINT Sport_User_Sport
+--     FOREIGN KEY (Sport_ID)
+--         REFERENCES Sport (ID)
+--         NOT DEFERRABLE
+--             INITIALLY IMMEDIATE
+-- ;
+
 INSERT INTO join_match_user(name, email, password, date_of_birth, role) VALUES ('John Doe', 'john.doe@gmail.com', 'password123', '1990-01-01', 'user');
 INSERT INTO join_match_user(name, email, password, date_of_birth, role) VALUES ('test user', 'test.user@gmail.com', 'password123', '2000-01-01', 'user');
 INSERT INTO join_match_user(name, email, password, date_of_birth, role) VALUES ('Kuba Sajnóg', 'kuba.sajnog@gmail.com', 'password123', '2003-03-11', 'user');
@@ -85,17 +118,23 @@ create table public.event
     score_team2            integer,
     sport_type_id          integer       not null
         references public.sport_type,
-    event_date            timestamp     not null
+    event_date             timestamp     not null,
+    min_level              integer       -- nullable
 );
 
 alter table public.event
     owner to joinuser;
 
 
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (1, 'Event1', 10, 20.00, 1, 1, 1, 'planned', null, null, 1, '2025-10-01 10:00:00');
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (2, 'Event2', 5, 0.00, 2, 2, 1, 'planned', null, null, 2, '2025-10-02 11:00:00');
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (3, 'Event3', 15, 15.00, 3, 3, 1, 'planned', null, null, 3, '2025-10-03 12:00:00');
 
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date)
+VALUES (1, 'Event1', 10, 20.00, 1, 1, 1, 'planned', null, null, 1, '2025-10-01 10:00:00');
+
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date)
+VALUES (2, 'Event2', 5, 0.00, 2, 2, 1, 'planned', null, null, 2, '2025-10-02 11:00:00');
+
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date)
+VALUES (3, 'Event3', 15, 15.00, 3, 3, 1, 'planned', null, null, 3, '2025-10-03 12:00:00');
 
 
 
