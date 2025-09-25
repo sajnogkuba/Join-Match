@@ -99,7 +99,7 @@ public class UserService {
         return supportObject;
     }
 
-    public List<String> issueTokensFor(User user) {
+    public TokenSupportObject issueTokensFor(User user) {
         return generateAndSaveTokens(user);
     }
 

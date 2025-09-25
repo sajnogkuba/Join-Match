@@ -118,17 +118,23 @@ create table public.event
     score_team2            integer,
     sport_type_id          integer       not null
         references public.sport_type,
-    event_date            timestamp     not null
+    event_date             timestamp     not null,
+    min_level              integer       -- nullable
 );
 
 alter table public.event
     owner to joinuser;
 
 
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (1, 'Event1', 10, 20.00, 1, 1, 1, 'planned', null, null, 1, '2025-10-01 10:00:00');
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (2, 'Event2', 5, 0.00, 2, 2, 1, 'planned', null, null, 2, '2025-10-02 11:00:00');
-INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date) VALUES (3, 'Event3', 15, 15.00, 3, 3, 1, 'planned', null, null, 3, '2025-10-03 12:00:00');
 
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date)
+VALUES (1, 'Event1', 10, 20.00, 1, 1, 1, 'planned', null, null, 1, '2025-10-01 10:00:00');
+
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date)
+VALUES (2, 'Event2', 5, 0.00, 2, 2, 1, 'planned', null, null, 2, '2025-10-02 11:00:00');
+
+INSERT INTO public.event (event_id, event_name, number_of_participants, cost, owner_id, sport_object_object_id, event_visibility_id, status, score_team1, score_team2, sport_type_id, event_date)
+VALUES (3, 'Event3', 15, 15.00, 3, 3, 1, 'planned', null, null, 3, '2025-10-03 12:00:00');
 
 
 

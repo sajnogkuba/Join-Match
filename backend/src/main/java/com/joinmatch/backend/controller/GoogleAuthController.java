@@ -8,6 +8,7 @@ import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.UserService;
+import com.joinmatch.backend.supportObject.TokenSupportObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,11 +55,11 @@ public class GoogleAuthController {
         });
 
         // wystaw Twoje tokeny
-        List<String> tokens = userService.issueTokensFor(user);
+        TokenSupportObject tokenSupportObject = userService.issueTokensFor(user);
 
         JwtResponse resp = new JwtResponse();
-        resp.token = tokens.get(0);
-        resp.refreshToken = tokens.get(1);
+        resp.token = tokenSupportObject.getToken();
+        resp.refreshToken = tokenSupportObject.getRefreshToken();
         resp.email = email;
 
         return ResponseEntity.ok(resp);
