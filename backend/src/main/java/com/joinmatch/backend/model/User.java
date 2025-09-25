@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Entity
-@Table(name = "\"JoinMatchUser\"")
+@Table(name = "\"join_match_user\"")
 @NoArgsConstructor
 @Data
 public class User {

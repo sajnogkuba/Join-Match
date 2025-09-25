@@ -8,70 +8,6 @@ import { Link } from 'react-router-dom';
 
 
 
-// Mock data for suggested events
-const SUGGESTED_EVENTS = [
-	{
-		id: 1,
-		title: 'Weekend Basketball Tournament',
-		location: 'City Sports Center',
-		date: 'May 15, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Basketball',
-		participants: 24,
-		slots: 32,
-	},
-	{
-		id: 2,
-		title: 'Amateur Football League',
-		location: 'Community Stadium',
-		date: 'May 18, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Football',
-		participants: 38,
-		slots: 44,
-	},
-	{
-		id: 3,
-		title: 'Tennis Doubles Championship',
-		location: 'Tennis Club Courts',
-		date: 'May 20, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Tennis',
-		participants: 12,
-		slots: 16,
-	},
-	{
-		id: 4,
-		title: 'Morning Yoga in the Park',
-		location: 'Central Park',
-		date: 'May 12, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Yoga',
-		participants: 15,
-		slots: 30,
-	},
-	{
-		id: 5,
-		title: '5K Charity Run',
-		location: 'Riverside Path',
-		date: 'May 22, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Running',
-		participants: 78,
-		slots: 100,
-	},
-	{
-		id: 6,
-		title: 'Volleyball Beach Tournament',
-		location: 'City Beach',
-		date: 'May 25, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Volleyball',
-		participants: 32,
-		slots: 48,
-	},
-]
-
 // Categories for the filter
 const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Running', 'Yoga', 'Swimming']
 
@@ -95,6 +31,10 @@ export const MainPage: React.FC = () => {
 				setLoading(false);
 			});
 	}, []);
+
+	const handleSignUp = (eventId: number) => {
+		console.log('ZAPISZ!', eventId);
+	};
 
 
 	const filteredEvents = events.filter(event => {
@@ -348,7 +288,7 @@ export const MainPage: React.FC = () => {
 												</svg>
 												<span>Zapisz</span>
 											</button>
-											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer'>
+											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer' onClick={()  => handleSignUp(event.eventId)}>
 												Dołącz
 											</button>
 										</div>
