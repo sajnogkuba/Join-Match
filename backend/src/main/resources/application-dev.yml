@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/joinmatchdb
-    username: joinuser
-    password: joinpass
+    url: jdbc:postgresql://ep-royal-bar-agsf4moz-pooler.c-2.eu-central-1.aws.neon.tech:5432/JoinMatch?sslmode=require&currentSchema=public
+    username: ${DB_USER}   # w .env ustaw: DB_USER=neondb_owner
+    password: ${DB_PASS}   # w .env ustaw: DB_PASS=...
