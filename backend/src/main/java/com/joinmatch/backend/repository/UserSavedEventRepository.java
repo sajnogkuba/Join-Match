@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface UserSavedEventRepository extends JpaRepository<UserSavedEvent, Integer> {
     List<UserSavedEvent> findByUserId(Integer id);
+
+    UserSavedEvent findByUserIdAndEventEventId(Integer userId, Integer eventId);
 }

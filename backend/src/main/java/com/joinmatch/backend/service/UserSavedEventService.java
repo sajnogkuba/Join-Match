@@ -53,4 +53,15 @@ public class UserSavedEventService {
         UserSavedEvent saved = userSavedEventRepository.save(userSavedEvent);
         return UserSavedEventResponseDto.fromUserSavedEvent(saved);
     }
+
+    @Transactional
+    public void delete(UserSavedEventRequestDto userSavedEventRequestDto) {
+        User user = userRepository.findByEmail(userSavedEventRequestDto.userEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + userSavedEventRequestDto.userEmail() + " not found"));
+        UserSavedEvent userSavedEvent = userSavedEventRepository.findByUserIdAndEventEventId(user.getId(), userSavedEventRequestDto.eventId());
+        if (userSavedEvent == null) {
+            throw new IllegalArgumentException("UserSavedEvent with user id " + user.getId() + " and event id " + userSavedEventRequestDto.eventId() + " not found");
+        }
+        userSavedEventRepository.delete(userSavedEvent);
+    }
 }

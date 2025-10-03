@@ -21,6 +21,7 @@ export const MainPage: React.FC = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [userEmail, setUserEmail] = useState<string | null>(null);
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set());
+	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set());
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -41,6 +42,22 @@ export const MainPage: React.FC = () => {
 		};
 
 		fetchJoined();
+	}, [userEmail]);
+
+	// Fetch user's saved events when we have the email
+	useEffect(() => {
+		const fetchSaved = async () => {
+			if (!userEmail) return;
+			try {
+				const response = await api.get('/user-saved-event', { params: { userEmail } });
+				const ids = new Set<number>((response.data || []).map((se: { eventId: number }) => se.eventId));
+				setSavedEventIds(ids);
+			} catch (e) {
+				console.error('Nie udało się pobrać ulubionych wydarzeń użytkownika:', e);
+			}
+		};
+
+		fetchSaved();
 	}, [userEmail]);
 
 	useEffect(() => {
@@ -72,6 +89,39 @@ export const MainPage: React.FC = () => {
 			setJoinedEventIds(prev => new Set<number>([...prev, eventId]));
 		} catch (err) {
 			console.error('Błąd podczas dołączania do wydarzenia:', err);
+		}
+	};
+
+	const handleSaveEvent = async (eventId: number) => {
+		if (!userEmail) {
+			navigate('/login');
+			return;
+		}
+
+		try {
+			if (savedEventIds.has(eventId)) {
+				// Delete saved event
+				await api.delete('/user-saved-event', {
+					data: {
+						userEmail: userEmail,
+						eventId: eventId,
+					}
+				});
+				setSavedEventIds(prev => {
+					const newSet = new Set(prev);
+					newSet.delete(eventId);
+					return newSet;
+				});
+			} else {
+				// Save event
+				await api.post('/user-saved-event', {
+					userEmail: userEmail,
+					eventId: eventId,
+				});
+				setSavedEventIds(prev => new Set<number>([...prev, eventId]));
+			}
+		} catch (err) {
+			console.error('Błąd podczas zapisywania/usuwania wydarzenia:', err);
 		}
 	};
 
@@ -316,7 +366,10 @@ export const MainPage: React.FC = () => {
 										</div>
 										{/* actions */}
 										<div className='flex justify-between items-center'>
-											<button className='text-gray-400 hover:text-white text-sm flex items-center space-x-1 transition'>
+									<button
+										className={`${savedEventIds.has(event.eventId) ? 'text-purple-400' : 'text-gray-400 hover:text-white'} text-sm flex items-center space-x-1 transition`}
+										onClick={() => handleSaveEvent(event.eventId)}
+									>
 												<svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
 													<path
 														strokeLinecap='round'
@@ -325,7 +378,7 @@ export const MainPage: React.FC = () => {
 														d='M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z'
 													/>
 												</svg>
-												<span>Zapisz</span>
+										<span>{savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}</span>
 											</button>
 				<button
 					className={`${joinedEventIds.has(event.eventId)
