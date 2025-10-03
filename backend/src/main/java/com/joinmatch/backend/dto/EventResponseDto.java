@@ -35,7 +35,7 @@ public record EventResponseDto(
                 event.getScoreTeam2(),
                 event.getEventDate(),
                 event.getSportEv().getName(),
-                0,
+                event.getUserEvents().size(),
                 event.getMinLevel()
         );
     }
