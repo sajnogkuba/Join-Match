@@ -1,14 +1,14 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEventResponseDto;
+import com.joinmatch.backend.dto.UserSavedEventRequestDto;
 import com.joinmatch.backend.dto.UserSavedEventResponseDto;
 import com.joinmatch.backend.service.UserSavedEventService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -34,5 +34,11 @@ public class UserSavedEventController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(userEvents);
+    }
+
+    @PostMapping
+    public ResponseEntity<UserSavedEventResponseDto> createSavedEvent(@RequestBody @Valid UserSavedEventRequestDto userSavedEventRequestDto) {
+        UserSavedEventResponseDto createdUserSavedEvent = userSavedEventService.create(userSavedEventRequestDto);
+        return ResponseEntity.status(201).body(createdUserSavedEvent);
     }
 }

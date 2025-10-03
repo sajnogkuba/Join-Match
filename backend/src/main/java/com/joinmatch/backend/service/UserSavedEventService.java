@@ -1,10 +1,14 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.UserEventResponseDto;
+import com.joinmatch.backend.dto.UserSavedEventRequestDto;
 import com.joinmatch.backend.dto.UserSavedEventResponseDto;
+import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.model.UserSavedEvent;
+import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.repository.UserSavedEventRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +19,7 @@ import java.util.List;
 public class UserSavedEventService {
     private final UserSavedEventRepository userSavedEventRepository;
     private final UserRepository userRepository;
+    private final EventRepository eventRepository;
 
     public List<UserSavedEventResponseDto> getAllUserSavedEvents() {
         return userSavedEventRepository.findAll()
@@ -30,5 +35,22 @@ public class UserSavedEventService {
                 .stream()
                 .map(UserSavedEventResponseDto::fromUserSavedEvent)
                 .toList();
+    }
+
+    @Transactional
+    public UserSavedEventResponseDto create(UserSavedEventRequestDto userSavedEventRequestDto) {
+        UserSavedEvent userSavedEvent = new UserSavedEvent();
+        return getUserEventResponseDto(userSavedEventRequestDto, userSavedEvent);
+    }
+
+    private UserSavedEventResponseDto getUserEventResponseDto(UserSavedEventRequestDto userSavedEventRequestDto, UserSavedEvent userSavedEvent) {
+        User user = userRepository.findByEmail(userSavedEventRequestDto.userEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + userSavedEventRequestDto.userEmail() + " not found"));
+        Event event = eventRepository.findById(userSavedEventRequestDto.eventId())
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + userSavedEventRequestDto.eventId() + " not found"));
+        userSavedEvent.setUser(user);
+        userSavedEvent.setEvent(event);
+        UserSavedEvent saved = userSavedEventRepository.save(userSavedEvent);
+        return UserSavedEventResponseDto.fromUserSavedEvent(saved);
     }
 }
