@@ -31,6 +31,10 @@ public class User {
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
+    @Column(name = "url_of_picture", length = 255)
+    private String urlOfPicture;
+
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 255)
     private Role role;

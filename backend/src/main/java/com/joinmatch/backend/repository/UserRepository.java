@@ -19,4 +19,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
         where t.token = :token
     """)
     Optional<User> findUserWithSportsByToken(@Param("token") String token);
+    @Query("select u from User u join u.tokens t " +
+            "where t.token = :token and t.revoked = false")
+    Optional<User> findByTokenValue(@Param("token") String token);
 }

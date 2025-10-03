@@ -9,6 +9,7 @@ import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,9 +60,30 @@ public class UserController {
         }
         return ResponseEntity.ok().build();
     }
+    //TODO do przeniesienia do sportControllera
     @GetMapping("/sports")
     public ResponseEntity<SportResponse> getSportsByUser(@RequestBody RequestSports requestSports){
         List<SportWithRatingDto> sports = sportService.getSportsForUser(requestSports.token());
         return ResponseEntity.ok(new SportResponse(sports));
+    }
+    @PatchMapping("/changePass")
+    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto){
+        try {
+            userService.changePassword(changePassDto);
+        }catch (IllegalArgumentException illegalArgumentException){
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(illegalArgumentException.getMessage());
+
+        }catch (RuntimeException runtimeException){
+            return ResponseEntity.badRequest().body(runtimeException.getMessage());
+
+        }
+        return ResponseEntity.ok("Password changed");
+    }
+    @GetMapping("/user/details")
+    public ResponseEntity<UserResponseDto> getUserDetails(@RequestBody UserDetailsDto userDetailsDto){
+
+        return ResponseEntity.ok().build();
     }
 }
