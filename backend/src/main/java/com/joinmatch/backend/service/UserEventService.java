@@ -53,4 +53,12 @@ public class UserEventService {
         return UserEventResponseDto.fromUserEvent(saved);
     }
 
+    public List<UserEventResponseDto> getUserEventsByUserEmail(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + userEmail + " not found"));
+        return userEventRepository.findByUserId(user.getId())
+                .stream()
+                .map(UserEventResponseDto::fromUserEvent)
+                .toList();
+    }
 }

@@ -5,6 +5,8 @@ import type { Event } from '../Api/types.ts';
 import axios from 'axios';
 import dayjs from "dayjs";
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import api from '../Api/axios.tsx';
 
 
 
@@ -17,6 +19,29 @@ export const MainPage: React.FC = () => {
 	const [events, setEvents] = useState<Event[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
+	const [userEmail, setUserEmail] = useState<string | null>(null);
+	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set());
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		setUserEmail(localStorage.getItem('email'));
+	}, []);
+
+	// Fetch user's joined events when we have the email
+	useEffect(() => {
+		const fetchJoined = async () => {
+			if (!userEmail) return;
+			try {
+				const response = await api.get('/user-event/by-user-email', { params: { userEmail } });
+				const ids = new Set<number>((response.data || []).map((ue: { eventId: number }) => ue.eventId));
+				setJoinedEventIds(ids);
+			} catch (e) {
+				console.error('Nie udało się pobrać zapisanych wydarzeń użytkownika:', e);
+			}
+		};
+
+		fetchJoined();
+	}, [userEmail]);
 
 	useEffect(() => {
 		axios.get<Event[]>('http://localhost:8080/api/event')
@@ -32,8 +57,22 @@ export const MainPage: React.FC = () => {
 			});
 	}, []);
 
-	const handleSignUp = (eventId: number) => {
-		console.log('ZAPISZ!', eventId);
+	const handleSignUp = async (eventId: number) => {
+		if (!userEmail) {
+			navigate('/login');
+			return;
+		}
+
+		try {
+			await api.post('/user-event', {
+				userEmail: userEmail,
+				eventId: eventId,
+				attendanceStatusId: 1,
+			});
+			setJoinedEventIds(prev => new Set<number>([...prev, eventId]));
+		} catch (err) {
+			console.error('Błąd podczas dołączania do wydarzenia:', err);
+		}
 	};
 
 
@@ -288,9 +327,17 @@ export const MainPage: React.FC = () => {
 												</svg>
 												<span>Zapisz</span>
 											</button>
-											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer' onClick={()  => handleSignUp(event.eventId)}>
-												Dołącz
-											</button>
+				<button
+					className={`${joinedEventIds.has(event.eventId)
+						? 'bg-green-600 hover:bg-green-700'
+						: (!userEmail
+							? 'bg-gray-600 hover:bg-gray-600 opacity-90'
+							: 'bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900')} text-white py-2 px-5 rounded-lg transition cursor-pointer`}
+					onClick={() => handleSignUp(event.eventId)}
+					disabled={joinedEventIds.has(event.eventId)}
+				>
+					{joinedEventIds.has(event.eventId) ? 'Dołączono' :  'Dołącz'}
+				</button>
 										</div>
 									</div>
 								</div>
