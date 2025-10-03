@@ -5,72 +5,10 @@ import type { Event } from '../Api/types.ts';
 import axios from 'axios';
 import dayjs from "dayjs";
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import api from '../Api/axios.tsx';
 
 
-
-// Mock data for suggested events
-const SUGGESTED_EVENTS = [
-	{
-		id: 1,
-		title: 'Weekend Basketball Tournament',
-		location: 'City Sports Center',
-		date: 'May 15, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Basketball',
-		participants: 24,
-		slots: 32,
-	},
-	{
-		id: 2,
-		title: 'Amateur Football League',
-		location: 'Community Stadium',
-		date: 'May 18, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Football',
-		participants: 38,
-		slots: 44,
-	},
-	{
-		id: 3,
-		title: 'Tennis Doubles Championship',
-		location: 'Tennis Club Courts',
-		date: 'May 20, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Tennis',
-		participants: 12,
-		slots: 16,
-	},
-	{
-		id: 4,
-		title: 'Morning Yoga in the Park',
-		location: 'Central Park',
-		date: 'May 12, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Yoga',
-		participants: 15,
-		slots: 30,
-	},
-	{
-		id: 5,
-		title: '5K Charity Run',
-		location: 'Riverside Path',
-		date: 'May 22, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Running',
-		participants: 78,
-		slots: 100,
-	},
-	{
-		id: 6,
-		title: 'Volleyball Beach Tournament',
-		location: 'City Beach',
-		date: 'May 25, 2025',
-		image: '/api/placeholder/400/250',
-		category: 'Volleyball',
-		participants: 32,
-		slots: 48,
-	},
-]
 
 // Categories for the filter
 const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Running', 'Yoga', 'Swimming']
@@ -81,6 +19,29 @@ export const MainPage: React.FC = () => {
 	const [events, setEvents] = useState<Event[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
+	const [userEmail, setUserEmail] = useState<string | null>(null);
+	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set());
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		setUserEmail(localStorage.getItem('email'));
+	}, []);
+
+	// Fetch user's joined events when we have the email
+	useEffect(() => {
+		const fetchJoined = async () => {
+			if (!userEmail) return;
+			try {
+				const response = await api.get('/user-event/by-user-email', { params: { userEmail } });
+				const ids = new Set<number>((response.data || []).map((ue: { eventId: number }) => ue.eventId));
+				setJoinedEventIds(ids);
+			} catch (e) {
+				console.error('Nie udało się pobrać zapisanych wydarzeń użytkownika:', e);
+			}
+		};
+
+		fetchJoined();
+	}, [userEmail]);
 
 	useEffect(() => {
 		axios.get<Event[]>('http://localhost:8080/api/event')
@@ -95,6 +56,24 @@ export const MainPage: React.FC = () => {
 				setLoading(false);
 			});
 	}, []);
+
+	const handleSignUp = async (eventId: number) => {
+		if (!userEmail) {
+			navigate('/login');
+			return;
+		}
+
+		try {
+			await api.post('/user-event', {
+				userEmail: userEmail,
+				eventId: eventId,
+				attendanceStatusId: 1,
+			});
+			setJoinedEventIds(prev => new Set<number>([...prev, eventId]));
+		} catch (err) {
+			console.error('Błąd podczas dołączania do wydarzenia:', err);
+		}
+	};
 
 
 	const filteredEvents = events.filter(event => {
@@ -348,9 +327,17 @@ export const MainPage: React.FC = () => {
 												</svg>
 												<span>Zapisz</span>
 											</button>
-											<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white py-2 px-5 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer'>
-												Dołącz
-											</button>
+				<button
+					className={`${joinedEventIds.has(event.eventId)
+						? 'bg-green-600 hover:bg-green-700'
+						: (!userEmail
+							? 'bg-gray-600 hover:bg-gray-600 opacity-90'
+							: 'bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900')} text-white py-2 px-5 rounded-lg transition cursor-pointer`}
+					onClick={() => handleSignUp(event.eventId)}
+					disabled={joinedEventIds.has(event.eventId)}
+				>
+					{joinedEventIds.has(event.eventId) ? 'Dołączono' :  'Dołącz'}
+				</button>
 										</div>
 									</div>
 								</div>

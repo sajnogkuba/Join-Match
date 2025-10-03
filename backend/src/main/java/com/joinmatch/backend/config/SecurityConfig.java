@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/event/**").permitAll()
                         .requestMatchers("/api/sport-type/**").permitAll()
                         .requestMatchers("/api/sport-object/**").permitAll()
+                        .requestMatchers("/api/user-event/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
