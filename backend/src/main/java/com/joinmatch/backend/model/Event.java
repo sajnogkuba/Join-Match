@@ -57,5 +57,5 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_type_id", nullable = false)
-    private SportType sportType;
+    private Sport sportEv;
 }

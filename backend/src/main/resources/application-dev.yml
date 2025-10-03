@@ -1,5 +1,13 @@
 spring:
   datasource:
     url: jdbc:postgresql://ep-royal-bar-agsf4moz-pooler.c-2.eu-central-1.aws.neon.tech:5432/JoinMatch?sslmode=require&currentSchema=public
-    username: ${DB_USER}   # w .env ustaw: DB_USER=neondb_owner
-    password: ${DB_PASS}   # w .env ustaw: DB_PASS=...
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    driver-class-name: org.postgresql.Driver
+#    jpa:
+#      hibernate:
+#        ddl-auto: none
+#      properties:
+#        hibernate:
+#          dialect: org.hibernate.dialect.PostgreSQLDialect
+#      show-sql: true

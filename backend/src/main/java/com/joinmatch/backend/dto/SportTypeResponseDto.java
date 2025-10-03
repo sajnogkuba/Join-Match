@@ -1,15 +1,17 @@
 package com.joinmatch.backend.dto;
 
-import com.joinmatch.backend.model.SportType;
+import com.joinmatch.backend.model.Sport;
 
 public record SportTypeResponseDto(
         Integer id,
-        String name
+        String name,
+        String url
 ) {
-    public static SportTypeResponseDto fromSportType(SportType sportType) {
+    public static SportTypeResponseDto fromSportType(Sport sport) {
         return new SportTypeResponseDto(
-                sportType.getId(),
-                sportType.getName()
+                sport.getId(),
+                sport.getName(),
+                sport.getURL()
         );
     }
 }

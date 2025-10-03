@@ -1,14 +1,12 @@
 spring:
-  # dzięki temu Spring wczyta .env (Boot 2.4+)
   config:
     import: optional:file:.env[.properties]
 
   jpa:
     hibernate:
-      ddl-auto: validate   # w bazowym zostawmy validate
+      ddl-auto: validate   # przy dev możesz dać 'update' jeśli potrzebujesz
     show-sql: true
-    # Tę linię usuń – Hibernate sam dobierze dialekt dla Postgresa:
-    # database-platform: org.hibernate.dialect.PostgreSQLDialect
+    # NIE ustawiaj dialect – Hibernate sam rozpozna dla Postgresa
 
   security:
     oauth2:
