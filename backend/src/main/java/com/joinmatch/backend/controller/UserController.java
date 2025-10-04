@@ -83,7 +83,13 @@ public class UserController {
     }
     @GetMapping("/user/details")
     public ResponseEntity<UserResponseDto> getUserDetails(@RequestBody UserDetailsDto userDetailsDto){
+        UserResponseDto simpleInfo;
+        try {
+             simpleInfo = userService.getSimpleInfo(userDetailsDto.token());
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.notFound().build();
+        }
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().body(simpleInfo);
     }
 }

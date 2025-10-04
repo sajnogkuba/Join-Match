@@ -4,6 +4,7 @@ import com.joinmatch.backend.config.JwtService;
 import com.joinmatch.backend.dto.ChangePassDto;
 import com.joinmatch.backend.dto.LoginRequest;
 import com.joinmatch.backend.dto.RegisterRequest;
+import com.joinmatch.backend.dto.UserResponseDto;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
@@ -114,6 +115,14 @@ public class UserService {
         }
         user.setPassword(passwordEncoder.encode(changePassDto.newPassword()));
         userRepository.save(user);
+    }
+    public UserResponseDto getSimpleInfo(String token){
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
+        if(!byTokenValue.isPresent()){
+            throw new IllegalArgumentException("User Not Found");
+        }
+        User user = byTokenValue.get();
+        return new UserResponseDto(user.getName(), user.getEmail(), user.getDateOfBirth(), user.getUrlOfPicture());
     }
 
 }
