@@ -19,7 +19,7 @@ public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "event_id")
-    private Long eventId;
+    private Integer eventId;
 
     @Column(name = "event_name", length = 100, nullable = false)
     private String eventName;

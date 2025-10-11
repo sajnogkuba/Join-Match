@@ -7,7 +7,7 @@ public record UserEventResponseDto(
         String userEmail,
         String eventName,
         String attendanceStatusName,
-        Long eventId
+        Integer eventId
 ) {
     public static UserEventResponseDto fromUserEvent(UserEvent userEvent) {
         return new UserEventResponseDto(
