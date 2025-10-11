@@ -28,6 +28,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/event/**").permitAll()
                         .requestMatchers("/api/sport-type/**").permitAll()
                         .requestMatchers("/api/sport-object/**").permitAll()
+                        .requestMatchers("/api/user-event/**").permitAll()
+                        .requestMatchers("/api/user-saved-event/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -42,7 +44,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173","http://localhost:3000")); // tylko port 5173!
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
 

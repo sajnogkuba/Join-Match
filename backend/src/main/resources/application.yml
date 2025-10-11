@@ -1,9 +1,13 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: validate   # przy dev możesz dać 'update' jeśli potrzebujesz
     show-sql: true
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    # NIE ustawiaj dialect – Hibernate sam rozpozna dla Postgresa
+
   security:
     oauth2:
       client:
@@ -19,6 +23,7 @@ spring:
 
 server:
   port: 8080
+
 logging:
   level:
     org.springframework.security: DEBUG

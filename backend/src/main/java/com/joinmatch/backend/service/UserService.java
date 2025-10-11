@@ -1,8 +1,10 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.config.JwtService;
+import com.joinmatch.backend.dto.ChangePassDto;
 import com.joinmatch.backend.dto.LoginRequest;
 import com.joinmatch.backend.dto.RegisterRequest;
+import com.joinmatch.backend.dto.UserResponseDto;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
@@ -10,6 +12,7 @@ import com.joinmatch.backend.repository.JoinMatchTokenRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,9 +44,6 @@ public class UserService {
         userRepository.save(user);
         // Można dodać logikę wysyłania e-maila weryfikacyjnego
     }
-/**
- * First in list is token and second is refreshToken
- */
     public TokenSupportObject login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -54,7 +54,7 @@ public class UserService {
     }
     public RefreshSupportObject refreshToken(String refreshToken){
         Optional<List<JoinMatchToken>> joinMatchTokenByRefreshToken = joinMatchTokenRepository.getJoinMatchTokenByRefreshToken(refreshToken);
-        if(!joinMatchTokenByRefreshToken.isPresent()){
+        if(joinMatchTokenByRefreshToken.isEmpty()){
             throw new RuntimeException("Wrong refresh token");
         }
         List<JoinMatchToken> joinMatchTokens = joinMatchTokenByRefreshToken.get();
@@ -101,6 +101,28 @@ public class UserService {
 
     public TokenSupportObject issueTokensFor(User user) {
         return generateAndSaveTokens(user);
+    }
+    @Transactional
+    public void changePassword(ChangePassDto changePassDto){
+        Optional<User> byTokenValue = userRepository.findByTokenValue(changePassDto.token());
+        if(!byTokenValue.isPresent()){
+            throw new IllegalArgumentException("No users found");
+        }
+        User user = byTokenValue.get();
+        System.out.println(passwordEncoder.matches(changePassDto.oldPassword(), user.getPassword()));
+        if (!passwordEncoder.matches(changePassDto.oldPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid credentials");
+        }
+        user.setPassword(passwordEncoder.encode(changePassDto.newPassword()));
+        userRepository.save(user);
+    }
+    public UserResponseDto getSimpleInfo(String token){
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
+        if(byTokenValue.isEmpty()){
+            throw new IllegalArgumentException("User Not Found");
+        }
+        User user = byTokenValue.get();
+        return new UserResponseDto(user.getName(), user.getEmail(), user.getDateOfBirth(), user.getUrlOfPicture());
     }
 
 }

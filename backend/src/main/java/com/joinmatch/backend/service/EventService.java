@@ -22,7 +22,7 @@ import java.util.List;
 public class EventService {
     private final EventRepository eventRepository;
     private final SportObjectRepository sportObjectRepository;
-    private final SportTypeRepository sportTypeRepository;
+    private final SportRepository sportRepository;
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
 
@@ -86,7 +86,7 @@ public class EventService {
                 .orElseThrow(() -> new IllegalArgumentException("User with email " + eventRequestDto.ownerEmail() + " not found"));
         SportObject sportObject = sportObjectRepository.findById(eventRequestDto.sportObjectId())
                 .orElseThrow(() -> new IllegalArgumentException("SportObject with id " + eventRequestDto.sportObjectId() + " not found"));
-        SportType sportType = sportTypeRepository.findById(eventRequestDto.sportTypeId())
+        Sport sport = sportRepository.findById(eventRequestDto.sportTypeId())
                 .orElseThrow(() -> new IllegalArgumentException("SportType with id " + eventRequestDto.sportTypeId() + " not found"));
         EventVisibility eventVisibility = eventVisibilityRepository.findById(eventRequestDto.eventVisibilityId())
                 .orElseThrow(() -> new IllegalArgumentException("EventVisibility with id " + eventRequestDto.eventVisibilityId() + " not found"));
@@ -97,7 +97,8 @@ public class EventService {
         event.setSportObject(sportObject);
         event.setEventVisibility(eventVisibility);
         event.setStatus(eventRequestDto.status());
-        event.setSportType(sportType);
+        //ustaw sport
+        event.setSportEv(sport);
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
 

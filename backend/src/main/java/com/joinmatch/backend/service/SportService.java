@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.dto.SportTypeResponseDto;
 import com.joinmatch.backend.dto.SportWithRatingDto;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.SportUser;
@@ -21,8 +22,8 @@ import java.util.Set;
 @AllArgsConstructor
 public class SportService {
     private UserRepository userRepository;
-    private SportUserRepository sportUserRepository;
-    private JoinMatchTokenRepository joinMatchTokenRepository;
+    private final SportRepository sportRepository;
+
 
     @Transactional(readOnly = true)
     public List<SportWithRatingDto> getSportsForUser(String token) {
@@ -33,9 +34,16 @@ public class SportService {
                 .map(su -> new SportWithRatingDto(
                         su.getSport().getId(),
                         su.getSport().getName(),
-                        su.getSport().getURL(),   // albo getUrl()
+                        su.getSport().getURL(),   
                         su.getRating()
                 ))
+                .toList();
+    }
+
+    public List<SportTypeResponseDto> getAllSportTypes() {
+        return sportRepository.findAll()
+                .stream()
+                .map(SportTypeResponseDto::fromSportType)
                 .toList();
     }
 }

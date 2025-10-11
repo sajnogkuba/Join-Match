@@ -3,13 +3,12 @@ package com.joinmatch.backend.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.*;
 
 @Entity
-@Table(name = "\"JoinMatchUser\"")
+@Table(name = "\"join_match_user\"")
 @NoArgsConstructor
 @Data
 public class User {
@@ -30,6 +29,10 @@ public class User {
 
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
+
+    @Column(name = "url_of_picture", length = 255)
+    private String urlOfPicture;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 255)

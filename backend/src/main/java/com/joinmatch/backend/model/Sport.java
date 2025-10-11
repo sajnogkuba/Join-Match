@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Data
@@ -30,4 +31,7 @@ public class Sport {
 
     @OneToMany(mappedBy = "sport", cascade = CascadeType.REMOVE)
     private Set<SportUser> sportUsers;
+
+    @OneToMany(mappedBy = "sportEv", cascade = CascadeType.REMOVE)
+    private Set<Event> events = new HashSet<>();
 }
