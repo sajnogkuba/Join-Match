@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import { AuthProvider } from './Context/authContext';
 import CreateEventPage from './pages/CreateEventPage.tsx';
+import ProfilePage from './pages/ProfilePage.tsx'
+import PrivateRoute from './routes/PrivateRoute.tsx'
 
 const EventsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona wydarzeń</div>
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
@@ -32,6 +34,14 @@ const App: React.FC = () => (
 				<Route path='register' element={<RegisterPage />} />
 				<Route path='stworz-wydarzenie' element={<CreateEventPage />} />
 				<Route path='*' element={<NotFoundPage />} />
+				<Route
+					path="/profile"
+					element={
+						<PrivateRoute>
+							<ProfilePage />
+						</PrivateRoute>
+					}
+				/>
 			</Route>
 		</Routes>
 	</BrowserRouter>

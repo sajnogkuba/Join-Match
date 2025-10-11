@@ -54,7 +54,7 @@ public class UserService {
     }
     public RefreshSupportObject refreshToken(String refreshToken){
         Optional<List<JoinMatchToken>> joinMatchTokenByRefreshToken = joinMatchTokenRepository.getJoinMatchTokenByRefreshToken(refreshToken);
-        if(!joinMatchTokenByRefreshToken.isPresent()){
+        if(joinMatchTokenByRefreshToken.isEmpty()){
             throw new RuntimeException("Wrong refresh token");
         }
         List<JoinMatchToken> joinMatchTokens = joinMatchTokenByRefreshToken.get();
@@ -118,7 +118,7 @@ public class UserService {
     }
     public UserResponseDto getSimpleInfo(String token){
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
-        if(!byTokenValue.isPresent()){
+        if(byTokenValue.isEmpty()){
             throw new IllegalArgumentException("User Not Found");
         }
         User user = byTokenValue.get();

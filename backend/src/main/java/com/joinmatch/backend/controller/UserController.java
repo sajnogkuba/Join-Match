@@ -82,10 +82,10 @@ public class UserController {
         return ResponseEntity.ok("Password changed");
     }
     @GetMapping("/user/details")
-    public ResponseEntity<UserResponseDto> getUserDetails(@RequestBody UserDetailsDto userDetailsDto){
+    public ResponseEntity<UserResponseDto> getUserDetails(@RequestParam String token){
         UserResponseDto simpleInfo;
         try {
-             simpleInfo = userService.getSimpleInfo(userDetailsDto.token());
+             simpleInfo = userService.getSimpleInfo(token);
         }catch (IllegalArgumentException e){
             return ResponseEntity.notFound().build();
         }
