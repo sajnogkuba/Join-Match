@@ -5,7 +5,7 @@ import com.joinmatch.backend.model.UserSavedEvent;
 public record UserSavedEventResponseDto(
         Integer id,
         Integer userId,
-        Long eventId
+        Integer eventId
 ) {
 
     public static UserSavedEventResponseDto fromUserSavedEvent(UserSavedEvent userSavedEvent) {

@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record EventResponseDto(
-        Long eventId,
+        Integer eventId,
         String eventName,
         Integer numberOfParticipants,
         BigDecimal cost,
