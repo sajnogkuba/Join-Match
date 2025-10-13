@@ -34,7 +34,7 @@ public class GoogleAuthController {
 
     @PostMapping("/google")
     public ResponseEntity<?> googleLogin(@RequestBody GoogleAuthRequest req) {
-        GoogleIdToken.Payload payload = tokenVerifier.verify(req.idToken);
+        GoogleIdToken.Payload payload = tokenVerifier.verify(req.idToken());
         if (payload == null) {
             return ResponseEntity.badRequest().body("Invalid Google ID token");
         }
@@ -57,10 +57,8 @@ public class GoogleAuthController {
         // wystaw Twoje tokeny
         TokenSupportObject tokenSupportObject = userService.issueTokensFor(user);
 
-        JwtResponse resp = new JwtResponse();
-        resp.token = tokenSupportObject.getToken();
-        resp.refreshToken = tokenSupportObject.getRefreshToken();
-        resp.email = email;
+        JwtResponse resp = new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
+
 
         return ResponseEntity.ok(resp);
     }

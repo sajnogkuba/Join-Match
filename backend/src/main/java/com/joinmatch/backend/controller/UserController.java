@@ -36,19 +36,13 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
         TokenSupportObject tokenSupportObject = userService.login(request);
-        JwtResponse response = new JwtResponse();
-        response.token = tokenSupportObject.getToken();
-        response.refreshToken = tokenSupportObject.getRefreshToken();
-        response.email = request.email();
+        JwtResponse response = new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),request.email());
         return ResponseEntity.ok(response);
     }
     @PostMapping("/refreshToken")
     public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken){
         RefreshSupportObject refreshObject = userService.refreshToken(refreshToken.refreshToken());
-        JwtResponse response = new JwtResponse();
-        response.token = refreshObject.getTokenSupportObject().getToken();
-        response.refreshToken = refreshObject.getTokenSupportObject().getRefreshToken();
-        response.email = refreshObject.getUser().getEmail();
+        JwtResponse response = new JwtResponse(refreshObject.getTokenSupportObject().getToken(),refreshObject.getTokenSupportObject().getRefreshToken(),refreshObject.getUser().getEmail());
         return ResponseEntity.ok(response);
     }
     @PostMapping("/logout")
@@ -61,11 +55,7 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
     //TODO do przeniesienia do sportControllera
-    @GetMapping("/sports")
-    public ResponseEntity<SportResponse> getSportsByUser(@RequestBody RequestSports requestSports){
-        List<SportWithRatingDto> sports = sportService.getSportsForUser(requestSports.token());
-        return ResponseEntity.ok(new SportResponse(sports));
-    }
+
     @PatchMapping("/changePass")
     public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto){
         try {

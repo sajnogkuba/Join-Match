@@ -1,7 +1,5 @@
 package com.joinmatch.backend.dto;
 
-public class JwtResponse {
-    public String token;
-    public String refreshToken;
-    public String email;
+public record JwtResponse(String token,String refreshToken,String email) {
+
 }
