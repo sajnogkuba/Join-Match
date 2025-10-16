@@ -1,14 +1,12 @@
 // src/pages/MainPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 import BackgroundImage from '../assets/Background.jpg'
-import type { Event } from '../Api/types.ts';
-import axios from 'axios';
-import dayjs from "dayjs";
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import api from '../Api/axios.tsx';
-
-
+import type { Event } from '../Api/types.ts'
+import axios from 'axios'
+import dayjs from 'dayjs'
+import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import api from '../Api/axios.tsx'
 
 // Categories for the filter
 const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Running', 'Yoga', 'Swimming']
@@ -16,68 +14,69 @@ const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Ru
 export const MainPage: React.FC = () => {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [selectedCategory, setSelectedCategory] = useState('All')
-	const [events, setEvents] = useState<Event[]>([]);
-	const [loading, setLoading] = useState<boolean>(true);
-	const [error, setError] = useState<string | null>(null);
-	const [userEmail, setUserEmail] = useState<string | null>(null);
-	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set());
-	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set());
-	const navigate = useNavigate();
+	const [events, setEvents] = useState<Event[]>([])
+	const [loading, setLoading] = useState<boolean>(true)
+	const [error, setError] = useState<string | null>(null)
+	const [userEmail, setUserEmail] = useState<string | null>(null)
+	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
+	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
+	const navigate = useNavigate()
 
 	useEffect(() => {
-		setUserEmail(localStorage.getItem('email'));
-	}, []);
+		setUserEmail(localStorage.getItem('email'))
+	}, [])
 
 	// Fetch user's joined events when we have the email
 	useEffect(() => {
 		const fetchJoined = async () => {
-			if (!userEmail) return;
+			if (!userEmail) return
 			try {
-				const response = await api.get('/user-event/by-user-email', { params: { userEmail } });
-				const ids = new Set<number>((response.data || []).map((ue: { eventId: number }) => ue.eventId));
-				setJoinedEventIds(ids);
+				const response = await api.get('/user-event/by-user-email', { params: { userEmail } })
+				const ids = new Set<number>((response.data || []).map((ue: { eventId: number }) => ue.eventId))
+				setJoinedEventIds(ids)
 			} catch (e) {
-				console.error('Nie udało się pobrać zapisanych wydarzeń użytkownika:', e);
+				console.error('Nie udało się pobrać zapisanych wydarzeń użytkownika:', e)
 			}
-		};
+		}
 
-		fetchJoined();
-	}, [userEmail]);
+		fetchJoined()
+	}, [userEmail])
 
 	// Fetch user's saved events when we have the email
 	useEffect(() => {
 		const fetchSaved = async () => {
-			if (!userEmail) return;
+			if (!userEmail) return
 			try {
-				const response = await api.get('/user-saved-event', { params: { userEmail } });
-				const ids = new Set<number>((response.data || []).map((se: { eventId: number }) => se.eventId));
-				setSavedEventIds(ids);
+				const response = await api.get('/user-saved-event', { params: { userEmail } })
+				const ids = new Set<number>((response.data || []).map((se: { eventId: number }) => se.eventId))
+				setSavedEventIds(ids)
 			} catch (e) {
-				console.error('Nie udało się pobrać ulubionych wydarzeń użytkownika:', e);
+				console.error('Nie udało się pobrać ulubionych wydarzeń użytkownika:', e)
 			}
-		};
+		}
 
-		fetchSaved();
-	}, [userEmail]);
+		fetchSaved()
+	}, [userEmail])
 
 	useEffect(() => {
-		axios.get<Event[]>('http://localhost:8080/api/event')
+		axios
+			.get<Event[]>('http://localhost:8080/api/event')
 			.then(response => {
-				setEvents(response.data);
+				setEvents(response.data)
 			})
 			.catch(err => {
-				setError('Nie udało się pobrać wydarzeń. Spróbuj ponownie później.');
-				console.error('Error fetching events:', err);
+				setError('Nie udało się pobrać wydarzeń. Spróbuj ponownie później.')
+				console.error('Error fetching events:', err)
 			})
 			.finally(() => {
-				setLoading(false);
-			});
-	}, []);
+				setLoading(false)
+			})
+	}, [])
 
 	const handleSignUp = async (eventId: number) => {
 		if (!userEmail) {
-			navigate('/login');
-			return;
+			navigate('/login')
+			return
 		}
 
 		try {
@@ -85,17 +84,17 @@ export const MainPage: React.FC = () => {
 				userEmail: userEmail,
 				eventId: eventId,
 				attendanceStatusId: 1,
-			});
-			setJoinedEventIds(prev => new Set<number>([...prev, eventId]));
+			})
+			setJoinedEventIds(prev => new Set<number>([...prev, eventId]))
 		} catch (err) {
-			console.error('Błąd podczas dołączania do wydarzenia:', err);
+			console.error('Błąd podczas dołączania do wydarzenia:', err)
 		}
-	};
+	}
 
 	const handleSaveEvent = async (eventId: number) => {
 		if (!userEmail) {
-			navigate('/login');
-			return;
+			navigate('/login')
+			return
 		}
 
 		try {
@@ -105,26 +104,25 @@ export const MainPage: React.FC = () => {
 					data: {
 						userEmail: userEmail,
 						eventId: eventId,
-					}
-				});
+					},
+				})
 				setSavedEventIds(prev => {
-					const newSet = new Set(prev);
-					newSet.delete(eventId);
-					return newSet;
-				});
+					const newSet = new Set(prev)
+					newSet.delete(eventId)
+					return newSet
+				})
 			} else {
 				// Save event
 				await api.post('/user-saved-event', {
 					userEmail: userEmail,
 					eventId: eventId,
-				});
-				setSavedEventIds(prev => new Set<number>([...prev, eventId]));
+				})
+				setSavedEventIds(prev => new Set<number>([...prev, eventId]))
 			}
 		} catch (err) {
-			console.error('Błąd podczas zapisywania/usuwania wydarzenia:', err);
+			console.error('Błąd podczas zapisywania/usuwania wydarzenia:', err)
 		}
-	};
-
+	}
 
 	const filteredEvents = events.filter(event => {
 		const matchesSearch =
@@ -187,17 +185,15 @@ export const MainPage: React.FC = () => {
 								<span>Filtry</span>
 							</button>
 							<Link
-								to="/stworz-wydarzenie"
-								className="flex items-center space-x-2 bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition cursor-pointer"
-							>
+								to='/stworz-wydarzenie'
+								className='flex items-center space-x-2 bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition cursor-pointer'>
 								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									className="h-5 w-5"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+									xmlns='http://www.w3.org/2000/svg'
+									className='h-5 w-5'
+									fill='none'
+									viewBox='0 0 24 24'
+									stroke='currentColor'>
+									<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
 								</svg>
 								<span>Stwórz wydarzenie</span>
 							</Link>
@@ -319,7 +315,13 @@ export const MainPage: React.FC = () => {
 									className='bg-black border border-gray-700 rounded-lg overflow-hidden transition hover:bg-gray-900'>
 									{/* image */}
 									<div className='relative'>
-										<img src={`/assets/${event.eventName}.jpeg`} alt={event.eventName} className='w-full h-48 object-cover' />
+										<Link to={`/event/${event.eventId}`} className='block'>
+											<img
+												src={`/assets/${event.eventName}.jpeg`}
+												alt={event.eventName}
+												className='w-full h-48 object-cover'
+											/>
+										</Link>
 										<div className='absolute top-3 right-3'>
 											<span className='inline-block bg-black/70 backdrop-blur-sm text-purple-400 text-sm font-medium px-3 py-1 rounded-lg border border-gray-700'>
 												{event.sportTypeName}
@@ -329,8 +331,12 @@ export const MainPage: React.FC = () => {
 									{/* content */}
 									<div className='p-4 text-gray-300'>
 										<div className='flex justify-between items-start mb-2'>
-											<h3 className='text-lg font-bold'>{event.eventName}</h3>
-											<span className='text-sm'>{dayjs(event.eventDate).format("DD.MM.YYYY HH:mm")}</span>
+											<h3 className='text-lg font-bold'>
+												<Link to={`/event/${event.eventId}`} className='hover:underline'>
+													{event.eventName}
+												</Link>
+											</h3>
+											<span className='text-sm'>{dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}</span>
 										</div>
 										<div className='flex items-center mb-4 text-gray-400'>
 											<svg className='h-5 w-5 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
@@ -366,10 +372,11 @@ export const MainPage: React.FC = () => {
 										</div>
 										{/* actions */}
 										<div className='flex justify-between items-center'>
-									<button
-										className={`${savedEventIds.has(event.eventId) ? 'text-purple-400' : 'text-gray-400 hover:text-white'} text-sm flex items-center space-x-1 transition`}
-										onClick={() => handleSaveEvent(event.eventId)}
-									>
+											<button
+												className={`${
+													savedEventIds.has(event.eventId) ? 'text-purple-400' : 'text-gray-400 hover:text-white'
+												} text-sm flex items-center space-x-1 transition`}
+												onClick={() => handleSaveEvent(event.eventId)}>
 												<svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
 													<path
 														strokeLinecap='round'
@@ -378,19 +385,20 @@ export const MainPage: React.FC = () => {
 														d='M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z'
 													/>
 												</svg>
-										<span>{savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}</span>
+												<span>{savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}</span>
 											</button>
-				<button
-					className={`${joinedEventIds.has(event.eventId)
-						? 'bg-green-600 hover:bg-green-700'
-						: (!userEmail
-							? 'bg-gray-600 hover:bg-gray-600 opacity-90'
-							: 'bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900')} text-white py-2 px-5 rounded-lg transition cursor-pointer`}
-					onClick={() => handleSignUp(event.eventId)}
-					disabled={joinedEventIds.has(event.eventId)}
-				>
-					{joinedEventIds.has(event.eventId) ? 'Dołączono' :  'Dołącz'}
-				</button>
+											<button
+												className={`${
+													joinedEventIds.has(event.eventId)
+														? 'bg-green-600 hover:bg-green-700'
+														: !userEmail
+														? 'bg-gray-600 hover:bg-gray-600 opacity-90'
+														: 'bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900'
+												} text-white py-2 px-5 rounded-lg transition cursor-pointer`}
+												onClick={() => handleSignUp(event.eventId)}
+												disabled={joinedEventIds.has(event.eventId)}>
+												{joinedEventIds.has(event.eventId) ? 'Dołączono' : 'Dołącz'}
+											</button>
 										</div>
 									</div>
 								</div>
@@ -502,7 +510,7 @@ export const MainPage: React.FC = () => {
 				<div
 					className='absolute inset-0 opacity-30'
 					style={{
-						backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath opacity='0.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+						backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath opacity='0.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
 					}}></div>
 				<div className='container mx-auto px-4 relative z-10'>
 					<div className='max-w-3xl mx-auto text-center'>
