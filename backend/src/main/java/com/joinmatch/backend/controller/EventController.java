@@ -32,7 +32,7 @@ public class EventController {
         return ResponseEntity.ok(events);
     }
     @GetMapping("/{id}")
-    public ResponseEntity<EventDetailsResponseDto> getEventById(@PathVariable Long id) {
+    public ResponseEntity<EventDetailsResponseDto> getEventById(@PathVariable Integer id) {
         return ResponseEntity.ok(eventService.getDetailsById(id));
     }
 
