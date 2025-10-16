@@ -7,11 +7,8 @@ import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
-import com.joinmatch.backend.dto.SportObjectRequestDto;
-import com.joinmatch.backend.dto.SportObjectResponseDto;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +31,7 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public EventDetailsResponseDto getDetailsById(Long id) {
+    public EventDetailsResponseDto getDetailsById(Integer id) {
         Event e = eventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
 
@@ -51,7 +48,7 @@ public class EventService {
                 .scoreTeam1(e.getScoreTeam1())
                 .scoreTeam2(e.getScoreTeam2())
 
-                .sportTypeName(e.getSportType().getName())
+                .sportTypeName(e.getSportEv().getName())
                 .sportObjectName(e.getSportObject().getName())
 
                 .sportObjectId(e.getSportObject().getObjectId())

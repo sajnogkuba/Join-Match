@@ -1,5 +1,6 @@
 package com.joinmatch.backend.dto;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class EventDetailsResponseDto {
-    private Long eventId;
+    private Integer eventId;
     private String eventName;
     private Integer numberOfParticipants;
 
