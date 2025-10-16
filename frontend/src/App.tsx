@@ -5,13 +5,13 @@ import Layout from './components/Layout'
 import MainPage from './pages/MainPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import { AuthProvider } from './Context/authContext';
+import { AuthProvider } from './Context/authContext'
 import EventPage from './pages/EventPage'
-import CreateEventPage from './pages/CreateEventPage.tsx';
+import CreateEventPage from './pages/CreateEventPage.tsx'
 import ProfilePage from './pages/ProfilePage.tsx'
 import PrivateRoute from './routes/PrivateRoute.tsx'
+import EventsPage from './pages/EventsPage.tsx'
 
-const EventsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona wydarzeń</div>
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const AboutPage = () => <div className='container mx-auto px-4 py-20 mt-20'>O nas</div>
 const ContactPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Kontakt</div>
@@ -20,31 +20,31 @@ const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>S
 
 const App: React.FC = () => (
 	<AuthProvider>
-	<BrowserRouter>
-		<Routes>
-			<Route path='/' element={<Layout />}>
-				<Route index element={<MainPage />} />
-				<Route path='wydarzenia' element={<EventsPage />} />
-				<Route path='wydarzenia/:id' element={<EventPage />} />
-				<Route path='rankingi' element={<RankingsPage />} />
-				<Route path='o-nas' element={<AboutPage />} />
-				<Route path='kontakt' element={<ContactPage />} />
-				<Route path='faq' element={<FAQPage />} />
-				<Route path='login' element={<LoginPage />} />
-				<Route path='register' element={<RegisterPage />} />
-				<Route path='stworz-wydarzenie' element={<CreateEventPage />} />
-				<Route path='*' element={<NotFoundPage />} />
-				<Route
-					path="/profile"
-					element={
-						<PrivateRoute>
-							<ProfilePage />
-						</PrivateRoute>
-					}
-				/>
-			</Route>
-		</Routes>
-	</BrowserRouter>
+		<BrowserRouter>
+			<Routes>
+				<Route path='/' element={<Layout />}>
+					<Route index element={<MainPage />} />
+					<Route path='events' element={<EventsPage />} />
+					<Route path='event/:id' element={<EventPage />} />
+					<Route path='rankingi' element={<RankingsPage />} />
+					<Route path='o-nas' element={<AboutPage />} />
+					<Route path='kontakt' element={<ContactPage />} />
+					<Route path='faq' element={<FAQPage />} />
+					<Route path='login' element={<LoginPage />} />
+					<Route path='register' element={<RegisterPage />} />
+					<Route path='stworz-wydarzenie' element={<CreateEventPage />} />
+					<Route path='*' element={<NotFoundPage />} />
+					<Route
+						path='/profile'
+						element={
+							<PrivateRoute>
+								<ProfilePage />
+							</PrivateRoute>
+						}
+					/>
+				</Route>
+			</Routes>
+		</BrowserRouter>
 	</AuthProvider>
 )
 
