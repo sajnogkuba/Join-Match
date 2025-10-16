@@ -3,6 +3,7 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.SportTypeResponseDto;
 import com.joinmatch.backend.dto.SportWithRatingDto;
 import com.joinmatch.backend.model.JoinMatchToken;
+import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.SportUser;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.JoinMatchTokenRepository;
@@ -21,8 +22,9 @@ import java.util.Set;
 @Service
 @AllArgsConstructor
 public class SportService {
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
     private final SportRepository sportRepository;
+    private final SportUserRepository sportUserRepository;
 
 
     @Transactional(readOnly = true)
@@ -46,4 +48,26 @@ public class SportService {
                 .map(SportTypeResponseDto::fromSportType)
                 .toList();
     }
-}
+    public void addNewSportForUser(String token, Integer idSport, Integer rating){
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
+        if(byTokenValue.isEmpty()){
+            throw new IllegalArgumentException("Not found user");
+        }
+        Optional<Sport> sportById = sportRepository.findSportById(idSport);
+        if(sportById.isEmpty()) {
+            throw new IllegalArgumentException("Wrong ID");
+        }
+        User user = byTokenValue.get();
+        Sport sport = sportById.get();
+        SportUser sportUser = new SportUser();
+        sportUser.setUser(user);
+        sportUser.setSport(sport);
+        sportUser.setRating(rating);
+        sport.getSportUsers().add(sportUser);
+        user.getSportUsers().add(sportUser);
+        userRepository.save(user);
+        sportUserRepository.save(sportUser);
+        sportRepository.save(sport);
+        }
+    }
+

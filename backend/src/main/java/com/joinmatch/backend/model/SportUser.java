@@ -3,13 +3,17 @@ package com.joinmatch.backend.model;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "sport_user")
+@AllArgsConstructor
+@NoArgsConstructor
 public class SportUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
