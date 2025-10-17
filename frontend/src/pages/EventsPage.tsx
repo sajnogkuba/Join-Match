@@ -1,4 +1,3 @@
-// src/pages/EventsPage.tsx
 import { useEffect, useMemo, useState, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -22,22 +21,8 @@ import {
 
 dayjs.locale('pl')
 
-// TODO: Po wdrożeniu mapy rozważ rozszerzenie typu Event:
-// export type Event = {
-//   ...
-//   latitude?: number;
-//   longitude?: number;
-// }
-
-// Lazy map (react-leaflet) — załadujemy tylko gdy użytkownik przełączy na widok mapy
-const LazyMapView = ({  }: { events: Event[] }) => {
-	// TODO: MAPA — włącz po dodaniu pól latitude/longitude w API i zainstalowaniu react-leaflet + leaflet
-	// Plan na później:
-	// 1) Dodać do typu Event (opcjonalne): latitude?: number; longitude?: number;
-	// 2) Odkomentować lazy import react-leaflet + leaflet.css
-	// 3) Renderować markery dla eventów posiadających współrzędne
-
-	// Na teraz wyświetlamy placeholder zamiast faktycznej mapy (bez zależności i bez błędów builda):
+// Lazy map placeholder — docelowo zastąpisz react-leaflet
+const LazyMapView = ({ }: { events: Event[] }) => {
 	return (
 		<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
 			<div>
@@ -51,30 +36,20 @@ const LazyMapView = ({  }: { events: Event[] }) => {
 	)
 }
 
-// Pomocniczy typ dla sortowania
 type SortKey = 'date_asc' | 'date_desc' | 'price_asc' | 'price_desc' | 'popularity'
-
 const PAGE_SIZE = 12
 
 const EventsPage = () => {
 	const navigate = useNavigate()
-
-	// Stan użytkownika
 	const [userEmail, setUserEmail] = useState<string | null>(null)
-
-	// Dane
 	const [events, setEvents] = useState<Event[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
-
-	// Zbiory ID dla zapisanych i dołączonych
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
-
-	// Filtry / UI stan
 	const [view, setView] = useState<'grid' | 'map'>('grid')
 	const [search, setSearch] = useState('')
-	const [sportFilters, setSportFilters] = useState<string[]>([]) // wielokrotny wybór
+	const [sportFilters, setSportFilters] = useState<string[]>([])
 	const [city, setCity] = useState('')
 	const [onlyFree, setOnlyFree] = useState(false)
 	const [onlyAvailable, setOnlyAvailable] = useState(false)
@@ -83,7 +58,6 @@ const EventsPage = () => {
 	const [priceMin, setPriceMin] = useState<string>('')
 	const [priceMax, setPriceMax] = useState<string>('')
 	const [sort, setSort] = useState<SortKey>('date_asc')
-
 	const [page, setPage] = useState(1)
 
 	useEffect(() => {
@@ -133,83 +107,57 @@ const EventsPage = () => {
 		fetchSaved()
 	}, [userEmail])
 
-	// Kategorie sportów z danych
 	const sports = useMemo(() => {
 		const set = new Set(events.map(e => e.sportTypeName).filter(Boolean))
 		return Array.from(set).sort()
 	}, [events])
 
-	// Miasta z danych (opcjonalnie)
 	const cities = useMemo(() => {
 		const set = new Set(events.map((e: any) => e.city).filter(Boolean))
 		return Array.from(set).sort()
 	}, [events])
 
-	// Filtrowanie i sortowanie w pamięci
 	const filteredSorted = useMemo(() => {
 		let list = [...events]
 
-		// Wyszukiwanie po nazwie lub obiekcie
 		if (search.trim()) {
 			const q = search.toLowerCase()
 			list = list.filter(e => e.eventName.toLowerCase().includes(q) || e.sportObjectName.toLowerCase().includes(q))
 		}
 
-		// Filtr sportów
 		if (sportFilters.length > 0) {
 			const set = new Set(sportFilters)
 			list = list.filter(e => set.has(e.sportTypeName))
 		}
 
-		// Filtr miasta
 		if (city) list = list.filter((e: any) => (e.city || '').toLowerCase() === city.toLowerCase())
-
-		// Data
 		if (dateFrom)
-			list = list.filter(
-				e =>
-					dayjs(e.eventDate).isAfter(dayjs(dateFrom).startOf('day')) ||
-					dayjs(e.eventDate).isSame(dayjs(dateFrom), 'day')
-			)
+			list = list.filter(e => dayjs(e.eventDate).isAfter(dayjs(dateFrom).startOf('day')) || dayjs(e.eventDate).isSame(dayjs(dateFrom), 'day'))
 		if (dateTo)
-			list = list.filter(
-				e => dayjs(e.eventDate).isBefore(dayjs(dateTo).endOf('day')) || dayjs(e.eventDate).isSame(dayjs(dateTo), 'day')
-			)
+			list = list.filter(e => dayjs(e.eventDate).isBefore(dayjs(dateTo).endOf('day')) || dayjs(e.eventDate).isSame(dayjs(dateTo), 'day'))
 
-		// Cena
 		if (onlyFree) list = list.filter((e: any) => Number(e.cost) === 0)
 		if (priceMin) list = list.filter((e: any) => Number(e.cost) >= Number(priceMin))
 		if (priceMax) list = list.filter((e: any) => Number(e.cost) <= Number(priceMax))
-
-		// Dostępne miejsca
 		if (onlyAvailable) list = list.filter(e => e.numberOfParticipants - (e as any).bookedParticipants > 0)
 
-		// Sortowanie
 		list.sort((a, b) => {
 			switch (sort) {
-				case 'date_asc':
-					return +new Date(a.eventDate) - +new Date(b.eventDate)
-				case 'date_desc':
-					return +new Date(b.eventDate) - +new Date(a.eventDate)
-				case 'price_asc':
-					return (a as any).cost - (b as any).cost
-				case 'price_desc':
-					return (b as any).cost - (a as any).cost
-				case 'popularity':
-					return ((b as any).bookedParticipants || 0) - ((a as any).bookedParticipants || 0)
-				default:
-					return 0
+				case 'date_asc': return +new Date(a.eventDate) - +new Date(b.eventDate)
+				case 'date_desc': return +new Date(b.eventDate) - +new Date(a.eventDate)
+				case 'price_asc': return (a as any).cost - (b as any).cost
+				case 'price_desc': return (b as any).cost - (a as any).cost
+				case 'popularity': return ((b as any).bookedParticipants || 0) - ((a as any).bookedParticipants || 0)
+				default: return 0
 			}
 		})
 
 		return list
 	}, [events, search, sportFilters, city, onlyFree, onlyAvailable, dateFrom, dateTo, priceMin, priceMax, sort])
 
-	// Paginacja klientowa
 	const paged = useMemo(() => filteredSorted.slice(0, page * PAGE_SIZE), [filteredSorted, page])
 	const canLoadMore = paged.length < filteredSorted.length
 
-	// Akcje: zapisz / dołącz
 	const handleSave = async (eventId: number) => {
 		if (!userEmail) {
 			navigate('/login')
@@ -263,7 +211,6 @@ const EventsPage = () => {
 
 	return (
 		<div className='min-h-screen bg-[#1f2632] text-zinc-300'>
-			{/* Top */}
 			<header className='relative h-[140px] w-full overflow-hidden'>
 				<div
 					className='absolute inset-0 bg-cover bg-center'
@@ -283,7 +230,7 @@ const EventsPage = () => {
 
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-					{/* Pasek narzędzi */}
+					{/* Pasek wyszukiwania i sortowania */}
 					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
 						<div className='flex flex-1 items-stretch gap-3'>
 							<div className='relative flex-1'>
@@ -302,16 +249,18 @@ const EventsPage = () => {
 							<div className='hidden md:flex items-center gap-2'>
 								<button
 									onClick={() => setView('grid')}
-									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
-										view === 'grid' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-									}`}>
+									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'grid'
+										? 'border-violet-600 text-white'
+										: 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+										}`}>
 									<GridIcon size={16} /> Lista
 								</button>
 								<button
 									onClick={() => setView('map')}
-									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
-										view === 'map' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-									}`}>
+									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'map'
+										? 'border-violet-600 text-white'
+										: 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+										}`}>
 									<MapIcon size={16} /> Mapa
 								</button>
 							</div>
@@ -329,10 +278,7 @@ const EventsPage = () => {
 									<option value='price_desc'>Cena malejąco</option>
 									<option value='popularity'>Popularność</option>
 								</select>
-								<ArrowUpDown
-									className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
-									size={16}
-								/>
+								<ArrowUpDown className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60' size={16} />
 							</div>
 							<button
 								onClick={clearFilters}
@@ -342,137 +288,7 @@ const EventsPage = () => {
 						</div>
 					</div>
 
-					{/* Filtry rozbudowane */}
-					<div className='mt-4 grid grid-cols-1 gap-3 md:grid-cols-4'>
-						{/* Sporty (multi) */}
-						<div>
-							<label className='mb-1 block text-xs text-zinc-400'>Sport</label>
-							<div className='flex flex-wrap gap-2'>
-								{sports.map(s => {
-									const active = sportFilters.includes(s)
-									return (
-										<button
-											key={s}
-											onClick={() => {
-												setPage(1)
-												setSportFilters(prev => (active ? prev.filter(x => x !== s) : [...prev, s]))
-											}}
-											className={`rounded-full px-3 py-1 text-xs ring-1 ${
-												active
-													? 'bg-violet-600 text-white ring-violet-700'
-													: 'bg-zinc-900/60 text-zinc-200 ring-zinc-700 hover:bg-zinc-800'
-											}`}>
-											{s}
-										</button>
-									)
-								})}
-							</div>
-						</div>
-
-						{/* Miasto */}
-						<div>
-							<label className='mb-1 block text-xs text-zinc-400'>Miasto</label>
-							<div className='relative'>
-								<input
-									list='cities'
-									value={city}
-									onChange={e => {
-										setCity(e.target.value)
-										setPage(1)
-									}}
-									placeholder='np. Warszawa'
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
-								/>
-								<datalist id='cities'>
-									{cities.map(c => (
-										<option key={c} value={c} />
-									))}
-								</datalist>
-							</div>
-						</div>
-
-						{/* Zakres dat */}
-						<div className='grid grid-cols-2 gap-2'>
-							<div>
-								<label className='mb-1 block text-xs text-zinc-400'>Od</label>
-								<input
-									type='date'
-									value={dateFrom}
-									onChange={e => {
-										setDateFrom(e.target.value)
-										setPage(1)
-									}}
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
-								/>
-							</div>
-							<div>
-								<label className='mb-1 block text-xs text-zinc-400'>Do</label>
-								<input
-									type='date'
-									value={dateTo}
-									onChange={e => {
-										setDateTo(e.target.value)
-										setPage(1)
-									}}
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
-								/>
-							</div>
-						</div>
-
-						{/* Cena / Dostępność */}
-						<div className='grid grid-cols-2 gap-2'>
-							<div className='flex items-center gap-2'>
-								<input
-									id='free'
-									type='checkbox'
-									checked={onlyFree}
-									onChange={e => {
-										setOnlyFree(e.target.checked)
-										setPage(1)
-									}}
-								/>
-								<label htmlFor='free' className='text-sm'>
-									Tylko darmowe
-								</label>
-							</div>
-							<div className='flex items-center gap-2'>
-								<input
-									id='avail'
-									type='checkbox'
-									checked={onlyAvailable}
-									onChange={e => {
-										setOnlyAvailable(e.target.checked)
-										setPage(1)
-									}}
-								/>
-								<label htmlFor='avail' className='text-sm'>
-									Tylko z miejscami
-								</label>
-							</div>
-							<div className='col-span-2 grid grid-cols-2 gap-2'>
-								<input
-									placeholder='Cena od'
-									value={priceMin}
-									onChange={e => {
-										setPriceMin(e.target.value)
-										setPage(1)
-									}}
-									className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm'
-								/>
-								<input
-									placeholder='Cena do'
-									value={priceMax}
-									onChange={e => {
-										setPriceMax(e.target.value)
-										setPage(1)
-									}}
-									className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm'
-								/>
-							</div>
-						</div>
-					</div>
-
-					{/* Widok */}
+					{/* Wyniki */}
 					<div className='mt-6'>
 						{loading ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
@@ -485,12 +301,11 @@ const EventsPage = () => {
 								{error}
 							</div>
 						) : view === 'map' ? (
-							<Suspense
-								fallback={
-									<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60'>
-										Ładowanie mapy…
-									</div>
-								}>
+							<Suspense fallback={
+								<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60'>
+									Ładowanie mapy…
+								</div>
+							}>
 								<LazyMapView events={filteredSorted} />
 							</Suspense>
 						) : filteredSorted.length === 0 ? (
@@ -503,23 +318,33 @@ const EventsPage = () => {
 							<>
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{paged.map(ev => (
-										<article
-											key={ev.eventId}
-											className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
-											<Link to={`/event/${ev.eventId}`} className='block'>
-												<div className='relative h-40 w-full bg-zinc-800'>
+										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 group'>
+											<Link to={`/event/${ev.eventId}`} className='block relative h-40 w-full bg-zinc-800 overflow-hidden'>
+												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
 													<img
-														src={`/assets/${ev.eventName}.jpeg`}
+														src={ev.imageUrl}
 														alt={ev.eventName}
 														onError={e => {
-															;(e.currentTarget as HTMLImageElement).src = `/assets/Event${ev.eventId}.jpeg`
+															const target = e.currentTarget as HTMLImageElement
+															target.style.display = 'none'
+															const fallback = target.nextElementSibling as HTMLElement
+															if (fallback) fallback.style.display = 'flex'
 														}}
-														className='h-full w-full object-cover'
+														className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
 													/>
-													<span className='absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-violet-200 ring-1 ring-violet-600/40'>
-														{ev.sportTypeName}
-													</span>
+												) : null}
+												<div 
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 transition-transform duration-300 group-hover:scale-105 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}
+												>
+													<div className='text-center text-zinc-400'>
+														<div className='text-4xl mb-2'>JoinMatch</div>
+														<div className='text-sm font-medium'>{ev.sportTypeName}</div>
+													</div>
 												</div>
+												<span className='absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-violet-200 ring-1 ring-violet-600/40'>
+													{ev.sportTypeName}
+												</span>
 											</Link>
 											<div className='p-4'>
 												<div className='flex items-start justify-between gap-2'>
@@ -530,15 +355,15 @@ const EventsPage = () => {
 													</h3>
 													<button
 														onClick={() => handleSave(ev.eventId)}
-														className={`rounded-full p-2 ring-1 ${
-															savedEventIds.has(ev.eventId)
-																? 'text-violet-300 ring-violet-700/40 bg-zinc-800'
-																: 'text-zinc-300 ring-zinc-700 hover:bg-zinc-800'
-														}`}
+														className={`rounded-full p-2 ring-1 ${savedEventIds.has(ev.eventId)
+															? 'text-violet-300 ring-violet-700/40 bg-zinc-800'
+															: 'text-zinc-300 ring-zinc-700 hover:bg-zinc-800'
+															}`}
 														aria-label='Zapisz wydarzenie'>
 														<Bookmark size={16} />
 													</button>
 												</div>
+
 												<div className='mt-2 grid grid-cols-1 gap-2 text-sm text-zinc-300'>
 													<div className='inline-flex items-center gap-2'>
 														<CalendarDays size={16} />
@@ -560,15 +385,15 @@ const EventsPage = () => {
 														}).format((ev as any).cost || 0)}
 													</div>
 												</div>
+
 												<div className='mt-4 flex items-center justify-between'>
 													<button
 														onClick={() => handleJoin(ev.eventId)}
 														disabled={joinedEventIds.has(ev.eventId)}
-														className={`rounded-xl px-3 py-2 text-sm font-semibold text-white ${
-															joinedEventIds.has(ev.eventId)
-																? 'bg-zinc-700 text-zinc-300'
-																: 'bg-violet-600 hover:bg-violet-500'
-														}`}>
+														className={`rounded-xl px-3 py-2 text-sm font-semibold text-white ${joinedEventIds.has(ev.eventId)
+															? 'bg-zinc-700 text-zinc-300'
+															: 'bg-violet-600 hover:bg-violet-500'
+															}`}>
 														{joinedEventIds.has(ev.eventId) ? 'Dołączono' : 'Dołącz'}
 													</button>
 													<Link

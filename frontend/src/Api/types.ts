@@ -18,6 +18,7 @@ export interface Event {
 	eventDate: Date
 	sportTypeName: string
 	bookedParticipants: number
+	imageUrl?: string
 	// Optional fields commonly returned by the API/UI
 	coverUrl?: string
 	city?: string

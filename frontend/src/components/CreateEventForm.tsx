@@ -16,6 +16,7 @@ type FormErrors = {
   eventDate?: string;
   eventTime?: string;
   placeId?: string;
+  eventImage?: string;
 };
 
 export default function CreateEventForm() {
@@ -27,8 +28,9 @@ export default function CreateEventForm() {
   const [price, setPrice] = useState<number | "">(0);
   const [maxParticipants, setMaxParticipants] = useState<number | "">("");
   const [eventDate, setEventDate] = useState("");
-  const [eventTime, setEventTime] = useState(""); // HH:mm
+  const [eventTime, setEventTime] = useState(""); 
   const [placeId, setPlaceId] = useState<number>(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [sportTypes, setSportTypes] = useState<SportType[]>([]);
   const [sportObjects, setSportObjects] = useState<SportObject[]>([]);
@@ -37,6 +39,7 @@ export default function CreateEventForm() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverOk, setServerOk] = useState<string | null>(null);
 
@@ -97,6 +100,16 @@ export default function CreateEventForm() {
 
     if (!placeId || placeId <= 0) newErrors.placeId = "Wybierz miejsce.";
 
+    if (selectedFile) {
+      const maxSize = 5 * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+        newErrors.eventImage = "Plik nie może być większy niż 5MB.";
+      }
+      if (!selectedFile.type.startsWith('image/')) {
+        newErrors.eventImage = "Wybierz plik graficzny (JPG, PNG, GIF).";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -115,6 +128,7 @@ export default function CreateEventForm() {
     setEventDate("");
     setEventTime("");
     setPlaceId(0);
+    setSelectedFile(null);
     setErrors({});
   };
 
@@ -129,21 +143,38 @@ export default function CreateEventForm() {
       return;
     }
 
-    const payload = {
-      eventName: eventName.trim(),
-      numberOfParticipants: Number(maxParticipants),
-      cost: free ? 0 : Number(price),
-      ownerEmail,
-      sportObjectId: placeId,
-      eventVisibilityId: isPrivate ? 2 : 1, // dopasuj do swojej tabeli visibility
-      status: "PLANNED",                    // dopasuj do enuma po stronie BE
-      eventDate: toLocalDateTime(eventDate, eventTime),
-      sportTypeId: sportId,
-      minLevel: level
-    };
-
     try {
       setSubmitting(true);
+      
+      let imageUrl = null;
+      if (selectedFile) {
+        setUploadingImage(true);
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        
+        const uploadResponse = await api.post('images/upload/event', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        imageUrl = uploadResponse.data;
+        setUploadingImage(false);
+      }
+
+      const payload = {
+        eventName: eventName.trim(),
+        numberOfParticipants: Number(maxParticipants),
+        cost: free ? 0 : Number(price),
+        ownerEmail,
+        sportObjectId: placeId,
+        eventVisibilityId: isPrivate ? 2 : 1,
+        status: "PLANNED",
+        eventDate: toLocalDateTime(eventDate, eventTime),
+        sportTypeId: sportId,
+        minLevel: level,
+        imageUrl: imageUrl
+      };
+
       await api.post('/event', payload);
       setServerOk("Wydarzenie utworzone ✅");
       resetForm();
@@ -152,6 +183,7 @@ export default function CreateEventForm() {
       setServerError(`Nie udało się utworzyć wydarzenia: ${msg}`);
     } finally {
       setSubmitting(false);
+      setUploadingImage(false);
     }
   };
 
@@ -330,6 +362,25 @@ export default function CreateEventForm() {
             </select>
             {errors.placeId && <div id="place-error">{errorText(errors.placeId)}</div>}
           </div>
+
+          <div className={card}>
+            <label className="text-gray-400 text-sm mb-1 block" htmlFor="eventImage">Zdjęcie wydarzenia:</label>
+            <input
+              type="file"
+              id="eventImage"
+              accept="image/*"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              className={`w-full p-2 border rounded bg-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 ${errors.eventImage ? inputErrorStyle : "border-gray-300"}`}
+              aria-invalid={!!errors.eventImage}
+              aria-describedby={errors.eventImage ? "eventImage-error" : undefined}
+            />
+            {selectedFile && (
+              <p className="mt-2 text-sm text-gray-500">
+                Wybrano: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            )}
+            {errors.eventImage && <div id="eventImage-error">{errorText(errors.eventImage)}</div>}
+          </div>
         </div>
 
         <div className="pt-2">
@@ -338,7 +389,7 @@ export default function CreateEventForm() {
             className="bg-purple-600 text-white px-8 py-2 rounded hover:bg-purple-700 transition-colors w-full disabled:opacity-60"
             disabled={loading || submitting}
           >
-            {submitting ? "Tworzenie..." : "Stwórz Wydarzenie"}
+            {uploadingImage ? "Przesyłanie zdjęcia..." : submitting ? "Tworzenie..." : "Stwórz Wydarzenie"}
           </button>
         </div>
       </form>

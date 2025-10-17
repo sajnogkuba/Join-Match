@@ -171,12 +171,29 @@ const MainPage: React.FC = () => {
 									transition={{ duration: 0.4 }}
 									className="group relative overflow-hidden rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-violet-600/40 transition-all hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(139,92,246,0.2)]"
 								>
-									<Link to={`/event/${event.eventId}`}>
-										<img
-											src={`https://source.unsplash.com/collection/190727/600x300?sig=${event.eventId}`}
-											alt={event.eventName}
-											className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-500"
-										/>
+									<Link to={`/event/${event.eventId}`} className="block relative h-48 w-full bg-zinc-800 overflow-hidden">
+										{event.imageUrl && event.imageUrl.trim() !== '' ? (
+											<img
+												src={event.imageUrl}
+												alt={event.eventName}
+												onError={e => {
+													const target = e.currentTarget as HTMLImageElement
+													target.style.display = 'none'
+													const fallback = target.nextElementSibling as HTMLElement
+													if (fallback) fallback.style.display = 'flex'
+												}}
+												className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+											/>
+										) : null}
+										<div 
+											className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${event.imageUrl && event.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+											style={{ display: event.imageUrl && event.imageUrl.trim() !== '' ? 'none' : 'flex' }}
+										>
+											<div className="text-center text-zinc-400">
+												<div className="text-4xl mb-2">JoinMatch</div>
+												<div className="text-sm font-medium">{event.sportTypeName}</div>
+											</div>
+										</div>
 									</Link>
 									<div className="p-5">
 										<h3 className="text-lg font-semibold text-white mb-1">{event.eventName}</h3>
