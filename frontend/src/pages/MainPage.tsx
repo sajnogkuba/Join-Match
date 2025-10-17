@@ -1,532 +1,261 @@
 // src/pages/MainPage.tsx
 import { useEffect, useState } from 'react'
-import BackgroundImage from '../assets/Background.jpg'
-import type { Event } from '../Api/types.ts'
-import axios from 'axios'
+import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
-import { Link } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { MapPin, CalendarDays, Bookmark, Users } from 'lucide-react'
+import BackgroundImage from '../assets/Background.jpg'
 import api from '../Api/axios.tsx'
+import type { Event } from '../Api/types.ts'
 
-// Categories for the filter
 const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Running', 'Yoga', 'Swimming']
 
-export const MainPage: React.FC = () => {
+const MainPage: React.FC = () => {
 	const [searchQuery, setSearchQuery] = useState('')
 	const [selectedCategory, setSelectedCategory] = useState('All')
 	const [events, setEvents] = useState<Event[]>([])
-	const [loading, setLoading] = useState<boolean>(true)
+	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
 	const navigate = useNavigate()
 
-	useEffect(() => {
-		setUserEmail(localStorage.getItem('email'))
-	}, [])
+	useEffect(() => setUserEmail(localStorage.getItem('email')), [])
 
-	// Fetch user's joined events when we have the email
 	useEffect(() => {
-		const fetchJoined = async () => {
-			if (!userEmail) return
+		const fetchData = async () => {
 			try {
-				const response = await api.get('/user-event/by-user-email', { params: { userEmail } })
-				const ids = new Set<number>((response.data || []).map((ue: { eventId: number }) => ue.eventId))
-				setJoinedEventIds(ids)
-			} catch (e) {
-				console.error('Nie udało się pobrać zapisanych wydarzeń użytkownika:', e)
-			}
-		}
-
-		fetchJoined()
-	}, [userEmail])
-
-	// Fetch user's saved events when we have the email
-	useEffect(() => {
-		const fetchSaved = async () => {
-			if (!userEmail) return
-			try {
-				const response = await api.get('/user-saved-event', { params: { userEmail } })
-				const ids = new Set<number>((response.data || []).map((se: { eventId: number }) => se.eventId))
-				setSavedEventIds(ids)
-			} catch (e) {
-				console.error('Nie udało się pobrać ulubionych wydarzeń użytkownika:', e)
-			}
-		}
-
-		fetchSaved()
-	}, [userEmail])
-
-	useEffect(() => {
-		axios
-			.get<Event[]>('http://localhost:8080/api/event')
-			.then(response => {
-				setEvents(response.data)
-			})
-			.catch(err => {
-				setError('Nie udało się pobrać wydarzeń. Spróbuj ponownie później.')
-				console.error('Error fetching events:', err)
-			})
-			.finally(() => {
+				const { data } = await api.get('/event')
+				setEvents(data)
+			} catch {
+				setError('Nie udało się pobrać wydarzeń.')
+			} finally {
 				setLoading(false)
-			})
+			}
+		}
+		fetchData()
 	}, [])
+
+	useEffect(() => {
+		if (!userEmail) return
+		api.get('/user-event/by-user-email', { params: { userEmail } })
+			.then(({ data }) => setJoinedEventIds(new Set(data.map((x: any) => x.eventId))))
+			.catch(() => {})
+		api.get('/user-saved-event', { params: { userEmail } })
+			.then(({ data }) => setSavedEventIds(new Set(data.map((x: any) => x.eventId))))
+			.catch(() => {})
+	}, [userEmail])
 
 	const handleSignUp = async (eventId: number) => {
-		if (!userEmail) {
-			navigate('/login')
-			return
-		}
-
+		if (!userEmail) return navigate('/login')
 		try {
-			await api.post('/user-event', {
-				userEmail: userEmail,
-				eventId: eventId,
-				attendanceStatusId: 1,
-			})
-			setJoinedEventIds(prev => new Set<number>([...prev, eventId]))
-		} catch (err) {
-			console.error('Błąd podczas dołączania do wydarzenia:', err)
-		}
+			await api.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+			setJoinedEventIds(prev => new Set([...prev, eventId]))
+		} catch {}
 	}
 
 	const handleSaveEvent = async (eventId: number) => {
-		if (!userEmail) {
-			navigate('/login')
-			return
-		}
-
+		if (!userEmail) return navigate('/login')
 		try {
 			if (savedEventIds.has(eventId)) {
-				// Delete saved event
-				await api.delete('/user-saved-event', {
-					data: {
-						userEmail: userEmail,
-						eventId: eventId,
-					},
-				})
-				setSavedEventIds(prev => {
-					const newSet = new Set(prev)
-					newSet.delete(eventId)
-					return newSet
+				await api.delete('/user-saved-event', { data: { userEmail, eventId } })
+				setSavedEventIds(p => {
+					const s = new Set(p)
+					s.delete(eventId)
+					return s
 				})
 			} else {
-				// Save event
-				await api.post('/user-saved-event', {
-					userEmail: userEmail,
-					eventId: eventId,
-				})
-				setSavedEventIds(prev => new Set<number>([...prev, eventId]))
+				await api.post('/user-saved-event', { userEmail, eventId })
+				setSavedEventIds(p => new Set([...p, eventId]))
 			}
-		} catch (err) {
-			console.error('Błąd podczas zapisywania/usuwania wydarzenia:', err)
-		}
+		} catch {}
 	}
 
-	const filteredEvents = events.filter(event => {
-		const matchesSearch =
-			event.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			event.sportObjectName.toLowerCase().includes(searchQuery.toLowerCase())
-
-		const matchesCategory = selectedCategory === 'All' || event.sportTypeName === selectedCategory
-
-		return matchesSearch && matchesCategory
+	const filteredEvents = events.filter(e => {
+		const matchName = e.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			e.sportObjectName.toLowerCase().includes(searchQuery.toLowerCase())
+		const matchCat = selectedCategory === 'All' || e.sportTypeName === selectedCategory
+		return matchName && matchCat
 	})
 
 	return (
-		<div className='bg-gray-900'>
-			{/* Hero Section */}
+		<div className="bg-[#0d0d10] text-zinc-100">
+			{/* HERO */}
 			<section
-				className="relative text-white py-20 bg-cover bg-center before:content-[''] before:absolute before:inset-0 before:bg-black/45"
-				style={{
-					backgroundImage: `url(${BackgroundImage})`,
-				}}>
-				<div className='relative z-10 container mx-auto px-4 text-center'>
-					<div className='container mx-auto px-4 text-center'>
-						<h1 className='text-4xl md:text-5xl font-bold mb-4'>Znajdź idealne wydarzenie sportowe</h1>
-						<p className='text-xl md:max-w-2xl mx-auto mb-8'>
-							Dołącz, organizuj i odkrywaj amatorskie wydarzenia sportowe w swojej okolicy. Łatwe rezerwacje i
-							zarządzanie zespołem.
-						</p>
-						<div className='flex justify-center'>
-							<button className='bg-white text-purple-900 font-bold py-3 px-8 rounded-lg mr-4 hover:bg-gray-100 transition-colors shadow-lg cursor-pointer'>
-								Znajdź Eventy
-							</button>
-							<button className='bg-purple-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-600 transition-colors shadow-lg cursor-pointer'>
-								Znajdź Mecze
-							</button>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Search Section  */}
-			<section className='py-12 bg-black relative z-10 shadow-2xl'>
-				<div className='absolute top-0 left-0 w-full h-16 bg-gradient-to-b from-purple-900/30 to-transparent'></div>
-				<div className='absolute bottom-0 right-0 w-1/4 h-32 bg-gradient-to-tl from-purple-600/20 to-transparent rounded-full blur-3xl'></div>
-				<div className='absolute top-12 left-12 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl'></div>
-
-				<div className='container mx-auto px-4 relative z-10'>
-					<div className='flex flex-col md:flex-row items-center justify-between mb-8'>
-						<h2 className='text-3xl font-bold text-white mb-4 md:mb-0'>
-							<span className='text-purple-400'>Znajdź</span> idealne wydarzenie
-						</h2>
-						<div className='flex space-x-4'>
-							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition cursor-pointer'>
-								<svg
-									xmlns='http://www.w3.org/2000/svg'
-									className='h-5 w-5'
-									fill='none'
-									viewBox='0 0 24 24'
-									stroke='currentColor'>
-									<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 6v6m0 0v6m0-6h6m-6 0H6' />
-								</svg>
-								<span>Filtry</span>
-							</button>
-							<Link
-								to='/stworz-wydarzenie'
-								className='flex items-center space-x-2 bg-purple-700 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition cursor-pointer'>
-								<svg
-									xmlns='http://www.w3.org/2000/svg'
-									className='h-5 w-5'
-									fill='none'
-									viewBox='0 0 24 24'
-									stroke='currentColor'>
-									<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' />
-								</svg>
-								<span>Stwórz wydarzenie</span>
-							</Link>
-						</div>
-					</div>
-
-					<div className='bg-black rounded-2xl shadow-lg border border-gray-800 p-6 backdrop-blur-sm'>
-						<div className='flex flex-col md:flex-row gap-4'>
-							{/* Search Input */}
-							<div className='flex-grow relative'>
-								<div className='absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none'>
-									<svg className='h-5 w-5 text-purple-400' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-										<path
-											strokeLinecap='round'
-											strokeLinejoin='round'
-											strokeWidth={2}
-											d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
-										/>
-									</svg>
-								</div>
-								<input
-									type='text'
-									className='pl-12 pr-4 py-4 w-full rounded-xl bg-white border border-white text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-									placeholder='Co chcesz zagrać dzisiaj?'
-									value={searchQuery}
-									onChange={e => setSearchQuery(e.target.value)}
-								/>
-							</div>
-
-							{/* Category Dropdown */}
-							<div className='md:w-64'>
-								<div className='relative'>
-									<select
-										className='appearance-none w-full py-4 px-4 rounded-xl bg-white border border-white text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
-										value={selectedCategory}
-										onChange={e => setSelectedCategory(e.target.value)}>
-										{CATEGORIES.map(category => (
-											<option key={category} value={category}>
-												{category}
-											</option>
-										))}
-									</select>
-									<div className='pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black'>
-										<svg className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-											<path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
-										</svg>
-									</div>
-								</div>
-							</div>
-
-							{/* Search Button */}
-							<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-4 px-8 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 cursor-pointer'>
-								Szukaj
-							</button>
-						</div>
-
-						{/* Popular Tags */}
-						<div className='mt-6 flex flex-wrap gap-2'>
-							<span className='text-gray-400 self-center'>Popularne:</span>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
-								Piłka nożna
-							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
-								Koszykówka
-							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
-								Siatkówka
-							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
-								Tenis
-							</button>
-							<button className='px-3 py-1 rounded-full bg-black hover:bg-gray-950 text-purple-400 border border-gray-700 text-sm transition cursor-pointer'>
-								Bieganie
-							</button>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Suggested Events Section */}
-			<section className='py-16 bg-black'>
-				<div className='container mx-auto px-4'>
-					<div className='flex flex-col md:flex-row justify-between items-center mb-10'>
-						<div>
-							<h2 className='text-3xl font-bold text-white mb-2'>Wydarzenia polecane</h2>
-							<p className='text-gray-400'>Odkryj popularne wydarzenia w Twojej okolicy</p>
-						</div>
-						<div className='mt-4 md:mt-0 flex space-x-3'>
-							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition cursor-pointer'>
-								<svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' viewBox='0 0 20 20' fill='currentColor'>
-									<path d='M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z' />
-								</svg>
-								<span>Filtruj</span>
-							</button>
-							<button className='flex items-center space-x-2 bg-black border border-gray-700 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-900 transition cursor-pointer'>
-								<svg
-									xmlns='http://www.w3.org/2000/svg'
-									className='h-5 w-5'
-									fill='none'
-									viewBox='0 0 24 24'
-									stroke='currentColor'>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M9 20l-5.447-2.724A2 2 0 013 15.382V5.618a2 2 0 011.553-1.894l5-1.25a2 2 0 01.894 0l5 1.25A2 2 0 0121 5.618v9.764a2 2 0 01-1.553 1.894L15 20M9 20V10M9 20l6-2.727M15 10V20'
-									/>
-								</svg>
-								<span>Mapa</span>
-							</button>
-						</div>
-					</div>
-
-					{filteredEvents.length > 0 ? (
-						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
-							{filteredEvents.map(event => (
-								<div
-									key={event.eventId}
-									className='bg-black border border-gray-700 rounded-lg overflow-hidden transition hover:bg-gray-900'>
-									{/* image */}
-									<div className='relative'>
-										<Link to={`/event/${event.eventId}`} className='block'>
-											<img
-												src={`/assets/${event.eventName}.jpeg`}
-												alt={event.eventName}
-												className='w-full h-48 object-cover'
-											/>
-										</Link>
-										<div className='absolute top-3 right-3'>
-											<span className='inline-block bg-black/70 backdrop-blur-sm text-purple-400 text-sm font-medium px-3 py-1 rounded-lg border border-gray-700'>
-												{event.sportTypeName}
-											</span>
-										</div>
-									</div>
-									{/* content */}
-									<div className='p-4 text-gray-300'>
-										<div className='flex justify-between items-start mb-2'>
-											<h3 className='text-lg font-bold'>
-												<Link to={`/event/${event.eventId}`} className='hover:underline'>
-													{event.eventName}
-												</Link>
-											</h3>
-											<span className='text-sm'>{dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}</span>
-										</div>
-										<div className='flex items-center mb-4 text-gray-400'>
-											<svg className='h-5 w-5 mr-2' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-												<path
-													strokeLinecap='round'
-													strokeLinejoin='round'
-													strokeWidth={2}
-													d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
-												/>
-												<path
-													strokeLinecap='round'
-													strokeLinejoin='round'
-													strokeWidth={2}
-													d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
-												/>
-											</svg>
-											<span>{event.sportObjectName}</span>
-										</div>
-										{/* progress */}
-										<div className='mb-4'>
-											<div className='flex justify-between text-sm mb-1'>
-												<span className='text-gray-400'>Zapełnienie</span>
-												<span className='text-purple-400'>
-													{event.bookedParticipants}/{event.numberOfParticipants}
-												</span>
-											</div>
-											<div className='w-full bg-gray-700 rounded-full h-2'>
-												<div
-													className='h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400'
-													style={{ width: `${(event.bookedParticipants / event.numberOfParticipants) * 100}%` }}
-												/>
-											</div>
-										</div>
-										{/* actions */}
-										<div className='flex justify-between items-center'>
-											<button
-												className={`${
-													savedEventIds.has(event.eventId) ? 'text-purple-400' : 'text-gray-400 hover:text-white'
-												} text-sm flex items-center space-x-1 transition`}
-												onClick={() => handleSaveEvent(event.eventId)}>
-												<svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-													<path
-														strokeLinecap='round'
-														strokeLinejoin='round'
-														strokeWidth={2}
-														d='M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z'
-													/>
-												</svg>
-												<span>{savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}</span>
-											</button>
-											<button
-												className={`${
-													joinedEventIds.has(event.eventId)
-														? 'bg-green-600 hover:bg-green-700'
-														: !userEmail
-														? 'bg-gray-600 hover:bg-gray-600 opacity-90'
-														: 'bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900'
-												} text-white py-2 px-5 rounded-lg transition cursor-pointer`}
-												onClick={() => handleSignUp(event.eventId)}
-												disabled={joinedEventIds.has(event.eventId)}>
-												{joinedEventIds.has(event.eventId) ? 'Dołączono' : 'Dołącz'}
-											</button>
-										</div>
-									</div>
-								</div>
-							))}
-						</div>
-					) : (
-						<div className='text-center py-16 bg-gray-800/50 rounded-xl border border-gray-700'>
-							<div className='text-5xl mb-4 opacity-60'>🔍</div>
-							<h3 className='text-xl font-medium text-white mb-3'>Nie znaleziono wydarzeń</h3>
-							<p className='text-gray-400 mb-6'>Zmień kryteria wyszukiwania lub stwórz własne wydarzenie!</p>
-							<button className='mt-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-8 rounded-lg hover:from-purple-700 hover:to-purple-900 transition cursor-pointer'>
-								Stwórz własne wydarzenie
-							</button>
-						</div>
-					)}
-
-					{filteredEvents.length > 0 && (
-						<div className='text-center mt-12'>
-							<button className='bg-transparent border border-purple-600 text-purple-400 py-3 px-8 rounded-lg hover:bg-purple-900/20 transition'>
-								Zobacz wszystkie wydarzenia
-							</button>
-						</div>
-					)}
-				</div>
-			</section>
-
-			{/* Features Section */}
-			<section className='py-20 bg-black relative'>
-				<div className='absolute top-0 left-0 w-full h-16 bg-gradient-to-b from-gray-900 to-transparent'></div>
-				<div className='absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,40,200,0.05),transparent_60%)]'></div>
-
-				<div className='container mx-auto px-4 relative z-10'>
-					<h2 className='text-3xl font-bold text-center text-white mb-4'>Dlaczego JoinMatch?</h2>
-					<p className='text-gray-400 text-center max-w-2xl mx-auto mb-16'>
-						Platforma która łączy pasjonatów sportu i umożliwia organizację wydarzeń na nowym poziomie
+				className="relative min-h-[85vh] flex items-center justify-center text-center bg-cover bg-center overflow-hidden"
+				style={{ backgroundImage: `url(${BackgroundImage})` }}
+			>
+				<div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/90" />
+				<div className="relative z-10 px-4 max-w-3xl">
+					<h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-tight">
+						Odkrywaj <span className="text-violet-400">sportowe emocje</span> w swoim mieście
+					</h1>
+					<p className="text-lg md:text-xl text-zinc-300 mb-10">
+						Znajdź wydarzenia, dołącz do drużyn i graj z ludźmi, którzy dzielą Twoją pasję.
 					</p>
-
-					<div className='grid grid-cols-1 md:grid-cols-3 gap-12'>
-						<div className='bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-2xl border border-gray-700 shadow-lg hover:shadow-purple-900/10 transition-all hover:-translate-y-1 group'>
-							<div className='bg-gradient-to-br from-purple-800 to-purple-600 rounded-xl w-16 h-16 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-900/30 group-hover:shadow-purple-900/50 transition-all'>
-								<svg className='h-8 w-8 text-white' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-									/>
-								</svg>
-							</div>
-							<h3 className='text-xl font-bold text-center text-white mb-4 group-hover:text-purple-400 transition-colors'>
-								Proste planowanie
-							</h3>
-							<p className='text-gray-400 text-center'>
-								Zarządzaj swoim kalendarzem sportowym, otrzymuj powiadomienia o nadchodzących wydarzeniach i nigdy nie
-								przegap okazji do gry.
-							</p>
-						</div>
-
-						<div className='bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-2xl border border-gray-700 shadow-lg hover:shadow-purple-900/10 transition-all hover:-translate-y-1 group'>
-							<div className='bg-gradient-to-br from-purple-800 to-purple-600 rounded-xl w-16 h-16 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-900/30 group-hover:shadow-purple-900/50 transition-all'>
-								<svg className='h-8 w-8 text-white' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'
-									/>
-								</svg>
-							</div>
-							<h3 className='text-xl font-bold text-center text-white mb-4 group-hover:text-purple-400 transition-colors'>
-								Zarządzanie drużyną
-							</h3>
-							<p className='text-gray-400 text-center'>
-								Twórz zespoły, zapraszaj znajomych i monitoruj postępy. Komunikacja i organizacja w jednym miejscu.
-							</p>
-						</div>
-
-						<div className='bg-gradient-to-b from-gray-800 to-gray-900 p-8 rounded-2xl border border-gray-700 shadow-lg hover:shadow-purple-900/10 transition-all hover:-translate-y-1 group'>
-							<div className='bg-gradient-to-br from-purple-800 to-purple-600 rounded-xl w-16 h-16 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-900/30 group-hover:shadow-purple-900/50 transition-all'>
-								<svg className='h-8 w-8 text-white' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
-									/>
-								</svg>
-							</div>
-							<h3 className='text-xl font-bold text-center text-white mb-4 group-hover:text-purple-400 transition-colors'>
-								Rezerwacja obiektów
-							</h3>
-							<p className='text-gray-400 text-center'>
-								Znajdź i zarezerwuj idealne miejsca na swoje wydarzenia sportowe, z aktualną dostępnością w czasie
-								rzeczywistym.
-							</p>
-						</div>
+					<div className="flex flex-col sm:flex-row justify-center gap-4">
+						<Link
+							to="/events"
+							className="bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900 px-8 py-4 rounded-xl font-semibold text-white shadow-lg shadow-violet-900/40 transition-all hover:-translate-y-0.5"
+						>
+							Zobacz wydarzenia
+						</Link>
+						<Link
+							to="/stworz-wydarzenie"
+							className="bg-white/10 border border-white/20 px-8 py-4 rounded-xl font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5"
+						>
+							Stwórz własne
+						</Link>
 					</div>
+				</div>
+				<div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce text-gray-400">
+					<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+					</svg>
+				</div>
+			</section>
 
-					<div className='mt-16 text-center'>
-						<button className='bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-10 rounded-xl hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/20 hover:shadow-purple-900/40 cursor-pointer'>
-							Poznaj wszystkie funkcje
+			{/* SEARCH BAR */}
+			<section className="relative z-20 -mt-16 px-4">
+				<div className="mx-auto max-w-5xl bg-black/60 backdrop-blur-xl rounded-3xl p-6 shadow-[0_0_30px_rgba(0,0,0,0.6)] border border-white/10">
+					<div className="flex flex-col md:flex-row gap-4">
+						<input
+							type="text"
+							placeholder="Czego szukasz?"
+							value={searchQuery}
+							onChange={e => setSearchQuery(e.target.value)}
+							className="flex-1 rounded-xl bg-zinc-900/70 border border-zinc-700 px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent"
+						/>
+						<select
+							value={selectedCategory}
+							onChange={e => setSelectedCategory(e.target.value)}
+							className="md:w-64 rounded-xl bg-zinc-900/70 border border-zinc-700 px-4 py-3 text-white focus:ring-2 focus:ring-violet-600"
+						>
+							{CATEGORIES.map(c => <option key={c}>{c}</option>)}
+						</select>
+						<button className="bg-gradient-to-r from-violet-600 to-violet-800 text-white font-medium py-3 px-8 rounded-xl hover:from-violet-700 hover:to-violet-900 transition-all shadow-lg shadow-violet-900/30">
+							Szukaj
 						</button>
 					</div>
 				</div>
 			</section>
 
-			{/* CTA Section */}
-			<section className='py-16 bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 relative overflow-hidden'>
-				<div
-					className='absolute inset-0 opacity-30'
-					style={{
-						backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath opacity='0.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-					}}></div>
-				<div className='container mx-auto px-4 relative z-10'>
-					<div className='max-w-3xl mx-auto text-center'>
-						<h2 className='text-4xl font-bold text-white mb-6'>Gotowy do akcji?</h2>
-						<p className='text-purple-200 text-xl mb-10'>
-							Dołącz do tysięcy pasjonatów sportu, którzy każdego dnia odkrywają nowe wydarzenia, zawierają nowe
-							znajomości i rozwijają swoje umiejętności.
-						</p>
-						<div className='flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 justify-center'>
-							<button className='bg-white text-purple-900 font-bold py-4 px-10 rounded-xl hover:bg-gray-100 transition-colors shadow-xl hover:shadow-white/20 cursor-pointer'>
-								Zarejestruj się za darmo
-							</button>
-							<button className='bg-transparent border-2 border-white text-white font-bold py-4 px-10 rounded-xl hover:bg-white/10 transition-colors'>
-								Dowiedz się więcej
-							</button>
+			{/* EVENTS */}
+			<section className="py-20 bg-black">
+				<div className="container mx-auto px-4">
+					<div className="flex flex-col md:flex-row justify-between items-center mb-10">
+						<div>
+							<h2 className="text-3xl font-bold text-white mb-2">Polecane wydarzenia</h2>
+							<p className="text-gray-400">Zobacz, co dzieje się w Twojej okolicy</p>
 						</div>
+						<Link
+							to="/events"
+							className="mt-4 md:mt-0 bg-violet-700 hover:bg-violet-600 text-white px-5 py-2 rounded-xl transition"
+						>
+							Wszystkie
+						</Link>
+					</div>
+
+					{loading ? (
+						<div className="text-center py-16 text-gray-400">Ładowanie...</div>
+					) : error ? (
+						<div className="text-center py-16 text-red-400">{error}</div>
+					) : filteredEvents.length > 0 ? (
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+							{filteredEvents.slice(0, 6).map(event => (
+								<motion.div
+									key={event.eventId}
+									initial={{ opacity: 0, y: 30 }}
+									whileInView={{ opacity: 1, y: 0 }}
+									transition={{ duration: 0.4 }}
+									className="group relative overflow-hidden rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-violet-600/40 transition-all hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(139,92,246,0.2)]"
+								>
+									<Link to={`/event/${event.eventId}`}>
+										<img
+											src={`https://source.unsplash.com/collection/190727/600x300?sig=${event.eventId}`}
+											alt={event.eventName}
+											className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-500"
+										/>
+									</Link>
+									<div className="p-5">
+										<h3 className="text-lg font-semibold text-white mb-1">{event.eventName}</h3>
+										<p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
+											<MapPin size={14} /> {event.sportObjectName}
+										</p>
+										<p className="text-sm text-zinc-400 mb-3 flex items-center gap-2">
+											<CalendarDays size={14} /> {dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}
+										</p>
+										<div className="flex justify-between items-center">
+											<button
+												onClick={() => handleSaveEvent(event.eventId)}
+												className={`flex items-center gap-1 text-sm ${savedEventIds.has(event.eventId)
+													? 'text-violet-400' : 'text-zinc-400 hover:text-white'
+													}`}
+											>
+												<Bookmark size={14} /> {savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}
+											</button>
+											<button
+												onClick={() => handleSignUp(event.eventId)}
+												disabled={joinedEventIds.has(event.eventId)}
+												className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${joinedEventIds.has(event.eventId)
+													? 'bg-green-600'
+													: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
+													}`}
+											>
+												{joinedEventIds.has(event.eventId) ? 'Dołączono' : 'Dołącz'}
+											</button>
+										</div>
+									</div>
+								</motion.div>
+							))}
+						</div>
+					) : (
+						<div className="text-center py-16 text-zinc-400">Brak wydarzeń spełniających kryteria.</div>
+					)}
+				</div>
+			</section>
+
+			{/* FEATURES */}
+			<section className="py-20 bg-[#0d0d12] relative">
+				<div className="container mx-auto px-4 text-center">
+					<h2 className="text-3xl font-bold text-white mb-4">Dlaczego <span className="text-violet-400">JoinMatch</span>?</h2>
+					<p className="text-zinc-400 max-w-2xl mx-auto mb-12">Tworzymy społeczność, która łączy ludzi przez sport</p>
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						{[
+							{ icon: '📅', title: 'Proste planowanie', desc: 'Zarządzaj swoim kalendarzem sportowym i otrzymuj powiadomienia o wydarzeniach.' },
+							{ icon: '🤝', title: 'Zarządzanie drużyną', desc: 'Twórz zespoły, zapraszaj znajomych i graj razem.' },
+							{ icon: '🏟️', title: 'Rezerwacja obiektów', desc: 'Rezerwuj miejsca z aktualną dostępnością w czasie rzeczywistym.' },
+						].map((f, i) => (
+							<motion.div
+								key={i}
+								initial={{ opacity: 0, y: 20 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								transition={{ delay: i * 0.1 }}
+								className="group bg-zinc-900/80 border border-zinc-800 rounded-3xl p-8 hover:border-violet-600/50 hover:-translate-y-1 transition-all"
+							>
+								<div className="text-5xl mb-4">{f.icon}</div>
+								<h3 className="text-xl font-semibold text-white mb-3 group-hover:text-violet-400">{f.title}</h3>
+								<p className="text-zinc-400 text-sm">{f.desc}</p>
+							</motion.div>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* CTA */}
+			<section className="py-20 bg-gradient-to-br from-violet-800 via-violet-700 to-violet-900 text-center text-white relative overflow-hidden">
+				<div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_50%,#fff,transparent_60%)]" />
+				<div className="relative z-10 px-4">
+					<h2 className="text-4xl font-bold mb-6">Gotowy do gry?</h2>
+					<p className="text-lg text-violet-100 mb-8">Dołącz do tysięcy użytkowników, którzy już grają z JoinMatch.</p>
+					<div className="flex flex-col sm:flex-row justify-center gap-4">
+						<Link to="/register" className="bg-white text-violet-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition">
+							Zarejestruj się
+						</Link>
+						<Link to="/events" className="bg-transparent border-2 border-white px-8 py-4 rounded-xl font-semibold hover:bg-white/10 transition">
+							Zobacz wydarzenia
+						</Link>
 					</div>
 				</div>
 			</section>

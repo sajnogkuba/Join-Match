@@ -1,138 +1,203 @@
-// src/components/Navbar.tsx
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Menu, X, User, LogOut, LogIn, UserPlus } from 'lucide-react'
 import Logo from '../assets/LogoWhite.png'
 import { useAuth } from '../Context/authContext'
 
 export const Navbar: React.FC = () => {
-	const [isMenuOpen, setIsMenuOpen] = useState(false)
-	const { isAuthenticated, logout, user } = useAuth()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const { isAuthenticated, logout, user } = useAuth()
+  const location = useLocation()
 
-	return (
-		<nav className='bg-black text-white shadow-lg'>
-			<div className='container mx-auto px-4'>
-				<div className='flex justify-between items-center py-4'>
-					<div className='flex items-center space-x-2'>
-						<Link to='/' className='flex items-center'>
-							<img src={Logo} alt='JoinMatch Logo' className='h-9' />
-						</Link>
-					</div>
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
-					{/* Desktop Navigation */}
-					<div className='hidden md:flex space-x-8'>
-						<Link to='/' className='hover:text-purple-300 transition-colors font-medium'>
-							Strona Główna
-						</Link>
-						<Link to='/events' className='hover:text-purple-300 transition-colors font-medium'>
-							Eventy
-						</Link>
-						<Link to='/venues' className='hover:text-purple-300 transition-colors font-medium'>
-							Mecze
-						</Link>
-						<Link to='/about' className='hover:text-purple-300 transition-colors font-medium'>
-							O nas
-						</Link>
-					</div>
+  const navLinks = [
+    { to: '/', label: 'Strona główna' },
+    { to: '/events', label: 'Eventy' },
+    { to: '/venues', label: 'Mecze' },
+    { to: '/about', label: 'O nas' },
+  ]
 
-					{/* Login/Register Buttons */}
-					<div className='hidden md:flex items-center space-x-4'>
-						{!isAuthenticated ? (
-							<>
-								<Link to='/login' className='px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors'>
-									Zaloguj
-								</Link>
-								<Link
-									to='/register'
-									className='bg-purple-600 px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors shadow-md'>
-									Zarejestruj
-								</Link>
-							</>
-						) : (
-							<>
-								<Link
-									to="/profile"
-									className="text-gray-400 mr-2 hover:text-purple-300 transition-colors"
-								>
-									Cześć, {user}!
-								</Link>
+  return (
+    <nav
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+        isScrolled ? 'bg-black/70 backdrop-blur-xl shadow-lg' : 'bg-transparent'
+      }`}
+    >
+	<div className="container mx-auto px-4 relative">
+	  <div className="flex justify-between items-center py-3 md:py-4">
+		{/* Logo */}
+		<Link to="/" className="flex items-center gap-2">
+		<motion.img
+		  src={Logo}
+		  alt="JoinMatch Logo"
+		  className="h-8 md:h-9"
+		  whileHover={{ scale: 1.05 }}
+		  transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+		/>
+		</Link>
 
-								<button
-									onClick={logout}
-									className='bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-md'>
-									Wyloguj
-								</button>
-							</>
-						)}
-					</div>
+		{/* Desktop Nav */}
+		<div className="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
+		{navLinks.map(link => (
+		  <Link
+			key={link.to}
+			to={link.to}
+			className={`font-medium transition-colors ${
+			location.pathname === link.to
+			  ? 'text-violet-400'
+			  : 'text-zinc-300 hover:text-white'
+			}`}
+		  >
+			{link.label}
+		  </Link>
+		))}
+		</div>
 
-					{/* Mobile Menu Button */}
-					<div className='md:hidden'>
-						<button onClick={() => setIsMenuOpen(!isMenuOpen)} className='focus:outline-none'>
-							<svg
-								xmlns='http://www.w3.org/2000/svg'
-								className='h-6 w-6'
-								fill='none'
-								viewBox='0 0 24 24'
-								stroke='currentColor'>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d={isMenuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
-								/>
-							</svg>
-						</button>
-					</div>
+		{/* Right side */}
+		<div className="hidden md:flex items-center space-x-4">
+		{!isAuthenticated ? (
+		  <>
+			<Link
+			to="/login"
+			className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-200 hover:text-white transition"
+			>
+			<LogIn size={16} /> Zaloguj
+			</Link>
+			<Link
+			to="/register"
+			className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-violet-800 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:from-violet-700 hover:to-violet-900 shadow-md transition"
+			>
+			<UserPlus size={16} /> Zarejestruj
+			</Link>
+		  </>
+		) : (
+		  <div className="relative">
+			<button
+			onClick={() => setShowProfileMenu(!showProfileMenu)}
+			className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 text-white font-semibold shadow-lg hover:text-white focus:outline-none"
+			>
+			<User size={18} />
+			</button>
+			<AnimatePresence>
+			{showProfileMenu && (
+			  <motion.div
+				initial={{ opacity: 0, y: -10 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: -10 }}
+				transition={{ duration: 0.15 }}
+				className="absolute right-0 mt-3 w-44 bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50"
+			  >
+				<div className="px-4 py-3 border-b border-zinc-800 text-sm text-zinc-400">
+				<span className="block text-white font-semibold">{user}</span>
+				<span className="text-xs text-zinc-500">Użytkownik</span>
 				</div>
+				<Link
+				to="/profile"
+				onClick={() => setShowProfileMenu(false)}
+				className="flex items-center gap-2 px-4 py-2 hover:bg-zinc-800 text-sm text-zinc-300"
+				>
+				<User size={16} /> Profil
+				</Link>
+				<button
+				onClick={() => {
+				  logout()
+				  setShowProfileMenu(false)
+				}}
+				className="w-full flex items-center gap-2 px-4 py-2 hover:bg-red-600/20 text-sm text-red-400"
+				>
+				<LogOut size={16} /> Wyloguj
+				</button>
+			  </motion.div>
+			)}
+			</AnimatePresence>
+		  </div>
+		)}
+		</div>
 
-				{/* Mobile Navigation */}
-				{isMenuOpen && (
-					<div className='md:hidden py-4 bg-black'>
-						<div className='flex flex-col space-y-4 pb-4'>
-							<Link
-								to='/'
-								className='hover:bg-gray-800 px-4 py-2 rounded-md transition-colors'
-								onClick={() => setIsMenuOpen(false)}>
-								Home
-							</Link>
-							<Link
-								to='/events'
-								className='hover:bg-gray-800 px-4 py-2 rounded-md transition-colors'
-								onClick={() => setIsMenuOpen(false)}>
-								Events
-							</Link>
-							<Link
-								to='/venues'
-								className='hover:bg-gray-800 px-4 py-2 rounded-md transition-colors'
-								onClick={() => setIsMenuOpen(false)}>
-								Venues
-							</Link>
-							<Link
-								to='/about'
-								className='hover:bg-gray-800 px-4 py-2 rounded-md transition-colors'
-								onClick={() => setIsMenuOpen(false)}>
-								About
-							</Link>
-							<div className='border-t border-gray-700 pt-2 flex flex-col space-y-2'>
-								<Link
-									to='/login'
-									className='hover:bg-gray-800 px-4 py-2 rounded-md transition-colors'
-									onClick={() => setIsMenuOpen(false)}>
-									Login
-								</Link>
-								<Link
-									to='/register'
-									className='bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md transition-colors'
-									onClick={() => setIsMenuOpen(false)}>
-									Register
-								</Link>
-							</div>
-						</div>
-					</div>
-				)}
-			</div>
-		</nav>
-	)
+		{/* Mobile Menu Button */}
+		<div className="md:hidden">
+		<button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-lg text-white">
+		  {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+		</button>
+		</div>
+	  </div>
+	</div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden bg-black/95 backdrop-blur-xl border-t border-zinc-800 shadow-lg"
+          >
+            <div className="flex flex-col px-4 py-4 space-y-3">
+              {navLinks.map(link => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`px-3 py-2 rounded-lg text-zinc-300 hover:bg-zinc-800 ${
+                    location.pathname === link.to && 'text-violet-400'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="border-t border-zinc-800 my-2" />
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-zinc-300 hover:bg-zinc-800 rounded-lg"
+                  >
+                    <LogIn size={16} /> Zaloguj
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-violet-800 px-3 py-2 rounded-lg text-white justify-center"
+                  >
+                    <UserPlus size={16} /> Zarejestruj
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-zinc-300 hover:bg-zinc-800 rounded-lg"
+                  >
+                    <User size={16} /> Profil
+                  </Link>
+                  <button
+                    onClick={() => {
+                      logout()
+                      setIsMenuOpen(false)
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-600/20 rounded-lg"
+                  >
+                    <LogOut size={16} /> Wyloguj
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  )
 }
 
 export default Navbar
