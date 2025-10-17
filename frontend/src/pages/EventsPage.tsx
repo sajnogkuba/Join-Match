@@ -107,15 +107,15 @@ const EventsPage = () => {
 		fetchSaved()
 	}, [userEmail])
 
-	const sports = useMemo(() => {
-		const set = new Set(events.map(e => e.sportTypeName).filter(Boolean))
-		return Array.from(set).sort()
-	}, [events])
+	// const sports = useMemo(() => {
+	// 	const set = new Set(events.map(e => e.sportTypeName).filter(Boolean))
+	// 	return Array.from(set).sort()
+	// }, [events])
 
-	const cities = useMemo(() => {
-		const set = new Set(events.map((e: any) => e.city).filter(Boolean))
-		return Array.from(set).sort()
-	}, [events])
+	// const cities = useMemo(() => {
+	// 	const set = new Set(events.map((e: any) => e.city).filter(Boolean))
+	// 	return Array.from(set).sort()
+	// }, [events])
 
 	const filteredSorted = useMemo(() => {
 		let list = [...events]
