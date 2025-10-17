@@ -9,15 +9,12 @@ import {
 	Map as MapIcon,
 	Grid as GridIcon,
 	Search,
-	SlidersHorizontal,
 	ChevronRight,
 	Bookmark,
 	CalendarDays,
 	MapPin,
 	Users,
 	Ticket,
-	CircleDollarSign,
-	X,
 	FilterX,
 	Loader2,
 	ArrowUpDown,
@@ -33,7 +30,7 @@ dayjs.locale('pl')
 // }
 
 // Lazy map (react-leaflet) — załadujemy tylko gdy użytkownik przełączy na widok mapy
-const LazyMapView = ({ events }: { events: Event[] }) => {
+const LazyMapView = ({  }: { events: Event[] }) => {
 	// TODO: MAPA — włącz po dodaniu pól latitude/longitude w API i zainstalowaniu react-leaflet + leaflet
 	// Plan na później:
 	// 1) Dodać do typu Event (opcjonalne): latitude?: number; longitude?: number;
