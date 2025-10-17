@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import StarRatingInput from "./StarRatingInput";
 import Checkbox from "./Checkbox";
-import axios from 'axios';
+import api from '../Api/axios';
 import type { SportType } from '../Api/types/SportType.ts';
 import type { SportObject } from '../Api/types/SportObject.ts';
-
-const API_BASE = 'http://localhost:8080';
 const card = "bg-black border border-gray-600 rounded-xl px-4 pt-2 pb-4";
 
 type FormErrors = {
@@ -49,14 +47,14 @@ export default function CreateEventForm() {
   }, []);
 
   useEffect(() => {
-    axios.get<SportType[]>(`${API_BASE}/api/sport-type`)
+    api.get<SportType[]>('/sport-type')
       .then(res => setSportTypes(res.data))
       .catch(() => setFetchError("Nie udało się pobrać sportów."))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    axios.get<SportObject[]>(`${API_BASE}/api/sport-object`)
+    api.get<SportObject[]>('/sport-object')
       .then(res => setSportObjects(res.data))
       .catch(() => setFetchError("Nie udało się pobrać obiektów sportowych."))
       .finally(() => setLoading(false));
@@ -146,9 +144,7 @@ export default function CreateEventForm() {
 
     try {
       setSubmitting(true);
-      await axios.post(`${API_BASE}/api/event`, payload, {
-        headers: { "Content-Type": "application/json" }
-      });
+      await api.post('/event', payload);
       setServerOk("Wydarzenie utworzone ✅");
       resetForm();
     } catch (err: any) {
