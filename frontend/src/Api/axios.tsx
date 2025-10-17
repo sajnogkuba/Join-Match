@@ -3,11 +3,11 @@ import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'a
 import type { JwtResponse } from './types'
 
 const axiosInstance: AxiosInstance = axios.create({
-	baseURL: 'http://localhost:8080/api', // Ensure consistent base URL
-	headers: {
-		'Content-Type': 'application/json',
-	},
-})
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
 
 // Funkcja do parsowania access tokena (JWT)
 function parseJwt(token: string) {
