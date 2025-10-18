@@ -125,4 +125,13 @@ public class UserService {
         return new UserResponseDto(user.getName(), user.getEmail(), user.getDateOfBirth(), user.getUrlOfPicture());
     }
 
+    public void updateUserPhoto(String token, String photoUrl) {
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
+        if(byTokenValue.isEmpty()){
+            throw new IllegalArgumentException("User Not Found");
+        }
+        User user = byTokenValue.get();
+        user.setUrlOfPicture(photoUrl);
+        userRepository.save(user);
+    }
 }
