@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import api from "../Api/axios";
 import type { UpdatePhotoRequest } from "../Api/types";
 import Avatar from "../components/Avatar";
+import Friends from "../components/Friends";
 import {
     Star, Users, Trophy, ChevronRight, Bookmark, Plus,
     Settings, UserRound, Lock, Bell, Globe2, LogOut, Database,
-    X, Upload, Camera
+    X, Upload, Camera, UserPlus
 } from "lucide-react";
 
 type SimpleUser = {
@@ -16,38 +17,42 @@ type SimpleUser = {
     urlOfPicture: string | null;
 };
 
-type SportTypeOption = { id: number; name: string; url: string };
 type UserSport = { id: number; name: string; level: number; url: string };
 type UserSportsResponse = {
     sports: { sportId: number; name: string; url: string; rating: number }[];
 };
 
 const savedEvents = [
-    { id: 101, title: "Luźna Gierka", place: "Koszykowa 13 – Warszawa", tag: "Piłka nożna",
+    { id: 101, title: "Luźna gierka", place: "Koszykowa 13 – Warszawa", tag: "Piłka nożna",
         cover: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=300&auto=format&fit=crop" },
-    { id: 102, title: "Mecz Zawodowy", place: "Łazienkowska 12 – Warszawa", tag: "Piłka nożna",
+    { id: 102, title: "Mecz zawodowy", place: "Łazienkowska 12 – Warszawa", tag: "Piłka nożna",
         cover: "https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=300&auto=format&fit=crop" },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ activeSection, onSectionChange }: { 
+    activeSection: string; 
+    onSectionChange: (section: string) => void;
+}) => {
     const items = [
-        { label: "General", icon: UserRound, active: true },
-        { label: "Edit Profile", icon: Settings },
-        { label: "Password", icon: Lock },
-        { label: "Social Profiles", icon: Globe2 },
-        { label: "Email Notifications", icon: Bell },
-        { label: "Sessions", icon: Users },
-        { label: "Applications", icon: Trophy },
-        { label: "Data Export", icon: Database },
+        { label: "Ogólne", icon: UserRound, key: "general" },
+        { label: "Edytuj profil", icon: Settings, key: "edit-profile" },
+        { label: "Hasło", icon: Lock, key: "password" },
+        { label: "Profile społecznościowe", icon: Globe2, key: "social-profiles" },
+        { label: "E-mail i powiadomienia", icon: Bell, key: "email-notifications" },
+        { label: "Znajomi", icon: UserPlus, key: "friends" },
+        { label: "Sesje", icon: Users, key: "sessions" },
+        { label: "Aplikacje", icon: Trophy, key: "apps" },
+        { label: "Eksport danych", icon: Database, key: "export-data" },
     ];
     return (
         <aside className="w-full md:w-64 shrink-0">
             <nav className="space-y-1">
-                {items.map(({ label, icon: Icon, active }) => (
+                {items.map(({ label, icon: Icon, key }) => (
                     <button
-                        key={label}
+                        key={key}
+                        onClick={() => onSectionChange(key)}
                         className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition ${
-                            active ? "bg-zinc-800 text-white" : "text-zinc-300 hover:bg-zinc-800/60"
+                            activeSection === key ? "bg-zinc-800 text-white" : "text-zinc-300 hover:bg-zinc-800/60"
                         }`}
                     >
                         <Icon size={18} />
@@ -57,7 +62,7 @@ const Sidebar = () => {
             </nav>
             <button className="mt-6 text-sm text-red-400 hover:text-red-300 inline-flex items-center gap-2">
                 <LogOut size={16} />
-                Delete Account
+                Usuń konto
             </button>
         </aside>
     );
@@ -105,23 +110,14 @@ const ProfileImageModal = ({
             formData.append('file', selectedFile);
 
             const uploadResponse = await api.post('/images/upload/profile', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
 
             const photoUrl = uploadResponse.data;
-
             const token = localStorage.getItem('accessToken');
-            if (!token) {
-                throw new Error('Brak tokenu autoryzacji');
-            }
+            if (!token) throw new Error('Brak tokenu autoryzacji');
 
-            const updateRequest: UpdatePhotoRequest = {
-                token,
-                photoUrl
-            };
-
+            const updateRequest: UpdatePhotoRequest = { token, photoUrl };
             await api.patch('/auth/user/photo', updateRequest);
 
             onPhotoUpdated(photoUrl);
@@ -142,7 +138,6 @@ const ProfileImageModal = ({
     };
 
     if (!isOpen) return null;
-
     const displayImage = previewUrl || (imageUrl || null);
 
     return (
@@ -158,8 +153,6 @@ const ProfileImageModal = ({
                 
                 <div className="flex flex-col items-center space-y-4">
                     <h3 className="text-white text-lg font-semibold">Zdjęcie profilowe</h3>
-                    
-                    {/* Large rounded profile image */}
                     <div className="relative">
                         <Avatar 
                             src={displayImage} 
@@ -170,7 +163,6 @@ const ProfileImageModal = ({
                         />
                     </div>
                     
-                    {/* Upload section */}
                     <div className="w-full space-y-3">
                         <input
                             type="file"
@@ -216,17 +208,13 @@ const ProfileImageModal = ({
     );
 };
 
-const ProfileCard = ({ 
-    user, 
-    loading, 
-    onImageClick 
-}: { 
+const ProfileCard = ({ user, loading, onImageClick }: { 
     user: SimpleUser | null; 
     loading: boolean; 
     onImageClick: () => void;
 }) => {
     const name = user?.name ?? (loading ? "Ładowanie…" : "—");
-    const handle = "General";
+    const handle = "Profil";
     const rating = 4.7;
     const friends = 67;
     const mainSport = "Piłka nożna";
@@ -234,11 +222,7 @@ const ProfileCard = ({
     return (
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-                <button
-                    onClick={onImageClick}
-                    className="relative group"
-                    disabled={loading}
-                >
+                <button onClick={onImageClick} className="relative group" disabled={loading}>
                     <Avatar 
                         src={user?.urlOfPicture ?? null} 
                         name={name} 
@@ -254,7 +238,7 @@ const ProfileCard = ({
                     <p className="text-white font-semibold leading-tight">
                         {name} <span className="text-zinc-400">/ {handle}</span>
                     </p>
-                    <p className="text-sm text-zinc-400">Update your username and manage your account</p>
+                    <p className="text-sm text-zinc-400">Zaktualizuj swoje dane i zarządzaj kontem</p>
                 </div>
             </div>
 
@@ -309,131 +293,12 @@ const SavedEvents = () => (
         <h3 className="text-white text-xl font-semibold">Zapisane wydarzenia</h3>
         <ul className="space-y-3">{savedEvents.map((e) => <SavedEvent key={e.id} {...e} />)}</ul>
         <div className="pt-2">
-            <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">Save Changes</button>
+            <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">
+                Zapisz zmiany
+            </button>
         </div>
     </section>
 );
-
-const AddSportModal = ({
-                           open,
-                           onClose,
-                           onAdded,
-                       }: {
-    open: boolean;
-    onClose: () => void;
-    onAdded: (s: UserSport) => void;
-}) => {
-    const [options, setOptions] = useState<SportTypeOption[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [sportId, setSportId] = useState<number | ''>('');
-    const [level, setLevel] = useState('');
-    const [err, setErr] = useState<string | null>(null);
-
-    const levelNum = Number(level);
-    const levelValid = Number.isInteger(levelNum) && levelNum >= 1 && levelNum <= 10;
-
-    useEffect(() => {
-        if (!open) return;
-        setLoading(true);
-        setErr(null);
-        api
-            .get<SportTypeOption[]>("/sport-type")
-            .then(({ data }) => setOptions(data))
-            .catch(() => setErr("Nie udało się pobrać listy sportów."))
-            .finally(() => setLoading(false));
-    }, [open]);
-
-    const selected = sportId ? options.find(o => o.id === sportId) : undefined;
-
-    const handleAdd = async () => {
-        if (!sportId || !levelValid || !selected) return;
-        setSaving(true);
-        try {
-            const token = localStorage.getItem("accessToken") || "";
-            await api.post("/sport-type/user", {
-                token,
-                sportId,
-                rating: levelNum,
-            });
-            onAdded({ id: selected.id, name: selected.name, url: selected.url, level: levelNum });
-            onClose();
-            setSportId('');
-            setLevel('');
-        } catch {
-            setErr("Nie udało się dodać sportu.");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    if (!open) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-            <div className="relative w-[95%] max-w-md rounded-2xl bg-zinc-900 p-5 ring-1 ring-zinc-800 shadow-2xl">
-                <h4 className="text-white text-lg font-semibold">Dodaj sport</h4>
-                <p className="text-sm text-zinc-400 mt-1">Wybierz sport i wpisz poziom (1–10).</p>
-                <div className="mt-4 space-y-3">
-                    <label className="block">
-                        <span className="text-sm text-zinc-300">Sport</span>
-                        <select
-                            disabled={loading || saving}
-                            className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-600"
-                            value={sportId}
-                            onChange={(e) => setSportId(e.target.value ? Number(e.target.value) : '')}
-                        >
-                            <option value="">{loading ? "Ładowanie…" : "— wybierz sport —"}</option>
-                            {options.map((o) => (
-                                <option key={o.id} value={o.id}>{o.name}</option>
-                            ))}
-                        </select>
-                    </label>
-                    {selected && (
-                        <div className="flex items-center gap-3">
-                            <img src={selected.url} alt={selected.name} className="h-10 w-10 rounded-full object-cover border border-zinc-700" />
-                            <span className="text-sm text-zinc-300">{selected.name}</span>
-                        </div>
-                    )}
-                    <label className="block">
-                        <span className="text-sm text-zinc-300">Poziom (1–10)</span>
-                        <input
-                            inputMode="numeric"
-                            type="number"
-                            min={1}
-                            max={10}
-                            step={1}
-                            className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-600"
-                            value={level}
-                            onChange={(e) => setLevel(e.target.value)}
-                            placeholder="Np. 5"
-                            disabled={saving}
-                        />
-                    </label>
-                    {!level || levelValid ? (
-                        <p className="text-xs text-zinc-500">Wpisz liczbę całkowitą 1–10.</p>
-                    ) : (
-                        <p className="text-xs text-red-400">Poziom musi być w zakresie 1–10.</p>
-                    )}
-                    {err && <p className="text-sm text-red-400">{err}</p>}
-                </div>
-                <div className="mt-5 flex justify-end gap-2">
-                    <button onClick={onClose} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800" disabled={saving}>
-                        Anuluj
-                    </button>
-                    <button
-                        onClick={handleAdd}
-                        disabled={!sportId || !levelValid || saving}
-                        className="rounded-xl bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
-                    >
-                        {saving ? "Dodawanie…" : "Dodaj"}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const SportsList = ({ items, onOpenAdd }: { items: UserSport[]; onOpenAdd: () => void }) => (
     <section className="space-y-4">
@@ -462,13 +327,54 @@ const SportsList = ({ items, onOpenAdd }: { items: UserSport[]; onOpenAdd: () =>
     </section>
 );
 
+const MainContent = ({ activeSection, sports, onOpenAdd }: { 
+    activeSection: string; 
+    sports: UserSport[]; 
+    onOpenAdd: () => void;
+}) => {
+    switch (activeSection) {
+        case "general":
+            return (
+                <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-2">
+                    <SportsList items={sports} onOpenAdd={onOpenAdd} />
+                    <SavedEvents />
+                </div>
+            );
+        case "friends":
+            return (
+                <div className="flex-1">
+                    <Friends />
+                </div>
+            );
+        default:
+            return (
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <h3 className="text-white text-xl font-semibold mb-2">
+                            {activeSection === "edit-profile" && "Edytuj profil"}
+                            {activeSection === "password" && "Zmiana hasła"}
+                            {activeSection === "social-profiles" && "Profile społecznościowe"}
+                            {activeSection === "email-notifications" && "E-mail i powiadomienia"}
+                            {activeSection === "sessions" && "Sesje"}
+                            {activeSection === "apps" && "Aplikacje"}
+                            {activeSection === "export-data" && "Eksport danych"}
+                        </h3>
+                        <p className="text-zinc-400">
+                            Ta sekcja będzie dostępna wkrótce
+                        </p>
+                    </div>
+                </div>
+            );
+    }
+};
+
 const ProfilePage = () => {
     const [user, setUser] = useState<SimpleUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [sports, setSports] = useState<UserSport[]>([]);
-    const [openAdd, setOpenAdd] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [activeSection, setActiveSection] = useState("general");
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
         setUser(prev => prev ? { ...prev, urlOfPicture: newPhotoUrl } : null);
@@ -515,7 +421,7 @@ const ProfilePage = () => {
                 <div className="absolute inset-0 bg-black/60" />
                 <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-4 pb-6 md:px-8">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-semibold text-white">Panel Profilu</h1>
+                        <h1 className="text-2xl md:text-3xl font-semibold text-white">Panel profilu</h1>
                         <div className="mt-2 h-1 w-32 rounded-full bg-violet-600" />
                     </div>
                 </div>
@@ -535,26 +441,24 @@ const ProfilePage = () => {
                     )}
                     <hr className="my-8 border-zinc-800" />
                     <div className="flex flex-col gap-8 lg:flex-row">
-                        <Sidebar />
-                        <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-2">
-                            <SportsList items={sports} onOpenAdd={() => setOpenAdd(true)} />
-                            <SavedEvents />
-                        </div>
+                        <Sidebar 
+                            activeSection={activeSection} 
+                            onSectionChange={setActiveSection} 
+                        />
+                        <MainContent 
+                            activeSection={activeSection}
+                            sports={sports}
+                            onOpenAdd={() => console.log('Add sport clicked')}
+                        />
                     </div>
                 </div>
             </main>
-
-            <AddSportModal
-                open={openAdd}
-                onClose={() => setOpenAdd(false)}
-                onAdded={(s) => setSports((prev) => [...prev, s])}
-            />
 
             <ProfileImageModal
                 isOpen={isImageModalOpen}
                 onClose={() => setIsImageModalOpen(false)}
                 imageUrl={user?.urlOfPicture ?? ""}
-                userName={user?.name ?? "User"}
+                userName={user?.name ?? "Użytkownik"}
                 onPhotoUpdated={handlePhotoUpdated}
                 loading={loading}
             />
