@@ -39,3 +39,7 @@ aws:
   credentials:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
+
+google:
+  api:
+    key: ${VITE_GOOGLE_MAPS_KEY}

@@ -1,398 +1,385 @@
-import { useEffect, useState } from 'react';
-import StarRatingInput from "./StarRatingInput";
-import Checkbox from "./Checkbox";
-import api from '../Api/axios';
-import type { SportType } from '../Api/types/SportType.ts';
-import type { SportObject } from '../Api/types/SportObject.ts';
-const card = "bg-black border border-gray-600 rounded-xl px-4 pt-2 pb-4";
+import { useEffect, useState } from 'react'
+import StarRatingInput from './StarRatingInput'
+import Checkbox from './Checkbox'
+import api from '../Api/axios'
+import type { SportType } from '../Api/types/SportType.ts'
+import type { SportObject } from '../Api/types/SportObject.ts'
+import { motion } from 'framer-motion'
+import { Upload, CalendarDays, MapPin, DollarSign, Users } from 'lucide-react'
+import PlaceAutocomplete from './PlaceAutocomplete'
+
+const inputBase =
+	'w-full px-4 py-3 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
+const card = 'bg-black/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-5 shadow-[0_0_20px_rgba(0,0,0,0.3)]'
 
 type FormErrors = {
-  eventName?: string;
-  sportId?: string;
-  level?: string;
-  price?: string;
-  maxParticipants?: string;
-  isPrivate?: string;
-  eventDate?: string;
-  eventTime?: string;
-  placeId?: string;
-  eventImage?: string;
-};
+	eventName?: string
+	sportId?: string
+	level?: string
+	price?: string
+	maxParticipants?: string
+	eventDate?: string
+	eventTime?: string
+	placeId?: string
+	eventImage?: string
+}
 
 export default function CreateEventForm() {
-  const [eventName, setEventName] = useState("");
-  const [sportId, setSportId] = useState<number>(0);
-  const [level, setLevel] = useState(1);
-  const [free, setFree] = useState(false);
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [price, setPrice] = useState<number | "">(0);
-  const [maxParticipants, setMaxParticipants] = useState<number | "">("");
-  const [eventDate, setEventDate] = useState("");
-  const [eventTime, setEventTime] = useState(""); 
-  const [placeId, setPlaceId] = useState<number>(0);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const [eventName, setEventName] = useState('')
+	const [sportId, setSportId] = useState<number>(0)
+	const [level, setLevel] = useState(1)
+	const [free, setFree] = useState(false)
+	const [isPrivate, setIsPrivate] = useState(false)
+	const [price, setPrice] = useState<number | ''>(0)
+	const [maxParticipants, setMaxParticipants] = useState<number | ''>('')
+	const [eventDate, setEventDate] = useState('')
+	const [eventTime, setEventTime] = useState('')
+	const [placeId, setPlaceId] = useState<number>(0)
+	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-  const [sportTypes, setSportTypes] = useState<SportType[]>([]);
-  const [sportObjects, setSportObjects] = useState<SportObject[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+	const [sportTypes, setSportTypes] = useState<SportType[]>([])
+	const [sportObjects, setSportObjects] = useState<SportObject[]>([])
+	const [loading, setLoading] = useState<boolean>(true)
+	const [errors, setErrors] = useState<FormErrors>({})
+	const [submitting, setSubmitting] = useState(false)
+	const [serverError, setServerError] = useState<string | null>(null)
+	const [serverOk, setServerOk] = useState<string | null>(null)
+	const [uploadingImage, setUploadingImage] = useState(false)
 
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [serverOk, setServerOk] = useState<string | null>(null);
+	const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
 
-  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+	const [useCustomPlace, setUseCustomPlace] = useState(false)
+	// Używamy full Google PlaceResult żeby pobrać address_components (miasto, ulica, numer)
+	const [customPlace, setCustomPlace] = useState<google.maps.places.PlaceResult | null>(null)
 
-  useEffect(() => {
-    setOwnerEmail(localStorage.getItem('email'));
-  }, []);
+	useEffect(() => {
+		setOwnerEmail(localStorage.getItem('email'))
+	}, [])
 
-  useEffect(() => {
-    api.get<SportType[]>('/sport-type')
-      .then(res => setSportTypes(res.data))
-      .catch(() => setFetchError("Nie udało się pobrać sportów."))
-      .finally(() => setLoading(false));
-  }, []);
+	// Helper: pobiera komponent adresu z place.address_components
+	const getComponent = (place: google.maps.places.PlaceResult | null, types: string[]): string => {
+		if (!place || !place.address_components) return ''
+		const comp = place.address_components.find(c => types.some(t => c.types.includes(t)))
+		return comp ? comp.long_name : ''
+	}
 
-  useEffect(() => {
-    api.get<SportObject[]>('/sport-object')
-      .then(res => setSportObjects(res.data))
-      .catch(() => setFetchError("Nie udało się pobrać obiektów sportowych."))
-      .finally(() => setLoading(false));
-  }, []);
+	useEffect(() => {
+		Promise.all([api.get('/sport-type'), api.get('/sport-object')])
+			.then(([types, objects]) => {
+				setSportTypes(types.data)
+				setSportObjects(objects.data)
+			})
+			.catch(() => setServerError('Nie udało się pobrać danych.'))
+			.finally(() => setLoading(false))
+	}, [])
 
-  const isDateInPast = (d: string) => {
-    if (!d) return false;
-    const today = new Date(); today.setHours(0,0,0,0);
-    const picked = new Date(d); picked.setHours(0,0,0,0);
-    return picked < today;
-  };
+	const isDateTimeInPast = (date: string, time: string) => {
+		if (!date || !time) return false
+		const dt = new Date(`${date}T${time}:00`)
+		return dt.getTime() < Date.now()
+	}
 
-  const isDateTimeInPast = (date: string, time: string) => {
-    if (!date || !time) return false;
-    const dt = new Date(`${date}T${time}:00`);
-    return dt.getTime() < Date.now();
-  };
+	const validate = (): boolean => {
+		const newErrors: FormErrors = {}
+		if (!eventName.trim() || eventName.trim().length < 3) newErrors.eventName = 'Podaj nazwę (min. 3 znaki).'
+		if (!sportId) newErrors.sportId = 'Wybierz sport.'
+		if (!maxParticipants || Number(maxParticipants) < 1) newErrors.maxParticipants = 'Podaj liczbę uczestników.'
+		if (!eventDate) newErrors.eventDate = 'Wybierz datę.'
+		if (!eventTime) newErrors.eventTime = 'Wybierz godzinę.'
+		if (eventDate && eventTime && isDateTimeInPast(eventDate, eventTime))
+			newErrors.eventTime = 'Termin nie może być z przeszłości.'
+		if (!useCustomPlace && !placeId) newErrors.placeId = 'Wybierz miejsce.'
+		if (!free && (price === '' || Number(price) < 0)) newErrors.price = 'Podaj poprawną cenę.'
 
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
+		setErrors(newErrors)
+		return Object.keys(newErrors).length === 0
+	}
 
-    if (!eventName.trim() || eventName.trim().length < 3) newErrors.eventName = "Nazwa jest wymagana (min. 3 znaki).";
-    if (!sportId || sportId <= 0) newErrors.sportId = "Wybierz sport.";
-    if (level < 1 || level > 5) newErrors.level = "Poziom musi być w zakresie 1–5.";
+	const toLocalDateTime = (d: string, t: string) => `${d}T${t}:00`
 
-    if (!free) {
-      if (price === "" || Number.isNaN(Number(price))) newErrors.price = "Cena jest wymagana.";
-      else if (Number(price) < 0) newErrors.price = "Cena nie może być ujemna.";
-    }
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault()
+		if (!validate()) return
+		if (!ownerEmail) {
+			setServerError('Brak zalogowanego użytkownika.')
+			return
+		}
 
-    if (maxParticipants === "" || Number.isNaN(Number(maxParticipants))) newErrors.maxParticipants = "Podaj maksymalną liczbę uczestników.";
-    else if (!Number.isInteger(Number(maxParticipants)) || Number(maxParticipants) < 1) newErrors.maxParticipants = "Musi być liczbą całkowitą ≥ 1.";
+		try {
+			setSubmitting(true)
+			let imageUrl = null
+			if (selectedFile) {
+				setUploadingImage(true)
+				const formData = new FormData()
+				formData.append('file', selectedFile)
+				const res = await api.post('images/upload/event', formData, {
+					headers: { 'Content-Type': 'multipart/form-data' },
+				})
+				imageUrl = res.data
+			}
 
-    if (!eventDate) newErrors.eventDate = "Wybierz datę wydarzenia.";
-    else if (isDateInPast(eventDate)) newErrors.eventDate = "Data nie może być z przeszłości.";
+			// If user provided a custom place, create it first and use its id
+			let sportObjectId = placeId
+			if (useCustomPlace && customPlace) {
+				// Używamy danych z Google PlaceResult (address_components) do wydobycia miasta, ulicy i numeru
+				const city = getComponent(customPlace, ['locality', 'administrative_area_level_2'])
+				const street = getComponent(customPlace, ['route'])
+				const number = getComponent(customPlace, ['street_number'])
 
-    if (!eventTime) newErrors.eventTime = "Wybierz godzinę.";
-    else if (!/^\d{2}:\d{2}$/.test(eventTime)) newErrors.eventTime = "Nieprawidłowy format godziny.";
-    else if (eventDate && isDateTimeInPast(eventDate, eventTime)) newErrors.eventTime = "Termin nie może być z przeszłości.";
+				const newObj = {
+					name: customPlace.name || 'Nowy obiekt',
+					city: city || 'Nieznane miasto',
+					street: street || 'Nieznana ulica',
+					number: parseInt(number) || 1,
+					secondNumber: 1,
+					capacity: 10,
+					latitude: customPlace.geometry?.location?.lat() ?? 0,
+					longitude: customPlace.geometry?.location?.lng() ?? 0,
+				}
 
-    if (!placeId || placeId <= 0) newErrors.placeId = "Wybierz miejsce.";
+				try {
+					const res = await api.post('/sport-object', newObj)
+					sportObjectId = res.data.id
+				} catch (err) {
+					console.error('Błąd tworzenia obiektu:', err)
+					setServerError('Nie udało się utworzyć obiektu / wydarzenia')
+					setSubmitting(false)
+					return
+				}
+			}
 
-    if (selectedFile) {
-      const maxSize = 5 * 1024 * 1024;
-      if (selectedFile.size > maxSize) {
-        newErrors.eventImage = "Plik nie może być większy niż 5MB.";
-      }
-      if (!selectedFile.type.startsWith('image/')) {
-        newErrors.eventImage = "Wybierz plik graficzny (JPG, PNG, GIF).";
-      }
-    }
+			await api.post('/event', {
+				eventName,
+				numberOfParticipants: Number(maxParticipants),
+				cost: free ? 0 : Number(price),
+				ownerEmail,
+				sportObjectId: sportObjectId,
+				eventVisibilityId: isPrivate ? 2 : 1,
+				status: 'PLANNED',
+				eventDate: toLocalDateTime(eventDate, eventTime),
+				sportTypeId: sportId,
+				minLevel: level,
+				imageUrl,
+			})
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+			setServerOk('🎉 Wydarzenie utworzone pomyślnie!')
+			setEventName('')
+			setSportId(0)
+			setLevel(1)
+			setFree(false)
+			setPrice(0)
+			setMaxParticipants('')
+			setEventDate('')
+			setEventTime('')
+			setPlaceId(0)
+			setSelectedFile(null)
+		} catch (err: any) {
+			console.error('Błąd tworzenia wydarzenia:', err)
+			setServerError('Nie udało się utworzyć obiektu / wydarzenia')
+		} finally {
+			setSubmitting(false)
+			setUploadingImage(false)
+		}
+	}
 
-  const toLocalDateTime = (dateOnly: string, timeHHmm: string) =>
-    `${dateOnly}T${timeHHmm}:00`;
+	return (
+		<div className='bg-[#0d0d10] text-white min-h-screen py-20 px-4'>
+			<motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className='max-w-5xl mx-auto'>
+				<h1 className='text-4xl font-bold mb-8 text-center'>
+					<span className='text-violet-400'>Stwórz</span> nowe wydarzenie
+				</h1>
 
-  const resetForm = () => {
-    setEventName("");
-    setSportId(0);
-    setLevel(1);
-    setFree(false);
-    setIsPrivate(false);
-    setPrice(0);
-    setMaxParticipants("");
-    setEventDate("");
-    setEventTime("");
-    setPlaceId(0);
-    setSelectedFile(null);
-    setErrors({});
-  };
+				{(serverError || serverOk) && (
+					<div
+						className={`mb-6 text-center px-4 py-3 rounded-xl ${
+							serverError
+								? 'bg-red-900/40 border border-red-700 text-red-300'
+								: 'bg-green-900/40 border border-green-700 text-green-300'
+						}`}>
+						{serverError || serverOk}
+					</div>
+				)}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setServerError(null);
-    setServerOk(null);
+				<form onSubmit={handleSubmit} className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
+					{/* Nazwa */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2'>Nazwa wydarzenia</label>
+						<input
+							className={`${inputBase} ${errors.eventName ? 'border-red-500' : ''}`}
+							placeholder='np. Niedzielny mecz piłki'
+							value={eventName}
+							onChange={e => setEventName(e.target.value)}
+						/>
+						{errors.eventName && <p className='text-red-400 text-sm mt-1'>{errors.eventName}</p>}
+					</div>
 
-    if (!validate()) return;
-    if (!ownerEmail) {
-      setServerError("Brak emaila zalogowanego użytkownika w localStorage (klucz: 'email').");
-      return;
-    }
+					{/* Sport */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2'>Rodzaj sportu</label>
+						<select
+							value={sportId}
+							onChange={e => setSportId(Number(e.target.value))}
+							className={`${inputBase} ${errors.sportId ? 'border-red-500' : ''}`}>
+							<option value={0}>Wybierz sport</option>
+							{sportTypes.map(s => (
+								<option key={s.id} value={s.id}>
+									{s.name}
+								</option>
+							))}
+						</select>
+						{errors.sportId && <p className='text-red-400 text-sm mt-1'>{errors.sportId}</p>}
+					</div>
 
-    try {
-      setSubmitting(true);
-      
-      let imageUrl = null;
-      if (selectedFile) {
-        setUploadingImage(true);
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        
-        const uploadResponse = await api.post('images/upload/event', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-        imageUrl = uploadResponse.data;
-        setUploadingImage(false);
-      }
+					{/* Poziom */}
+					<div className={card}>
+						<StarRatingInput
+							label='Minimalny poziom zaawansowania'
+							value={level}
+							onChange={setLevel}
+							max={5}
+							size={30}
+						/>
+					</div>
 
-      const payload = {
-        eventName: eventName.trim(),
-        numberOfParticipants: Number(maxParticipants),
-        cost: free ? 0 : Number(price),
-        ownerEmail,
-        sportObjectId: placeId,
-        eventVisibilityId: isPrivate ? 2 : 1,
-        status: "PLANNED",
-        eventDate: toLocalDateTime(eventDate, eventTime),
-        sportTypeId: sportId,
-        minLevel: level,
-        imageUrl: imageUrl
-      };
+					{/* Cena */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
+							<DollarSign size={16} /> Cena (PLN)
+						</label>
+						<input
+							type='number'
+							min={0}
+							step={0.01}
+							disabled={free}
+							value={free ? 0 : price}
+							onChange={e => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
+							className={`${inputBase} ${errors.price ? 'border-red-500' : ''} disabled:opacity-60`}
+						/>
+						{errors.price && <p className='text-red-400 text-sm mt-1'>{errors.price}</p>}
+						<Checkbox id='free' label='Bezpłatne wydarzenie' checked={free} onChange={v => setFree(v)} />
+					</div>
 
-      await api.post('/event', payload);
-      setServerOk("Wydarzenie utworzone ✅");
-      resetForm();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Nieznany błąd.";
-      setServerError(`Nie udało się utworzyć wydarzenia: ${msg}`);
-    } finally {
-      setSubmitting(false);
-      setUploadingImage(false);
-    }
-  };
+					{/* Maks uczestników */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
+							<Users size={16} /> Maksymalna liczba uczestników
+						</label>
+						<input
+							type='number'
+							min={1}
+							value={maxParticipants}
+							onChange={e => setMaxParticipants(e.target.value === '' ? '' : Number(e.target.value))}
+							className={`${inputBase} ${errors.maxParticipants ? 'border-red-500' : ''}`}
+						/>
+						{errors.maxParticipants && <p className='text-red-400 text-sm mt-1'>{errors.maxParticipants}</p>}
+					</div>
 
-  const inputErrorStyle = "border-red-500 focus:ring-red-500";
-  const errorText = (msg?: string) => msg ? <p className="mt-1 text-sm text-red-400">{msg}</p> : null;
+					{/* Data i czas */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
+							<CalendarDays size={16} /> Data wydarzenia
+						</label>
+						<input
+							type='date'
+							value={eventDate}
+							onChange={e => setEventDate(e.target.value)}
+							className={`${inputBase} ${errors.eventDate ? 'border-red-500' : ''}`}
+						/>
+						{errors.eventDate && <p className='text-red-400 text-sm mt-1'>{errors.eventDate}</p>}
+					</div>
 
-  return (
-    <div className="py-10 px-4 mx-auto max-w-6xl">
-      <h1 className='text-3xl font-bold text-white mb-3'>
-        <span className='text-purple-500'>Stwórz</span> nowe wydarzenie
-      </h1>
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2'>Godzina</label>
+						<input
+							type='time'
+							value={eventTime}
+							onChange={e => setEventTime(e.target.value)}
+							className={`${inputBase} ${errors.eventTime ? 'border-red-500' : ''}`}
+						/>
+						{errors.eventTime && <p className='text-red-400 text-sm mt-1'>{errors.eventTime}</p>}
+					</div>
 
-      {fetchError && (
-        <div className="mb-4 rounded border border-red-500 bg-red-900/30 text-red-200 px-4 py-2">
-          {fetchError}
-        </div>
-      )}
-      {serverError && (
-        <div className="mb-4 rounded border border-red-500 bg-red-900/30 text-red-200 px-4 py-2">
-          {serverError}
-        </div>
-      )}
-      {serverOk && (
-        <div className="mb-4 rounded border border-green-600 bg-green-900/30 text-green-200 px-4 py-2">
-          {serverOk}
-        </div>
-      )}
+					{/* Miejsce */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
+							<MapPin size={16} /> Miejsce
+						</label>
 
-      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="eventName">Nazwa wydarzenia:</label>
-            <input
-              type="text"
-              id="eventName"
-              value={eventName}
-              onChange={(e) => setEventName(e.target.value)}
-              className={`w-full p-2 border border-gray-300 rounded bg-gray-100 ${errors.eventName ? inputErrorStyle : ""}`}
-              placeholder="Wpisz nazwę wydarzenia"
-              aria-invalid={!!errors.eventName}
-              aria-describedby={errors.eventName ? "eventName-error" : undefined}
-            />
-            {errors.eventName && <div id="eventName-error">{errorText(errors.eventName)}</div>}
-          </div>
+						{!useCustomPlace ? (
+							<>
+								<select
+									value={placeId}
+									onChange={e => setPlaceId(Number(e.target.value))}
+									className={`${inputBase} ${errors.placeId ? 'border-red-500' : ''}`}>
+									<option value={0}>Wybierz obiekt</option>
+									{sportObjects.map(obj => (
+										<option key={obj.id} value={obj.id}>
+											{obj.name}, {obj.city}, {obj.street} {obj.number}
+										</option>
+									))}
+								</select>
 
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="sport">Sport:</label>
-            <select
-              id="sport"
-              value={sportId}
-              onChange={(e) => setSportId(Number(e.target.value))}
-              className={`w-full p-2 border border-gray-300 rounded bg-gray-100 ${errors.sportId ? inputErrorStyle : ""}`}
-              aria-invalid={!!errors.sportId}
-              aria-describedby={errors.sportId ? "sport-error" : undefined}
-            >
-              <option value={0}>Wybierz sport</option>
-              {sportTypes.map((st) => (
-                <option key={st.id} value={st.id}>{st.name}</option>
-              ))}
-            </select>
-            {errors.sportId && <div id="sport-error">{errorText(errors.sportId)}</div>}
-          </div>
+								<div className='mt-3'>
+									<Checkbox
+										id='customPlace'
+										label='Nie ma mojego obiektu na liście'
+										checked={useCustomPlace}
+										onChange={setUseCustomPlace}
+									/>
+								</div>
+							</>
+						) : (
+							<>
+								<PlaceAutocomplete onSelect={place => setCustomPlace(place)} />
+								<div className='mt-3'>
+									<Checkbox
+										id='useList'
+										label='Wybierz z listy obiektów'
+										checked={!useCustomPlace}
+										onChange={() => setUseCustomPlace(false)}
+									/>
+								</div>
 
-          <div className={card}>
-            <StarRatingInput
-              label="Minimalny stopień zaawansowania:"
-              value={level}
-              onChange={setLevel}
-              max={5}
-              size={30}
-            />
-            {errors.level && errorText(errors.level)}
-          </div>
+								{customPlace && (
+									<p className='text-sm text-zinc-400 mt-2'>
+										Wybrano: {customPlace.name || 'Nowy obiekt'} ({customPlace.formatted_address || ''})
+									</p>
+								)}
+							</>
+						)}
 
-          <div className={`${card} flex items-center`}>
-            <Checkbox
-              id="isFree"
-              label="Bezpłatny udział:"
-              checked={free}
-              onChange={(checked) => {
-                setFree(checked);
-                if (checked) setPrice(0);
-              }}
-            />
-          </div>
+						{errors.placeId && <p className='text-red-400 text-sm mt-1'>{errors.placeId}</p>}
+					</div>
 
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="price">Cena (PLN):</label>
-            <input
-              type="number"
-              id="price"
-              value={free ? 0 : price}
-              onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
-              disabled={free}
-              className={`w-full p-2 border border-gray-300 rounded bg-gray-100 disabled:bg-gray-300 disabled:text-gray-500 disabled:border-gray-400 disabled:cursor-not-allowed ${errors.price ? inputErrorStyle : ""}`}
-              placeholder="Podaj cenę"
-              min={0}
-              step={0.01}
-              inputMode="decimal"
-              aria-invalid={!!errors.price}
-              aria-describedby={errors.price ? "price-error" : undefined}
-            />
-            {errors.price && <div id="price-error">{errorText(errors.price)}</div>}
-          </div>
+					{/* Zdjęcie */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
+							<Upload size={16} /> Zdjęcie wydarzenia
+						</label>
+						<input
+							type='file'
+							accept='image/*'
+							onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+							className='file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-violet-700 file:text-white hover:file:bg-violet-800 cursor-pointer bg-zinc-900/70 text-gray-300 border border-zinc-700 rounded-xl p-2 w-full'
+						/>
+						{selectedFile && (
+							<p className='text-sm text-zinc-400 mt-2'>
+								{selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+							</p>
+						)}
+					</div>
+				</form>
 
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="maxParticipants">Maksymalna liczba uczestników:</label>
-            <input
-              type="number"
-              id="maxParticipants"
-              value={maxParticipants}
-              onChange={(e) => setMaxParticipants(e.target.value === "" ? "" : Number(e.target.value))}
-              className={`w-full p-2 border border-gray-300 rounded bg-gray-100 ${errors.maxParticipants ? inputErrorStyle : ""}`}
-              placeholder="Np. 10"
-              min={1}
-              step={1}
-              aria-invalid={!!errors.maxParticipants}
-              aria-describedby={errors.maxParticipants ? "maxParticipants-error" : undefined}
-            />
-            {errors.maxParticipants && <div id="maxParticipants-error">{errorText(errors.maxParticipants)}</div>}
-          </div>
-
-          <div className={`${card} flex items-center`}>
-            <Checkbox
-              id="isPrivate"
-              label="Wydarzenie prywatne:"
-              checked={isPrivate}
-              onChange={setIsPrivate}
-            />
-          </div>
-
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="eventDate">Data wydarzenia:</label>
-            <input
-              type="date"
-              id="eventDate"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              className={`w-full p-2 border border-gray-300 rounded bg-white ${errors.eventDate ? inputErrorStyle : ""}`}
-              aria-invalid={!!errors.eventDate}
-              aria-describedby={errors.eventDate ? "eventDate-error" : undefined}
-            />
-            {errors.eventDate && <div id="eventDate-error">{errorText(errors.eventDate)}</div>}
-          </div>
-
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="eventTime">Godzina:</label>
-            <input
-              type="time"
-              id="eventTime"
-              value={eventTime}
-              onChange={(e) => setEventTime(e.target.value)}
-              className={`w-full p-2 border border-gray-300 rounded bg-white ${errors.eventTime ? inputErrorStyle : ""}`}
-              aria-invalid={!!errors.eventTime}
-              aria-describedby={errors.eventTime ? "eventTime-error" : undefined}
-            />
-            {errors.eventTime && <div id="eventTime-error">{errorText(errors.eventTime)}</div>}
-          </div>
-
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="place">Miejsce:</label>
-            <select
-              id="place"
-              value={placeId}
-              onChange={(e) => setPlaceId(Number(e.target.value))}
-              className={`w-full p-2 border border-gray-300 rounded bg-gray-100 ${errors.placeId ? inputErrorStyle : ""}`}
-              aria-invalid={!!errors.placeId}
-              aria-describedby={errors.placeId ? "place-error" : undefined}
-            >
-              <option value={0}>Wybierz miejsce</option>
-              {sportObjects.map((obj) => (
-                <option key={obj.id} value={obj.id}>
-                  {obj.name}, {obj.city}, {obj.street} {obj.number}{obj.secondNumber ? `/${obj.secondNumber}` : ""}
-                </option>
-              ))}
-            </select>
-            {errors.placeId && <div id="place-error">{errorText(errors.placeId)}</div>}
-          </div>
-
-          <div className={card}>
-            <label className="text-gray-400 text-sm mb-1 block" htmlFor="eventImage">Zdjęcie wydarzenia:</label>
-            <input
-              type="file"
-              id="eventImage"
-              accept="image/*"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className={`w-full p-2 border rounded bg-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 ${errors.eventImage ? inputErrorStyle : "border-gray-300"}`}
-              aria-invalid={!!errors.eventImage}
-              aria-describedby={errors.eventImage ? "eventImage-error" : undefined}
-            />
-            {selectedFile && (
-              <p className="mt-2 text-sm text-gray-500">
-                Wybrano: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
-            )}
-            {errors.eventImage && <div id="eventImage-error">{errorText(errors.eventImage)}</div>}
-          </div>
-        </div>
-
-        <div className="pt-2">
-          <button
-            type="submit"
-            className="bg-purple-600 text-white px-8 py-2 rounded hover:bg-purple-700 transition-colors w-full disabled:opacity-60"
-            disabled={loading || submitting}
-          >
-            {uploadingImage ? "Przesyłanie zdjęcia..." : submitting ? "Tworzenie..." : "Stwórz Wydarzenie"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+				<div className='mt-10 text-center'>
+					<button
+						type='submit'
+						onClick={handleSubmit}
+						disabled={submitting}
+						className='bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900 px-10 py-4 rounded-xl font-semibold text-white shadow-lg shadow-violet-900/30 transition-all hover:-translate-y-0.5 disabled:opacity-60'>
+						{uploadingImage ? 'Przesyłanie zdjęcia...' : submitting ? 'Tworzenie...' : 'Stwórz Wydarzenie'}
+					</button>
+				</div>
+			</motion.div>
+		</div>
+	)
 }
