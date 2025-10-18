@@ -1,3 +1,4 @@
+// src/pages/EventsPage.tsx
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -23,6 +24,18 @@ import {
 } from 'lucide-react'
 
 dayjs.locale('pl')
+
+// const LazyMapView = ({ }: { events: Event[] }) => (
+// 	<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
+// 		<div>
+// 			<div className='text-4xl mb-3'>🗺️</div>
+// 			<p className='text-white font-semibold'>Widok mapy będzie dostępny wkrótce</p>
+// 			<p className='mt-1 text-sm text-zinc-400'>
+// 				Po dodaniu współrzędnych do wydarzeń (latitude/longitude) pokażemy markery na mapie.
+// 			</p>
+// 		</div>
+// 	</div>
+// )
 
 type SortKey = 'date_asc' | 'date_desc' | 'price_asc' | 'price_desc' | 'popularity'
 const PAGE_SIZE = 12
@@ -249,6 +262,7 @@ const EventsPage = () => {
 
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
+
 					{/* Pasek wyszukiwania i sortowania */}
 					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
 						<div className='flex flex-1 items-stretch gap-3'>
@@ -426,10 +440,30 @@ const EventsPage = () => {
 							<>
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{paged.map(ev => (
-										<article
-											key={ev.eventId}
-											className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
-											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800'>
+										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
+											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
+												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
+													<img
+														src={ev.imageUrl}
+														alt={ev.eventName}
+														onError={e => {
+															const target = e.currentTarget as HTMLImageElement
+															target.style.display = 'none'
+															const fallback = target.nextElementSibling as HTMLElement
+															if (fallback) fallback.style.display = 'flex'
+														}}
+														className='h-full w-full object-cover group-hover:scale-105 transition-transform duration-500'
+													/>
+												) : null}
+												<div
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}
+												>
+													<div className='text-center text-zinc-400'>
+														<div className='text-4xl mb-2'>JoinMatch</div>
+														<div className='text-sm font-medium'>{ev.sportTypeName}</div>
+													</div>
+												</div>
 												<span className='absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-violet-200 ring-1 ring-violet-600/40'>
 													{ev.sportTypeName}
 												</span>
