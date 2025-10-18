@@ -56,12 +56,14 @@ export default function CreateEventForm() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    api.get<SportObject[]>('/sport-object')
-      .then(res => setSportObjects(res.data))
-      .catch(() => setFetchError("Nie udało się pobrać obiektów sportowych."))
-      .finally(() => setLoading(false));
-  }, []);
+	useEffect(() => {
+		Promise.all([api.get('/sport-type'), api.get('/sport-object')])
+			.then(([types, objects]) => {
+				setSportTypes(types.data)
+				setSportObjects(objects.data)
+			})
+			.catch(() => setServerError('Nie udało się pobrać danych.'))
+	}, [])
 
   const isDateInPast = (d: string) => {
     if (!d) return false;

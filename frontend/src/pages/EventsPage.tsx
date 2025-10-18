@@ -1,5 +1,5 @@
 // src/pages/EventsPage.tsx
-import { useEffect, useMemo, useState, Suspense } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -23,17 +23,17 @@ import {
 
 dayjs.locale('pl')
 
-const LazyMapView = ({ }: { events: Event[] }) => (
-	<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
-		<div>
-			<div className='text-4xl mb-3'>🗺️</div>
-			<p className='text-white font-semibold'>Widok mapy będzie dostępny wkrótce</p>
-			<p className='mt-1 text-sm text-zinc-400'>
-				Po dodaniu współrzędnych do wydarzeń (latitude/longitude) pokażemy markery na mapie.
-			</p>
-		</div>
-	</div>
-)
+// const LazyMapView = ({ }: { events: Event[] }) => (
+// 	<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
+// 		<div>
+// 			<div className='text-4xl mb-3'>🗺️</div>
+// 			<p className='text-white font-semibold'>Widok mapy będzie dostępny wkrótce</p>
+// 			<p className='mt-1 text-sm text-zinc-400'>
+// 				Po dodaniu współrzędnych do wydarzeń (latitude/longitude) pokażemy markery na mapie.
+// 			</p>
+// 		</div>
+// 	</div>
+// )
 
 type SortKey = 'date_asc' | 'date_desc' | 'price_asc' | 'price_desc' | 'popularity'
 const PAGE_SIZE = 12
