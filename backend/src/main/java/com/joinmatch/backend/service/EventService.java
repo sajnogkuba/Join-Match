@@ -56,7 +56,6 @@ public class EventService {
                 .street(e.getSportObject().getStreet())
                 .number(e.getSportObject().getNumber())
                 .secondNumber(e.getSportObject().getSecondNumber())
-                .capacity(e.getSportObject().getCapacity())
 
                 .eventVisibilityId(e.getEventVisibility().getId())
                 .eventVisibilityName(e.getEventVisibility().getName())

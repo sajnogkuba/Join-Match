@@ -58,7 +58,6 @@ public class SportObjectService {
         sportObject.setStreet(dto.street());
         sportObject.setNumber(dto.number());
         sportObject.setSecondNumber(dto.secondNumber());
-        sportObject.setCapacity(dto.capacity());
 
         Double lat = dto.latitude();
         Double lng = dto.longitude();
@@ -111,7 +110,6 @@ public class SportObjectService {
                 obj.getStreet(),
                 obj.getNumber(),
                 obj.getSecondNumber(),
-                obj.getCapacity(),
                 obj.getLatitude(),
                 obj.getLongitude()
         );

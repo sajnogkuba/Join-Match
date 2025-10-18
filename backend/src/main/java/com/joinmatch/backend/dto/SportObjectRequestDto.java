@@ -24,12 +24,8 @@ public record SportObjectRequestDto(
         Integer number,
 
         @Min(value = 1, message = "Second number must be greater than 0")
-        @NotNull(message = "Second number cannot be null")
         Integer secondNumber,
 
-        @Min(value = 1, message = "Capacity must be greater than 0")
-        @NotNull(message = "Capacity cannot be null")
-        Integer capacity,
 
         Double latitude,
 

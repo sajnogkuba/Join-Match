@@ -131,8 +131,7 @@ export default function CreateEventForm() {
 					city: city || 'Nieznane miasto',
 					street: street || 'Nieznana ulica',
 					number: parseInt(number) || 1,
-					secondNumber: 1,
-					capacity: 10,
+					secondNumber: null,
 					latitude: customPlace.geometry?.location?.lat() ?? 0,
 					longitude: customPlace.geometry?.location?.lng() ?? 0,
 				}

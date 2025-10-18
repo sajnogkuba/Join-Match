@@ -7,7 +7,6 @@ public record SportObjectResponseDto (
         String street,
         Integer number,
         Integer secondNumber,
-        Integer capacity,
 
         Double latitude,
 

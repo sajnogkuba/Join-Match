@@ -5,7 +5,6 @@ export interface SportObject {
   street: string
   number: number
   secondNumber: number
-  capacity: number
   latitude: number | null
   longitude: number | null
 }
