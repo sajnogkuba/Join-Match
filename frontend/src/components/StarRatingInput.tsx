@@ -1,22 +1,23 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 
 type StarRatingProps = {
-  value: number;              // 0..max
+  value: number;
   onChange: (v: number) => void;
-  max?: number;               // domyślnie 5
-  size?: number;              // px
+  max?: number;
+  size?: number;
   readOnly?: boolean;
-  label?: string;             // np. "Minimalny stopień zaawansowania"
+  label?: string;
 };
 
 export default function StarRatingInput({
-                                     value,
-                                     onChange,
-                                     max = 5,
-                                     size = 28,
-                                     readOnly = false,
-                                     label,
-                                   }: StarRatingProps) {
+  value,
+  onChange,
+  max = 5,
+  size = 30,
+  readOnly = false,
+  label,
+}: StarRatingProps) {
   const [hover, setHover] = useState<number | null>(null);
   const active = hover ?? value;
 
@@ -39,7 +40,7 @@ export default function StarRatingInput({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="text-gray-400 text-sm mb-1 block">{label}</label>
+        <label className="text-zinc-400 text-sm block">{label}</label>
       )}
 
       <div
@@ -52,44 +53,43 @@ export default function StarRatingInput({
         {Array.from({ length: max }, (_, i) => {
           const index = i + 1;
           const filled = index <= active;
+          const selected = index === value;
 
           return (
-            <button
+            <motion.button
               key={index}
               type="button"
               role="radio"
-              aria-checked={index === value}
-              title={`${index} / ${max}`}
+              aria-checked={selected}
               disabled={readOnly}
               onMouseEnter={() => !readOnly && setHover(index)}
               onMouseLeave={() => !readOnly && setHover(null)}
               onFocus={() => !readOnly && setHover(index)}
               onBlur={() => !readOnly && setHover(null)}
               onClick={() => !readOnly && onChange(index)}
-              className="p-0.5 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded"
+              className="focus:outline-none"
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 300 }}
             >
-              {/* SVG gwiazdy: wypełniona lub tylko obrys */}
               <svg
                 width={size}
                 height={size}
                 viewBox="0 0 24 24"
-                className="block"
+                className="block drop-shadow-sm"
                 aria-hidden="true"
               >
-                {filled ? (
-                  <path
-                    d="M12 2l3.09 6.26L22 9.27l-5 4.88L18.18 22 12 18.6 5.82 22 7 14.15l-5-4.88 6.91-1.01L12 2z"
-                    className="fill-purple-600"
-                  />
-                ) : (
-                  <path
-                    d="M12 2l3.09 6.26L22 9.27l-5 4.88L18.18 22 12 18.6 5.82 22 7 14.15l-5-4.88 6.91-1.01L12 2z"
-                    className="fill-transparent stroke-white"
-                    strokeWidth={2}
-                  />
-                )}
+                <path
+                  d="M12 2l3.09 6.26L22 9.27l-5 4.88L18.18 22 12 18.6 5.82 22 7 14.15l-5-4.88 6.91-1.01L12 2z"
+                  className={`transition-all duration-300 ${
+                    filled
+                      ? "fill-violet-500 drop-shadow-[0_0_6px_rgba(139,92,246,0.6)]"
+                      : "fill-transparent stroke-zinc-400"
+                  }`}
+                  strokeWidth={filled ? 0 : 2}
+                />
               </svg>
-            </button>
+            </motion.button>
           );
         })}
       </div>

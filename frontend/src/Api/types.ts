@@ -49,7 +49,6 @@ export type EventDetails = {
 	street: string
 	number: number
 	secondNumber: number | null
-	capacity: number
 
 	eventVisibilityId: number
 	eventVisibilityName: string

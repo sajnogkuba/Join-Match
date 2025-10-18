@@ -26,5 +26,8 @@ public class SportObject {
 
     private Integer secondNumber;
 
-    private Integer capacity;
+
+    private Double latitude;
+
+    private Double longitude;
 }
