@@ -2,15 +2,16 @@ package com.joinmatch.backend.model;
 
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "friend_request")
 @NoArgsConstructor
+@AllArgsConstructor
 @Data
+@Builder
 public class FriendRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
