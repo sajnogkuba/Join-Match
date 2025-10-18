@@ -358,7 +358,29 @@ const EventsPage = () => {
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{paged.map(ev => (
 										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
-											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800'>
+											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
+												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
+													<img
+														src={ev.imageUrl}
+														alt={ev.eventName}
+														onError={e => {
+															const target = e.currentTarget as HTMLImageElement
+															target.style.display = 'none'
+															const fallback = target.nextElementSibling as HTMLElement
+															if (fallback) fallback.style.display = 'flex'
+														}}
+														className='h-full w-full object-cover group-hover:scale-105 transition-transform duration-500'
+													/>
+												) : null}
+												<div 
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}
+												>
+													<div className='text-center text-zinc-400'>
+														<div className='text-4xl mb-2'>JoinMatch</div>
+														<div className='text-sm font-medium'>{ev.sportTypeName}</div>
+													</div>
+												</div>
 												<span className='absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-violet-200 ring-1 ring-violet-600/40'>
 													{ev.sportTypeName}
 												</span>
