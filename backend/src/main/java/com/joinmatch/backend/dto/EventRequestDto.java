@@ -13,6 +13,7 @@ public record EventRequestDto(
         String status,
         LocalDateTime eventDate,
         Integer sportTypeId,
-        Integer minLevel
+        Integer minLevel,
+        String imageUrl
 ) {
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, User, LogOut, LogIn, UserPlus } from 'lucide-react'
@@ -7,16 +7,10 @@ import { useAuth } from '../Context/authContext'
 
 export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const { isAuthenticated, logout, user } = useAuth()
   const location = useLocation()
 
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   const navLinks = [
     { to: '/', label: 'Strona główna' },
@@ -27,9 +21,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-black/70 backdrop-blur-xl shadow-lg' : 'bg-transparent'
-      }`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-black/50 backdrop-blur-xl shadow-lg`}
     >
 	<div className="container mx-auto px-4 relative">
 	  <div className="flex justify-between items-center py-3 md:py-4">
@@ -93,10 +85,10 @@ export const Navbar: React.FC = () => {
 				animate={{ opacity: 1, y: 0 }}
 				exit={{ opacity: 0, y: -10 }}
 				transition={{ duration: 0.15 }}
-				className="absolute right-0 mt-3 w-44 bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50"
+				className="absolute right-0 mt-3 min-w-48 max-w-80 bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50"
 			  >
 				<div className="px-4 py-3 border-b border-zinc-800 text-sm text-zinc-400">
-				<span className="block text-white font-semibold">{user}</span>
+				<span className="block text-white font-semibold break-words">{user}</span>
 				<span className="text-xs text-zinc-500">Użytkownik</span>
 				</div>
 				<Link

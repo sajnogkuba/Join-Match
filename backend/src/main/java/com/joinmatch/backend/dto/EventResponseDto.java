@@ -19,7 +19,8 @@ public record EventResponseDto(
         LocalDateTime eventDate,
         String sportTypeName,
         Integer bookedParticipants,
-        Integer minLevel
+        Integer minLevel,
+        String imageUrl
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(
@@ -36,7 +37,8 @@ public record EventResponseDto(
                 event.getEventDate(),
                 event.getSportEv().getName(),
                 event.getUserEvents().size(),
-                event.getMinLevel()
+                event.getMinLevel(),
+                event.getImageUrl()
         );
     }
 }

@@ -94,10 +94,10 @@ public class EventService {
         event.setSportObject(sportObject);
         event.setEventVisibility(eventVisibility);
         event.setStatus(eventRequestDto.status());
-        //ustaw sport
         event.setSportEv(sport);
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
+        event.setImageUrl(eventRequestDto.imageUrl());
 
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);

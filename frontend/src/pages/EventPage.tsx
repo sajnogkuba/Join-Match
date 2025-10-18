@@ -12,7 +12,6 @@ import {
 	MapPin,
 	Ticket,
 	Shield,
-	Users,
 	Copy,
 	ChevronDown,
 	MessageCircle,
@@ -189,9 +188,9 @@ const EventPage: React.FC = () => {
 	const progressPercentage = Math.min(100, (participants.length / Math.max(1, event.numberOfParticipants)) * 100)
 
 	return (
-		<div className='min-h-screen bg-[#1f2632] text-zinc-300'>
-			{/* HERO */}
-			<div className='sticky top-0 z-40 bg-[#1f2632]/80 backdrop-blur border-b border-zinc-800'>
+		<div className='min-h-screen bg-[#1f2632] text-zinc-300 pt-24'>
+			{/* Header with navigation buttons */}
+			<div className='bg-[#1f2632] border-b border-zinc-800'>
 				<div className='mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-8'>
 					<button
 						onClick={() => navigate(-1)}

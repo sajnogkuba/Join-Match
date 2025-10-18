@@ -57,6 +57,9 @@ public class Event {
     @Column(name = "min_level", nullable = false)
     private Integer minLevel;
 
+    @Column(name = "image_url", length = 255)
+    private String imageUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_type_id", nullable = false)
     private Sport sportEv;
