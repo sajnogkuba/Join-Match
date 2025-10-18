@@ -36,50 +36,63 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
         TokenSupportObject tokenSupportObject = userService.login(request);
-        JwtResponse response = new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),request.email());
+        JwtResponse response = new JwtResponse(tokenSupportObject.getToken(), tokenSupportObject.getRefreshToken(), request.email());
         return ResponseEntity.ok(response);
     }
+
     @PostMapping("/refreshToken")
-    public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken){
+    public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken) {
         RefreshSupportObject refreshObject = userService.refreshToken(refreshToken.refreshToken());
-        JwtResponse response = new JwtResponse(refreshObject.getTokenSupportObject().getToken(),refreshObject.getTokenSupportObject().getRefreshToken(),refreshObject.getUser().getEmail());
+        JwtResponse response = new JwtResponse(refreshObject.getTokenSupportObject().getToken(), refreshObject.getTokenSupportObject().getRefreshToken(), refreshObject.getUser().getEmail());
         return ResponseEntity.ok(response);
     }
+
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest){
-        try{
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest) {
+        try {
             userService.logoutUser(logoutRequest.email());
-        }catch (RuntimeException runtimeException){
-            return  ResponseEntity.badRequest().build();
+        } catch (RuntimeException runtimeException) {
+            return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
     }
     //TODO do przeniesienia do sportControllera
 
     @PatchMapping("/changePass")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto){
+    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto) {
         try {
             userService.changePassword(changePassDto);
-        }catch (IllegalArgumentException illegalArgumentException){
+        } catch (IllegalArgumentException illegalArgumentException) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body(illegalArgumentException.getMessage());
 
-        }catch (RuntimeException runtimeException){
+        } catch (RuntimeException runtimeException) {
             return ResponseEntity.badRequest().body(runtimeException.getMessage());
 
         }
         return ResponseEntity.ok("Password changed");
     }
+
     @GetMapping("/user/details")
-    public ResponseEntity<UserResponseDto> getUserDetails(@RequestParam String token){
+    public ResponseEntity<UserResponseDto> getUserDetails(@RequestParam String token) {
         UserResponseDto simpleInfo;
         try {
-             simpleInfo = userService.getSimpleInfo(token);
-        }catch (IllegalArgumentException e){
+            simpleInfo = userService.getSimpleInfo(token);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
 
         return ResponseEntity.ok().body(simpleInfo);
+    }
+
+    @PatchMapping("/user/photo")
+    public ResponseEntity<String> updateUserPhoto(@RequestBody UpdateUserPhotoRequestDto request) {
+        try {
+            userService.updateUserPhoto(request.token(), request.photoUrl());
+            return ResponseEntity.ok("Photo updated");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

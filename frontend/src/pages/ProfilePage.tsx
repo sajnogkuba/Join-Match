@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axiosInstance from "../Api/axios";
+import api from "../Api/axios";
+import type { UpdatePhotoRequest } from "../Api/types";
+import Avatar from "../components/Avatar";
 import {
     Star, Users, Trophy, ChevronRight, Bookmark, Plus,
     Settings, UserRound, Lock, Bell, Globe2, LogOut, Database,
+    X, Upload, Camera
 } from "lucide-react";
 
 type SimpleUser = {
@@ -60,12 +63,170 @@ const Sidebar = () => {
     );
 };
 
-const ProfileCard = ({ user, loading }: { user: SimpleUser | null; loading: boolean }) => {
+
+const ProfileImageModal = ({ 
+    isOpen, 
+    onClose, 
+    imageUrl, 
+    userName,
+    onPhotoUpdated,
+    loading = false
+}: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    imageUrl: string; 
+    userName: string;
+    onPhotoUpdated: (newPhotoUrl: string) => void;
+    loading?: boolean;
+}) => {
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setError(null);
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) return;
+
+        setUploading(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            const uploadResponse = await api.post('/images/upload/profile', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const photoUrl = uploadResponse.data;
+
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                throw new Error('Brak tokenu autoryzacji');
+            }
+
+            const updateRequest: UpdatePhotoRequest = {
+                token,
+                photoUrl
+            };
+
+            await api.patch('/auth/user/photo', updateRequest);
+
+            onPhotoUpdated(photoUrl);
+            handleClose();
+        } catch (error) {
+            console.error('Błąd podczas przesyłania zdjęcia:', error);
+            setError('Nie udało się przesłać zdjęcia. Spróbuj ponownie.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleClose = () => {
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setError(null);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    const displayImage = previewUrl || (imageUrl || null);
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/80" onClick={handleClose} />
+            <div className="relative w-[95%] max-w-md rounded-2xl bg-zinc-900 p-6 ring-1 ring-zinc-800 shadow-2xl">
+                <button
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+                >
+                    <X size={24} />
+                </button>
+                
+                <div className="flex flex-col items-center space-y-4">
+                    <h3 className="text-white text-lg font-semibold">Zdjęcie profilowe</h3>
+                    
+                    {/* Large rounded profile image */}
+                    <div className="relative">
+                        <Avatar 
+                            src={displayImage} 
+                            name={userName} 
+                            size="lg"
+                            loading={loading}
+                            className="ring-4 ring-zinc-700 shadow-2xl"
+                        />
+                    </div>
+                    
+                    {/* Upload section */}
+                    <div className="w-full space-y-3">
+                        <input
+                            type="file"
+                            id="profile-image-upload"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                        />
+                        <label
+                            htmlFor="profile-image-upload"
+                            className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-zinc-600 hover:border-violet-500 px-4 py-3 text-sm text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <Camera size={18} />
+                            Wybierz nowe zdjęcie
+                        </label>
+                        
+                        {selectedFile && (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-center gap-2">
+                                    <span className="text-sm text-zinc-400">
+                                        Wybrano: {selectedFile.name}
+                                    </span>
+                                    <button
+                                        onClick={handleUpload}
+                                        disabled={uploading}
+                                        className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <Upload size={16} />
+                                        {uploading ? "Przesyłanie..." : "Prześlij"}
+                                    </button>
+                                </div>
+                                {error && (
+                                    <p className="text-sm text-red-400 text-center">
+                                        {error}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ProfileCard = ({ 
+    user, 
+    loading, 
+    onImageClick 
+}: { 
+    user: SimpleUser | null; 
+    loading: boolean; 
+    onImageClick: () => void;
+}) => {
     const name = user?.name ?? (loading ? "Ładowanie…" : "—");
     const handle = "General";
-    const avatar =
-        user?.urlOfPicture ??
-        "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?q=80&w=300&auto=format&fit=crop";
     const rating = 4.7;
     const friends = 67;
     const mainSport = "Piłka nożna";
@@ -73,7 +234,22 @@ const ProfileCard = ({ user, loading }: { user: SimpleUser | null; loading: bool
     return (
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-                <img src={avatar} alt={`${name} avatar`} className="h-14 w-14 rounded-full object-cover ring-2 ring-zinc-700" />
+                <button
+                    onClick={onImageClick}
+                    className="relative group"
+                    disabled={loading}
+                >
+                    <Avatar 
+                        src={user?.urlOfPicture ?? null} 
+                        name={name} 
+                        size="md"
+                        loading={loading}
+                        className="hover:ring-violet-500 transition-all duration-200 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                        <Camera size={16} className="opacity-0 group-hover:opacity-100 text-white transition-opacity duration-200" />
+                    </div>
+                </button>
                 <div>
                     <p className="text-white font-semibold leading-tight">
                         {name} <span className="text-zinc-400">/ {handle}</span>
@@ -161,7 +337,7 @@ const AddSportModal = ({
         if (!open) return;
         setLoading(true);
         setErr(null);
-        axiosInstance
+        api
             .get<SportTypeOption[]>("/sport-type")
             .then(({ data }) => setOptions(data))
             .catch(() => setErr("Nie udało się pobrać listy sportów."))
@@ -175,7 +351,7 @@ const AddSportModal = ({
         setSaving(true);
         try {
             const token = localStorage.getItem("accessToken") || "";
-            await axiosInstance.post("/sport-type/user", {
+            await api.post("/sport-type/user", {
                 token,
                 sportId,
                 rating: levelNum,
@@ -292,6 +468,11 @@ const ProfilePage = () => {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [sports, setSports] = useState<UserSport[]>([]);
     const [openAdd, setOpenAdd] = useState(false);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+    const handlePhotoUpdated = (newPhotoUrl: string) => {
+        setUser(prev => prev ? { ...prev, urlOfPicture: newPhotoUrl } : null);
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
@@ -300,7 +481,7 @@ const ProfilePage = () => {
             setLoading(false);
             return;
         }
-        axiosInstance
+        api
             .get<SimpleUser>("/auth/user/details", { params: { token } })
             .then(({ data }) => setUser(data))
             .catch(() => setErrorMsg("Nie udało się pobrać profilu."))
@@ -310,7 +491,7 @@ const ProfilePage = () => {
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
         if (!token) return;
-        axiosInstance
+        api
             .get<UserSportsResponse>("/sport-type/user", { params: { token } })
             .then(({ data }) => {
                 const mapped: UserSport[] = (data.sports ?? []).map(s => ({
@@ -342,7 +523,11 @@ const ProfilePage = () => {
 
             <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
                 <div className="rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800">
-                    <ProfileCard user={user} loading={loading} />
+                    <ProfileCard 
+                        user={user} 
+                        loading={loading} 
+                        onImageClick={() => setIsImageModalOpen(true)} 
+                    />
                     {errorMsg && (
                         <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
                             {errorMsg}
@@ -363,6 +548,15 @@ const ProfilePage = () => {
                 open={openAdd}
                 onClose={() => setOpenAdd(false)}
                 onAdded={(s) => setSports((prev) => [...prev, s])}
+            />
+
+            <ProfileImageModal
+                isOpen={isImageModalOpen}
+                onClose={() => setIsImageModalOpen(false)}
+                imageUrl={user?.urlOfPicture ?? ""}
+                userName={user?.name ?? "User"}
+                onPhotoUpdated={handlePhotoUpdated}
+                loading={loading}
             />
         </div>
     );

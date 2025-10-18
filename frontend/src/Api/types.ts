@@ -4,6 +4,11 @@ export interface JwtResponse {
 	email: string
 }
 
+export interface UpdatePhotoRequest {
+	token: string
+	photoUrl: string
+}
+
 export interface Event {
 	eventId: number
 	eventName: string
