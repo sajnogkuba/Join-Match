@@ -1,3 +1,6 @@
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
+
 type CheckboxProps = {
   id: string;
   label: string;
@@ -5,10 +8,12 @@ type CheckboxProps = {
   onChange: (checked: boolean) => void;
 };
 
-const Checkbox = ({ id, label, checked, onChange }: CheckboxProps)=> {
+export default function Checkbox({ id, label, checked, onChange }: CheckboxProps) {
   return (
-    <label htmlFor={id} className="flex items-center gap-3 cursor-pointer select-none">
-      <span className="text-gray-400 text-sm mb-1 block">{label}</span>
+    <label
+      htmlFor={id}
+      className="flex items-center gap-3 cursor-pointer select-none group mt-2"
+    >
       <input
         id={id}
         type="checkbox"
@@ -16,26 +21,28 @@ const Checkbox = ({ id, label, checked, onChange }: CheckboxProps)=> {
         onChange={(e) => onChange(e.target.checked)}
         className="hidden"
       />
-      <span
-        className={`
-          w-8 h-8 flex items-center justify-center rounded-md border-3 bg-white
-          ${checked ? "border-purple-600 text-purple-600" : "border-purple-600 text-transparent"}
-        `}
+
+      <motion.span
+        initial={false}
+        animate={{
+          backgroundColor: checked ? "rgb(139 92 246 / 0.15)" : "transparent",
+          borderColor: checked ? "rgb(139 92 246)" : "rgb(63 63 70)",
+        }}
+        transition={{ duration: 0.2 }}
+        className="w-6 h-6 flex items-center justify-center border rounded-md"
       >
-        {/* Ikona X */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          fill="none"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        {checked && (
+          <Check
+            size={16}
+            className="text-violet-400"
+            strokeWidth={3}
+          />
+        )}
+      </motion.span>
+
+      <span className="text-zinc-300 text-sm group-hover:text-white transition">
+        {label}
       </span>
     </label>
   );
 }
-
-export default Checkbox;

@@ -32,7 +32,6 @@ public class EventDetailsResponseDto {
     private String street;
     private Integer number;
     private Integer secondNumber;
-    private Integer capacity;
 
     private Integer eventVisibilityId;
     private String eventVisibilityName;

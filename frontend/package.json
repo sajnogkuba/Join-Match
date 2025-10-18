@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.0.1",
+    "@react-google-maps/api": "^2.20.7",
     "@react-oauth/google": "^0.12.2",
     "@tailwindcss/vite": "^4.1.5",
     "axios": "^1.10.0",

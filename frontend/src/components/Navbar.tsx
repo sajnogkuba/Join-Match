@@ -1,13 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, User, LogOut, LogIn, UserPlus } from 'lucide-react'
 import Logo from '../assets/LogoWhite.png'
 import { useAuth } from '../Context/authContext'
+import Avatar from './Avatar'
+import api from '../Api/axios'
+
+type UserDetails = {
+  name: string;
+  email: string;
+  dateOfBirth: string;
+  urlOfPicture: string | null;
+}
 
 export const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(null)
+  const [loadingUserDetails, setLoadingUserDetails] = useState(false)
   const { isAuthenticated, logout, user } = useAuth()
   const location = useLocation()
 
@@ -18,6 +29,22 @@ export const Navbar: React.FC = () => {
     { to: '/venues', label: 'Mecze' },
     { to: '/about', label: 'O nas' },
   ]
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setLoadingUserDetails(true)
+      const token = localStorage.getItem('accessToken')
+      if (token) {
+        api.get<UserDetails>('/auth/user/details', { params: { token } })
+          .then(({ data }) => setUserDetails(data))
+          .catch(() => setUserDetails(null))
+          .finally(() => setLoadingUserDetails(false))
+      }
+    } else {
+      setUserDetails(null)
+      setLoadingUserDetails(false)
+    }
+  }, [isAuthenticated, user])
 
   return (
     <nav
@@ -74,9 +101,15 @@ export const Navbar: React.FC = () => {
 		  <div className="relative">
 			<button
 			onClick={() => setShowProfileMenu(!showProfileMenu)}
-			className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 text-white font-semibold shadow-lg hover:text-white focus:outline-none"
+			className="relative focus:outline-none"
 			>
-			<User size={18} />
+			<Avatar 
+			  src={userDetails?.urlOfPicture ?? null}
+			  name={userDetails?.name ?? user ?? "User"}
+			  size="sm"
+			  loading={loadingUserDetails}
+			  className="w-8 h-8 shadow-lg hover:scale-105 transition-transform"
+			/>
 			</button>
 			<AnimatePresence>
 			{showProfileMenu && (
@@ -88,7 +121,9 @@ export const Navbar: React.FC = () => {
 				className="absolute right-0 mt-3 min-w-48 max-w-80 bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50"
 			  >
 				<div className="px-4 py-3 border-b border-zinc-800 text-sm text-zinc-400">
-				<span className="block text-white font-semibold break-words">{user}</span>
+				<span className="block text-white font-semibold break-words">
+				  {userDetails?.name ?? user ?? "Użytkownik"}
+				</span>
 				<span className="text-xs text-zinc-500">Użytkownik</span>
 				</div>
 				<Link

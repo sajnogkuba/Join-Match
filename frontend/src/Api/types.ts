@@ -4,6 +4,11 @@ export interface JwtResponse {
 	email: string
 }
 
+export interface UpdatePhotoRequest {
+	token: string
+	photoUrl: string
+}
+
 export interface Event {
 	eventId: number
 	eventName: string
@@ -44,7 +49,6 @@ export type EventDetails = {
 	street: string
 	number: number
 	secondNumber: number | null
-	capacity: number
 
 	eventVisibilityId: number
 	eventVisibilityName: string

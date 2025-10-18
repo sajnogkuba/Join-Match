@@ -322,10 +322,6 @@ const EventPage: React.FC = () => {
 									<p className='text-xs text-zinc-400'>Widoczność</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{capitalizeFirst(event.eventVisibilityName)}</p>
 								</div>
-								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
-									<p className='text-xs text-zinc-400'>Pojemność obiektu</p>
-									<p className='mt-1 text-white text-lg font-semibold'>{event.capacity} osób</p>
-								</div>
 							</div>
 
 							{/* Lokalizacja */}
