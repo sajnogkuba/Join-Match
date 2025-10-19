@@ -1,4 +1,3 @@
-// src/pages/EventPage.tsx
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
@@ -6,30 +5,20 @@ import axiosInstance from '../Api/axios'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import {
-	ArrowLeft,
 	Share2,
-	CalendarDays,
-	MapPin,
-	Ticket,
 	Shield,
 	Copy,
 	ChevronDown,
-	MessageCircle,
 	UserRound,
+	MapPin,
 	Bookmark,
+	BookmarkCheck,
 	AlertTriangle,
+	MessageCircle,
+	CalendarDays,
 } from 'lucide-react'
 
 dayjs.locale('pl')
-
-// --- Mock uczestników (zachowano z wersji wejściowej) ---
-const mockParticipants = [
-	{ id: 1, name: 'Anna Nowak', avatar: '👩', skillLevel: 'Średni' },
-	{ id: 2, name: 'Piotr Wiśniewski', avatar: '👨', skillLevel: 'Wysoki' },
-	{ id: 3, name: 'Katarzyna Kowalczyk', avatar: '👩', skillLevel: 'Niski' },
-	{ id: 4, name: 'Michał Zieliński', avatar: '👨', skillLevel: 'Średni' },
-	{ id: 5, name: 'Agnieszka Dąbrowska', avatar: '👩', skillLevel: 'Wysoki' },
-]
 
 const EventPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
@@ -39,14 +28,39 @@ const EventPage: React.FC = () => {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	const [participants, setParticipants] = useState(mockParticipants)
+	// user email will be fetched from backend using access token
+	const [userEmail, setUserEmail] = useState<string | null>(null)
+
+	const [participants, setParticipants] = useState<any[]>([])
 	const [joined, setJoined] = useState(false)
+	const [saved, setSaved] = useState(false)
 
 	const [showShareToast, setShowShareToast] = useState(false)
 	const [showShareModal, setShowShareModal] = useState(false)
 	const [showDetailsAccordion, setShowDetailsAccordion] = useState(false)
 	const [showParticipants, setShowParticipants] = useState(false)
 
+	// fetch user email from backend based on stored access token (similar to ProfilePage)
+	useEffect(() => {
+		const fetchUserEmail = async () => {
+			const token = localStorage.getItem('accessToken')
+			if (!token) {
+				setUserEmail(null)
+				return
+			}
+			try {
+				const { data } = await axiosInstance.get('/auth/user/details', { params: { token } })
+				setUserEmail(data.email)
+			} catch (err) {
+				console.error('❌ Nie udało się pobrać danych użytkownika:', err)
+				setUserEmail(null)
+			}
+		}
+
+		fetchUserEmail()
+	}, [])
+
+	// ---------------- FETCH EVENT + PARTICIPANTS ----------------
 	useEffect(() => {
 		if (!id) {
 			setError('Nieprawidłowy identyfikator wydarzenia')
@@ -54,17 +68,105 @@ const EventPage: React.FC = () => {
 			return
 		}
 
-		axiosInstance
-			.get<EventDetails>(`/event/${id}`)
-			.then(({ data }) => setEvent(data))
-			.catch(err => {
+		const fetchEvent = async () => {
+			try {
+				const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
+				setEvent(data)
+
+				const participantsRes = await axiosInstance.get(`/user-event/${id}/participants`)
+				setParticipants(participantsRes.data || [])
+
+				// sprawdź, czy user uczestniczy
+				if (participantsRes.data?.some((p: any) => p.userEmail === userEmail)) {
+					setJoined(true)
+				}
+
+				// sprawdź, czy zapisany
+				if (userEmail) {
+					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
+					if (savedRes.data?.some((s: any) => s.eventId === Number(id))) {
+						setSaved(true)
+					}
+				}
+			} catch (err) {
 				console.error('❌ Błąd pobierania szczegółów wydarzenia:', err)
 				setError('Nie udało się pobrać szczegółów wydarzenia')
-			})
-			.finally(() => setLoading(false))
-	}, [id])
+			} finally {
+				setLoading(false)
+			}
+		}
 
-	// --- utils ---
+		fetchEvent()
+	}, [id, userEmail])
+
+	// ---------------- JOIN / LEAVE EVENT ----------------
+	const handleJoinEvent = async () => {
+		if (!userEmail || !id) return
+		try {
+			if (joined) {
+				await axiosInstance.delete(`/user-event`, {
+					data: { userEmail, eventId: Number(id), attendanceStatusId: 1 },
+				})
+				setParticipants(prev => prev.filter(p => p.userEmail !== userEmail))
+				setJoined(false)
+			} else {
+				await axiosInstance.post(`/user-event`, {
+					userEmail,
+					eventId: Number(id),
+					attendanceStatusId: 1,
+				})
+				const userObj = { id: Date.now(), userEmail, name: 'Ty', avatar: '👤', skillLevel: 'Średni' }
+				setParticipants(prev => [...prev, userObj])
+				setJoined(true)
+			}
+		} catch (err) {
+			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
+		}
+	}
+
+	// ---------------- SHARE ----------------
+	const handleShare = async () => {
+		try {
+			const url = window.location.href
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				await navigator.clipboard.writeText(url)
+			} else {
+				const el = document.createElement('textarea')
+				el.value = url
+				document.body.appendChild(el)
+				el.select()
+				document.execCommand('copy')
+				document.body.removeChild(el)
+			}
+			setShowShareToast(true)
+			setTimeout(() => setShowShareToast(false), 2000)
+		} catch (e) {
+			console.error('Nie udało się skopiować linku', e)
+		}
+	}
+
+	// ---------------- SAVE / UNSAVE EVENT ----------------
+	const handleSaveEvent = async () => {
+		if (!userEmail || !id) return
+		try {
+			if (saved) {
+				await axiosInstance.delete(`/user-saved-event`, {
+					data: { userEmail, eventId: Number(id) },
+				})
+				setSaved(false)
+			} else {
+				await axiosInstance.post(`/user-saved-event`, {
+					userEmail,
+					eventId: Number(id),
+				})
+				setSaved(true)
+			}
+		} catch (err) {
+			console.error('❌ Błąd przy zapisywaniu/odpinaniu wydarzenia:', err)
+		}
+	}
+
+	// ---------------- UTILS ----------------
 	const formatPrice = (cost: number, currency: string) =>
 		new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(cost)
 
@@ -73,7 +175,9 @@ const EventPage: React.FC = () => {
 
 	const capitalizeFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 
-	const getSkillLevelColor = (level: string) => {
+	const getSkillLevelColor = (level?: string) => {
+		if (!level) return 'bg-zinc-600/20 text-zinc-300'
+	
 		switch (level.toLowerCase()) {
 			case 'niski':
 				return 'bg-emerald-500/15 text-emerald-300'
@@ -84,77 +188,10 @@ const EventPage: React.FC = () => {
 			default:
 				return 'bg-zinc-600/20 text-zinc-300'
 		}
-	}
+	}	
 
-	const getStatusBadge = (status: string, scoreTeam1: number | null, scoreTeam2: number | null) => {
-		const base = 'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1'
-		switch (status) {
-			case 'finished':
-				return (
-					<span className={`${base} bg-emerald-500/10 text-emerald-300 ring-emerald-600/40`}>
-						<span className='h-1.5 w-1.5 rounded-full bg-emerald-400' />
-						Zakończone • {scoreTeam1 ?? 0}:{scoreTeam2 ?? 0}
-					</span>
-				)
-			case 'cancelled':
-				return (
-					<span className={`${base} bg-rose-500/10 text-rose-300 ring-rose-600/40`}>
-						<span className='h-1.5 w-1.5 rounded-full bg-rose-400' />
-						Anulowane
-					</span>
-				)
-			case 'in_progress':
-				return (
-					<span className={`${base} bg-amber-500/10 text-amber-300 ring-amber-600/40`}>
-						<span className='h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400' />W trakcie
-					</span>
-				)
-			default:
-				return (
-					<span className={`${base} bg-sky-500/10 text-sky-300 ring-sky-600/40`}>
-						<span className='h-1.5 w-1.5 rounded-full bg-sky-400' />
-						Planowane
-					</span>
-				)
-		}
-	}
-
-	const handleShare = async () => {
-		const shareData = {
-			title: event?.eventName || 'Wydarzenie sportowe',
-			text: `Sprawdź to wydarzenie sportowe: ${event?.eventName}`,
-			url: window.location.href,
-		}
-
-		if (navigator.share) {
-			try {
-				await navigator.share(shareData)
-			} catch {
-				// anulowano
-			}
-		} else {
-			try {
-				await navigator.clipboard.writeText(window.location.href)
-				setShowShareToast(true)
-				setTimeout(() => setShowShareToast(false), 2500)
-			} catch (err) {
-				console.error('Nie udało się skopiować linku', err)
-			}
-		}
-	}
-
-	const handleJoinEvent = () => {
-		if (joined) {
-			setParticipants(prev => prev.filter(p => p.name !== 'Ty'))
-			setJoined(false)
-		} else {
-			setParticipants(prev => [...prev, { id: Date.now(), name: 'Ty', avatar: '👤', skillLevel: 'Średni' }])
-			setJoined(true)
-		}
-	}
-
-	// --- stany ekranu ---
-	if (loading) {
+	// ---------------- LOADING / ERROR ----------------
+	if (loading)
 		return (
 			<div className='min-h-screen grid place-items-center bg-[#1f2632]'>
 				<div className='rounded-2xl bg-black/50 px-6 py-5 ring-1 ring-zinc-800 text-zinc-200 flex items-center gap-3'>
@@ -163,9 +200,8 @@ const EventPage: React.FC = () => {
 				</div>
 			</div>
 		)
-	}
 
-	if (error || !event) {
+	if (error || !event)
 		return (
 			<div className='min-h-screen grid place-items-center bg-[#1f2632] px-4'>
 				<div className='max-w-md w-full rounded-3xl bg-black/60 p-6 ring-1 ring-zinc-800 text-center'>
@@ -182,66 +218,73 @@ const EventPage: React.FC = () => {
 				</div>
 			</div>
 		)
-	}
 
 	const spotsLeft = Math.max(0, event.numberOfParticipants - participants.length)
 	const progressPercentage = Math.min(100, (participants.length / Math.max(1, event.numberOfParticipants)) * 100)
 
+	// ---------------- UI ----------------
 	return (
-		<div className='min-h-screen bg-[#1f2632] text-zinc-300 pt-24'>
-			{/* Header with navigation buttons */}
-			<div className='bg-[#1f2632] border-b border-zinc-800'>
-				<div className='mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-8'>
-					<button
-						onClick={() => navigate(-1)}
-						className='inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-zinc-200 ring-1 ring-white/10 bg-black/30 hover:bg-black/50'>
-						<ArrowLeft size={18} />
-						<span className='hidden sm:inline'>Wróć</span>
-					</button>
-					<button
-						onClick={() => setShowShareModal(true)}
-						className='inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-zinc-200 ring-1 ring-white/10 bg-black/30 hover:bg-black/50'>
-						<Share2 size={18} />
-						<span className='hidden sm:inline'>Udostępnij</span>
-					</button>
+		<div className='min-h-screen bg-[#1f2632] text-zinc-300 pt-20'>
+			{/* GŁÓWNE ZDJĘCIE */}
+			<div className='relative w-full h-72 overflow-hidden rounded-b-3xl border-b border-zinc-800'>
+				{event.imageUrl && event.imageUrl.trim() !== '' ? (
+					<img
+						src={event.imageUrl}
+						alt={event.eventName}
+						className='h-full w-full object-cover'
+						onError={e => {
+							const target = e.currentTarget as HTMLImageElement
+							target.style.display = 'none'
+							const fallback = target.nextElementSibling as HTMLElement
+							if (fallback) fallback.style.display = 'flex'
+						}}
+					/>
+				) : null}
+
+				<div
+					className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 ${
+						event.imageUrl && event.imageUrl.trim() !== '' ? 'hidden' : 'flex'
+					}`}>
+					<div className='text-center text-zinc-400'>
+						<div className='text-4xl mb-2'>JoinMatch</div>
+						<div className='text-sm font-medium'>{event.sportTypeName}</div>
+					</div>
 				</div>
 			</div>
 
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-					{/* Nagłówek wydarzenia */}
-					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
+					{/* Nagłówek */}
+					<div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
 						<div>
-							<div className='flex flex-wrap items-center gap-2'>
-								<span className='rounded-full bg-violet-600/20 px-3 py-1 text-xs font-medium text-violet-200 ring-1 ring-violet-600/40'>
-									{event.sportTypeName}
-								</span>
-								{getStatusBadge(event.status, event.scoreTeam1, event.scoreTeam2)}
-								<span
-									className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-zinc-700 ${getSkillLevelColor(
-										event.skillLevel
-									)}`}>
-									Poziom: {event.skillLevel}
-								</span>
-							</div>
-							<h1 className='mt-3 text-2xl md:text-3xl font-semibold text-white'>{event.eventName}</h1>
-							<div className='mt-3 flex flex-wrap items-center gap-4 text-sm text-zinc-300'>
-								<div className='inline-flex items-center gap-2'>
-									<CalendarDays size={18} />
-									<span>{dayjs(event.eventDate).format('dddd, DD.MM.YYYY • HH:mm')}</span>
-								</div>
-								<div className='inline-flex items-center gap-2'>
-									<MapPin size={18} />
-									<span>{event.sportObjectName}</span>
-								</div>
-								<div className='inline-flex items-center gap-2'>
-									<Ticket size={18} />
-									<span>{formatPrice(event.cost, event.currency)}</span>
-								</div>
-							</div>
+							<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
+							<p className='text-sm text-zinc-400 mt-1'>{dayjs(event.eventDate).format('dddd, DD.MM.YYYY • HH:mm')}</p>
+							<p className='text-sm text-zinc-400'>{event.sportObjectName}</p>
+						</div>
+
+						<div className='flex items-center gap-3'>
+							<button
+								onClick={handleJoinEvent}
+								className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+									joined ? 'bg-zinc-700 text-zinc-400' : 'bg-violet-600 text-white hover:bg-violet-500'
+								}`}>
+								{joined ? 'Dołączono' : 'Dołącz'}
+							</button>
+
+							<button
+								onClick={() => setShowShareModal(true)}
+								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/50 px-3 py-2 text-sm text-white hover:bg-zinc-800'>
+								<Share2 size={16} /> Udostępnij
+							</button>
+
+							<button
+								onClick={handleSaveEvent}
+								className='flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/50 px-3 py-2 text-sm text-white hover:bg-zinc-800'>
+								{saved ? <BookmarkCheck size={18} className='text-violet-400' /> : <Bookmark size={18} />}
+								{saved ? 'Zapisano' : 'Zapisz wydarzenie'}
+							</button>
 						</div>
 					</div>
-
 					<hr className='my-6 border-zinc-800' />
 
 					<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>

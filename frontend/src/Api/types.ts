@@ -34,10 +34,11 @@ export type EventDetails = {
 	eventId: number
 	eventName: string
 	numberOfParticipants: number
+	bookedParticipants: number
 	cost: number
 	currency: string
 	status: 'planned' | 'in_progress' | 'finished' | 'cancelled'
-	eventDate: string // ISO
+	eventDate: string
 	scoreTeam1: number | null
 	scoreTeam2: number | null
 
@@ -55,7 +56,10 @@ export type EventDetails = {
 
 	ownerId: number
 	ownerName: string
+	ownerAvatarUrl?: string
 
 	skillLevel: string
 	paymentMethod: string
+	imageUrl?: string
 }
+

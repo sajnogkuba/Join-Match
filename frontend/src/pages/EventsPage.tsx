@@ -1,5 +1,5 @@
 // src/pages/EventsPage.tsx
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -7,6 +7,7 @@ import axiosInstance from '../Api/axios'
 import type { Event } from '../Api/types'
 import type { SportObject } from '../Api/types/SportObject'
 import MapView from '../components/MapView'
+import PlaceAutocomplete from '../components/PlaceAutocomplete'
 import {
 	Map as MapIcon,
 	Grid as GridIcon,
@@ -108,20 +109,47 @@ const EventsPage = () => {
 		return Array.from(set).sort()
 	}, [events])
 
-	// 🧩 Łączenie eventów z obiektami sportowymi
 	const eventsWithCoords = useMemo(() => {
+		const levelMap: Record<number, string> = {
+			1: 'Początkujący',
+			2: 'Amator',
+			3: 'Średni',
+			4: 'Zaawansowany',
+			5: 'Profesjonalny',
+		}
+
 		return events
 			.map(ev => {
 				const obj = sportObjects.find(o => o.name === ev.sportObjectName)
 				if (!obj || obj.latitude == null || obj.longitude == null) return null
+
 				return {
-					...ev,
+					eventId: ev.eventId,
+					eventName: ev.eventName,
+					eventDate: ev.eventDate,
+					sportObjectName: ev.sportObjectName,
 					latitude: obj.latitude,
 					longitude: obj.longitude,
-					city: obj.city,
+					city: obj.city || ev.city,
+					sportTypeName: ev.sportTypeName || 'Nieznany sport',
+					cost: (ev as any).cost ?? 0,
+					imageUrl: (ev as any).imageUrl || null,
+					skillLevel: 'Poziom: ' + levelMap[(ev as any).minLevel] || 'brak',
 				}
 			})
-			.filter(Boolean) as (Event & { latitude: number; longitude: number; city?: string })[]
+			.filter(Boolean) as {
+			eventId: number
+			eventName: string
+			eventDate: string | Date
+			sportObjectName: string
+			latitude: number
+			longitude: number
+			city?: string
+			sportTypeName?: string
+			cost?: number
+			imageUrl?: string
+			skillLevel?: string
+		}[]
 	}, [events, sportObjects])
 
 	// 🔍 filtrowanie itd.
@@ -242,7 +270,7 @@ const EventsPage = () => {
 	}
 
 	return (
-		<div className='min-h-screen bg-[#1f2632] text-zinc-300'>
+		<div className='min-h-screen bg-[#1f2632] text-zinc-300 pt-10'>
 			<header className='relative h-[140px] w-full overflow-hidden'>
 				<div
 					className='absolute inset-0 bg-cover bg-center'
@@ -262,7 +290,6 @@ const EventsPage = () => {
 
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-
 					{/* Pasek wyszukiwania i sortowania */}
 					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
 						<div className='flex flex-1 items-stretch gap-3'>
@@ -356,18 +383,30 @@ const EventsPage = () => {
 						{/* Miasto */}
 						<div>
 							<label className='mb-1 block text-xs text-zinc-400'>Miasto</label>
-							<input
-								list='cities'
-								value={city}
-								onChange={e => setCity(e.target.value)}
-								placeholder='np. Warszawa'
-								className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
+							{/* Używamy własnego PlaceAutocomplete; po wyborze ustawiamy city */}
+							<PlaceAutocomplete
+								onSelect={(place: google.maps.places.PlaceResult) => {
+									// helper do pobrania komponentu adresowego
+									const getAddr = (types: string[]) => {
+										return (place.address_components || []).find((c: any) =>
+											c.types.some((t: string) => types.includes(t))
+										)?.long_name
+									}
+									const cityName =
+										getAddr([
+											'locality',
+											'postal_town',
+											'administrative_area_level_2',
+											'administrative_area_level_1',
+										]) ||
+										place.formatted_address ||
+										place.name ||
+										''
+									setCity(cityName)
+									setPage(1)
+								}}
+								placeholder='Miasto lub adres'
 							/>
-							<datalist id='cities'>
-								{cities.map(c => (
-									<option key={c} value={c} />
-								))}
-							</datalist>
 						</div>
 
 						{/* Daty */}
@@ -419,7 +458,7 @@ const EventsPage = () => {
 					{/* Lista wyników / mapa */}
 					<div className='mt-6'>
 						{view === 'map' ? (
-							<MapView events={eventsWithCoords} />
+							<MapView events={eventsWithCoords} selectedCity={city} />
 						) : loading ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
 								<div className='flex items-center gap-2 text-zinc-300'>
@@ -440,7 +479,9 @@ const EventsPage = () => {
 							<>
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{paged.map(ev => (
-										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
+										<article
+											key={ev.eventId}
+											className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
 											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
 												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
 													<img
@@ -456,9 +497,10 @@ const EventsPage = () => {
 													/>
 												) : null}
 												<div
-													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
-													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}
-												>
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${
+														ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'
+													}`}
+													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}>
 													<div className='text-center text-zinc-400'>
 														<div className='text-4xl mb-2'>JoinMatch</div>
 														<div className='text-sm font-medium'>{ev.sportTypeName}</div>
