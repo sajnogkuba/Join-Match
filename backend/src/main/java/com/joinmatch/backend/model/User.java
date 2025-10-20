@@ -2,7 +2,9 @@ package com.joinmatch.backend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -47,6 +49,8 @@ public class User {
     private List<JoinMatchToken> tokens = new ArrayList<>();
 
     @OneToMany(mappedBy = "user",cascade = CascadeType.REMOVE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<SportUser> sportUsers = new HashSet<>();
 
 

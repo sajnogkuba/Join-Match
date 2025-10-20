@@ -4,5 +4,6 @@ public record SportWithRatingDto(
         Integer sportId,
         String name,
         String url,
-        Integer rating
+        Integer rating,
+        Boolean isMain
 ) {}

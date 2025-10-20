@@ -42,4 +42,13 @@ public class SportTypeController {
 
         return ResponseEntity.status(201).body(sportDto);
     }
+    @PatchMapping("/mainSport")
+    public ResponseEntity<Void> setNewMainSport(@RequestBody MainSportDto mainSportDto){
+        try{
+            sportService.setMainSport(mainSportDto.email(),mainSportDto.idSport());
+        }catch (IllegalArgumentException illegalArgumentException){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
 }

@@ -1,12 +1,26 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../Api/axios";
 import type { UpdatePhotoRequest } from "../Api/types";
 import Avatar from "../components/Avatar";
+import StarRatingInput from "../components/StarRatingInput";
 import {
-    Star, Users, Trophy, ChevronRight, Bookmark, Plus,
-    Settings, UserRound, Lock, Bell, Globe2, LogOut, Database,
-    X, Upload, Camera
+    Star,
+    Users,
+    Trophy,
+    ChevronRight,
+    Bookmark,
+    Plus,
+    Settings,
+    UserRound,
+    Lock,
+    Bell,
+    Globe2,
+    LogOut,
+    Database,
+    X,
+    Upload,
+    Camera,
 } from "lucide-react";
 
 type SimpleUser = {
@@ -17,16 +31,28 @@ type SimpleUser = {
 };
 
 type SportTypeOption = { id: number; name: string; url: string };
-type UserSport = { id: number; name: string; level: number; url: string };
+type UserSport = { id: number; name: string; level: number; url: string; isMain?: boolean };
 type UserSportsResponse = {
-    sports: { sportId: number; name: string; url: string; rating: number }[];
+    sports: { sportId: number; name: string; url: string; rating: number; isMain?: boolean }[];
 };
 
 const savedEvents = [
-    { id: 101, title: "Luźna Gierka", place: "Koszykowa 13 – Warszawa", tag: "Piłka nożna",
-        cover: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=300&auto=format&fit=crop" },
-    { id: 102, title: "Mecz Zawodowy", place: "Łazienkowska 12 – Warszawa", tag: "Piłka nożna",
-        cover: "https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=300&auto=format&fit=crop" },
+    {
+        id: 101,
+        title: "Luźna Gierka",
+        place: "Koszykowa 13 – Warszawa",
+        tag: "Piłka nożna",
+        cover:
+            "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=300&auto=format&fit=crop",
+    },
+    {
+        id: 102,
+        title: "Mecz Zawodowy",
+        place: "Łazienkowska 12 – Warszawa",
+        tag: "Piłka nożna",
+        cover:
+            "https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=300&auto=format&fit=crop",
+    },
 ];
 
 const Sidebar = () => {
@@ -63,18 +89,17 @@ const Sidebar = () => {
     );
 };
 
-
-const ProfileImageModal = ({ 
-    isOpen, 
-    onClose, 
-    imageUrl, 
-    userName,
-    onPhotoUpdated,
-    loading = false
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    imageUrl: string; 
+const ProfileImageModal = ({
+                               isOpen,
+                               onClose,
+                               imageUrl,
+                               userName,
+                               onPhotoUpdated,
+                               loading = false,
+                           }: {
+    isOpen: boolean;
+    onClose: () => void;
+    imageUrl: string;
     userName: string;
     onPhotoUpdated: (newPhotoUrl: string) => void;
     loading?: boolean;
@@ -96,39 +121,24 @@ const ProfileImageModal = ({
 
     const handleUpload = async () => {
         if (!selectedFile) return;
-
         setUploading(true);
         setError(null);
-
         try {
             const formData = new FormData();
-            formData.append('file', selectedFile);
-
-            const uploadResponse = await api.post('/images/upload/profile', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+            formData.append("file", selectedFile);
+            const uploadResponse = await api.post("/images/upload/profile", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
             });
-
             const photoUrl = uploadResponse.data;
-
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                throw new Error('Brak tokenu autoryzacji');
-            }
-
-            const updateRequest: UpdatePhotoRequest = {
-                token,
-                photoUrl
-            };
-
-            await api.patch('/auth/user/photo', updateRequest);
-
+            const token = localStorage.getItem("accessToken");
+            if (!token) throw new Error("Brak tokenu autoryzacji");
+            const updateRequest: UpdatePhotoRequest = { token, photoUrl };
+            await api.patch("/auth/user/photo", updateRequest);
             onPhotoUpdated(photoUrl);
             handleClose();
         } catch (error) {
-            console.error('Błąd podczas przesyłania zdjęcia:', error);
-            setError('Nie udało się przesłać zdjęcia. Spróbuj ponownie.');
+            console.error("Błąd podczas przesyłania zdjęcia:", error);
+            setError("Nie udało się przesłać zdjęcia. Spróbuj ponownie.");
         } finally {
             setUploading(false);
         }
@@ -142,8 +152,7 @@ const ProfileImageModal = ({
     };
 
     if (!isOpen) return null;
-
-    const displayImage = previewUrl || (imageUrl || null);
+    const displayImage = previewUrl || imageUrl || null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -155,22 +164,17 @@ const ProfileImageModal = ({
                 >
                     <X size={24} />
                 </button>
-                
                 <div className="flex flex-col items-center space-y-4">
                     <h3 className="text-white text-lg font-semibold">Zdjęcie profilowe</h3>
-                    
-                    {/* Large rounded profile image */}
                     <div className="relative">
-                        <Avatar 
-                            src={displayImage} 
-                            name={userName} 
+                        <Avatar
+                            src={displayImage}
+                            name={userName}
                             size="lg"
                             loading={loading}
                             className="ring-4 ring-zinc-700 shadow-2xl"
                         />
                     </div>
-                    
-                    {/* Upload section */}
                     <div className="w-full space-y-3">
                         <input
                             type="file"
@@ -186,13 +190,10 @@ const ProfileImageModal = ({
                             <Camera size={18} />
                             Wybierz nowe zdjęcie
                         </label>
-                        
                         {selectedFile && (
                             <div className="space-y-3">
                                 <div className="flex items-center justify-center gap-2">
-                                    <span className="text-sm text-zinc-400">
-                                        Wybrano: {selectedFile.name}
-                                    </span>
+                                    <span className="text-sm text-zinc-400">Wybrano: {selectedFile.name}</span>
                                     <button
                                         onClick={handleUpload}
                                         disabled={uploading}
@@ -202,11 +203,7 @@ const ProfileImageModal = ({
                                         {uploading ? "Przesyłanie..." : "Prześlij"}
                                     </button>
                                 </div>
-                                {error && (
-                                    <p className="text-sm text-red-400 text-center">
-                                        {error}
-                                    </p>
-                                )}
+                                {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                             </div>
                         )}
                     </div>
@@ -216,38 +213,38 @@ const ProfileImageModal = ({
     );
 };
 
-const ProfileCard = ({ 
-    user, 
-    loading, 
-    onImageClick 
-}: { 
-    user: SimpleUser | null; 
-    loading: boolean; 
+const ProfileCard = ({
+                         user,
+                         loading,
+                         onImageClick,
+                         mainSportName,
+                     }: {
+    user: SimpleUser | null;
+    loading: boolean;
     onImageClick: () => void;
+    mainSportName: string;
 }) => {
     const name = user?.name ?? (loading ? "Ładowanie…" : "—");
     const handle = "General";
     const rating = 4.7;
     const friends = 67;
-    const mainSport = "Piłka nożna";
 
     return (
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-                <button
-                    onClick={onImageClick}
-                    className="relative group"
-                    disabled={loading}
-                >
-                    <Avatar 
-                        src={user?.urlOfPicture ?? null} 
-                        name={name} 
+                <button onClick={onImageClick} className="relative group" disabled={loading}>
+                    <Avatar
+                        src={user?.urlOfPicture ?? null}
+                        name={name}
                         size="md"
                         loading={loading}
                         className="hover:ring-violet-500 transition-all duration-200 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
-                        <Camera size={16} className="opacity-0 group-hover:opacity-100 text-white transition-opacity duration-200" />
+                        <Camera
+                            size={16}
+                            className="opacity-0 group-hover:opacity-100 text-white transition-opacity duration-200"
+                        />
                     </div>
                 </button>
                 <div>
@@ -257,7 +254,6 @@ const ProfileCard = ({
                     <p className="text-sm text-zinc-400">Update your username and manage your account</p>
                 </div>
             </div>
-
             <div className="flex items-center gap-8">
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
@@ -276,7 +272,7 @@ const ProfileCard = ({
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
                         <Trophy size={16} />
-                        <span className="font-semibold text-white">{mainSport}</span>
+                        <span className="font-semibold text-white">{mainSportName || "—"}</span>
                     </div>
                     <p className="text-xs text-zinc-400">Główny sport</p>
                 </div>
@@ -285,7 +281,17 @@ const ProfileCard = ({
     );
 };
 
-const SavedEvent = ({ title, place, tag, cover }: { title: string; place: string; tag: string; cover: string }) => (
+const SavedEvent = ({
+                        title,
+                        place,
+                        tag,
+                        cover,
+                    }: {
+    title: string;
+    place: string;
+    tag: string;
+    cover: string;
+}) => (
     <li className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
         <div className="flex items-center gap-3 min-w-0">
             <div className="relative">
@@ -295,10 +301,16 @@ const SavedEvent = ({ title, place, tag, cover }: { title: string; place: string
             <div className="min-w-0">
                 <p className="truncate text-white font-medium leading-tight">{title}</p>
                 <p className="truncate text-xs text-zinc-400">{place}</p>
-                <span className="mt-1 inline-block rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-200">{tag}</span>
+                <span className="mt-1 inline-block rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-200">
+          {tag}
+        </span>
             </div>
         </div>
-        <Link to="#" className="grid h-9 w-9 place-items-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition" aria-label="Zobacz wydarzenie">
+        <Link
+            to="#"
+            className="grid h-9 w-9 place-items-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition"
+            aria-label="Zobacz wydarzenie"
+        >
             <ChevronRight />
         </Link>
     </li>
@@ -309,7 +321,9 @@ const SavedEvents = () => (
         <h3 className="text-white text-xl font-semibold">Zapisane wydarzenia</h3>
         <ul className="space-y-3">{savedEvents.map((e) => <SavedEvent key={e.id} {...e} />)}</ul>
         <div className="pt-2">
-            <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">Save Changes</button>
+            <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">
+                Save Changes
+            </button>
         </div>
     </section>
 );
@@ -326,12 +340,12 @@ const AddSportModal = ({
     const [options, setOptions] = useState<SportTypeOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [sportId, setSportId] = useState<number | ''>('');
-    const [level, setLevel] = useState('');
+    const [sportId, setSportId] = useState<number | "">("");
+    const [level, setLevel] = useState("");
     const [err, setErr] = useState<string | null>(null);
 
     const levelNum = Number(level);
-    const levelValid = Number.isInteger(levelNum) && levelNum >= 1 && levelNum <= 10;
+    const levelValid = Number.isInteger(levelNum) && levelNum >= 1 && levelNum <= 5;
 
     useEffect(() => {
         if (!open) return;
@@ -344,22 +358,18 @@ const AddSportModal = ({
             .finally(() => setLoading(false));
     }, [open]);
 
-    const selected = sportId ? options.find(o => o.id === sportId) : undefined;
+    const selected = sportId ? options.find((o) => o.id === sportId) : undefined;
 
     const handleAdd = async () => {
         if (!sportId || !levelValid || !selected) return;
         setSaving(true);
         try {
             const token = localStorage.getItem("accessToken") || "";
-            await api.post("/sport-type/user", {
-                token,
-                sportId,
-                rating: levelNum,
-            });
+            await api.post("/sport-type/user", { token, sportId, rating: levelNum });
             onAdded({ id: selected.id, name: selected.name, url: selected.url, level: levelNum });
             onClose();
-            setSportId('');
-            setLevel('');
+            setSportId("");
+            setLevel("");
         } catch {
             setErr("Nie udało się dodać sportu.");
         } finally {
@@ -374,7 +384,7 @@ const AddSportModal = ({
             <div className="absolute inset-0 bg-black/70" onClick={onClose} />
             <div className="relative w-[95%] max-w-md rounded-2xl bg-zinc-900 p-5 ring-1 ring-zinc-800 shadow-2xl">
                 <h4 className="text-white text-lg font-semibold">Dodaj sport</h4>
-                <p className="text-sm text-zinc-400 mt-1">Wybierz sport i wpisz poziom (1–10).</p>
+                <p className="text-sm text-zinc-400 mt-1">Wybierz sport i ustaw poziom.</p>
                 <div className="mt-4 space-y-3">
                     <label className="block">
                         <span className="text-sm text-zinc-300">Sport</span>
@@ -382,44 +392,47 @@ const AddSportModal = ({
                             disabled={loading || saving}
                             className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-600"
                             value={sportId}
-                            onChange={(e) => setSportId(e.target.value ? Number(e.target.value) : '')}
+                            onChange={(e) => setSportId(e.target.value ? Number(e.target.value) : "")}
                         >
                             <option value="">{loading ? "Ładowanie…" : "— wybierz sport —"}</option>
                             {options.map((o) => (
-                                <option key={o.id} value={o.id}>{o.name}</option>
+                                <option key={o.id} value={o.id}>
+                                    {o.name}
+                                </option>
                             ))}
                         </select>
                     </label>
                     {selected && (
                         <div className="flex items-center gap-3">
-                            <img src={selected.url} alt={selected.name} className="h-10 w-10 rounded-full object-cover border border-zinc-700" />
+                            <img
+                                src={selected.url}
+                                alt={selected.name}
+                                className="h-10 w-10 rounded-full object-cover border border-zinc-700"
+                            />
                             <span className="text-sm text-zinc-300">{selected.name}</span>
                         </div>
                     )}
-                    <label className="block">
-                        <span className="text-sm text-zinc-300">Poziom (1–10)</span>
-                        <input
-                            inputMode="numeric"
-                            type="number"
-                            min={1}
-                            max={10}
-                            step={1}
-                            className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-600"
-                            value={level}
-                            onChange={(e) => setLevel(e.target.value)}
-                            placeholder="Np. 5"
-                            disabled={saving}
+                    <div>
+                        <StarRatingInput
+                            label="Poziom (1–5)"
+                            max={5}
+                            value={levelNum || 0}
+                            onChange={(v) => setLevel(String(v))}
                         />
-                    </label>
-                    {!level || levelValid ? (
-                        <p className="text-xs text-zinc-500">Wpisz liczbę całkowitą 1–10.</p>
-                    ) : (
-                        <p className="text-xs text-red-400">Poziom musi być w zakresie 1–10.</p>
-                    )}
+                        {!level || levelValid ? (
+                            <p className="text-xs text-zinc-500 mt-1">Wybierz liczbę gwiazdek 1–5.</p>
+                        ) : (
+                            <p className="text-xs text-red-400 mt-1">Poziom musi być w zakresie 1–5.</p>
+                        )}
+                    </div>
                     {err && <p className="text-sm text-red-400">{err}</p>}
                 </div>
                 <div className="mt-5 flex justify-end gap-2">
-                    <button onClick={onClose} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800" disabled={saving}>
+                    <button
+                        onClick={onClose}
+                        className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+                        disabled={saving}
+                    >
                         Anuluj
                     </button>
                     <button
@@ -435,27 +448,59 @@ const AddSportModal = ({
     );
 };
 
-const SportsList = ({ items, onOpenAdd }: { items: UserSport[]; onOpenAdd: () => void }) => (
+const SportsList = ({
+                        items,
+                        onOpenAdd,
+                        onSetMain,
+                        settingIndex,
+                    }: {
+    items: UserSport[];
+    onOpenAdd: () => void;
+    onSetMain: (index: number) => void;
+    settingIndex: number | null;
+}) => (
     <section className="space-y-4">
         <h3 className="text-white text-xl font-semibold">Sporty</h3>
         <ul className="space-y-3">
-            {items.map((s) => (
-                <li key={`${s.id}-${s.name}`} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-                    <div className="flex items-center gap-3">
-                        <img src={s.url} alt={s.name} className="h-10 w-10 rounded-full object-cover border border-zinc-700" />
-                        <div>
-                            <p className="text-white font-medium leading-tight">{s.name}</p>
-                            <p className="text-xs text-zinc-400">Poziom: {s.level}</p>
+            {items.map((s, index) => {
+                const isMain = !!s.isMain;
+                const isLoading = settingIndex === index;
+                return (
+                    <li
+                        key={`${index}-${s.id}-${s.name}`}
+                        className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3"
+                    >
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={s.url}
+                                alt={s.name}
+                                className="h-10 w-10 rounded-full object-cover border border-zinc-700"
+                            />
+                            <div>
+                                <p className="text-white font-medium leading-tight">{s.name}</p>
+                                <p className="text-xs text-zinc-400">Poziom: {s.level}</p>
+                            </div>
                         </div>
-                    </div>
-                    <button className="rounded-xl border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800">
-                        Ustaw jako główny
-                    </button>
-                </li>
-            ))}
+                        <button
+                            onClick={() => onSetMain(index)}
+                            disabled={isMain || isLoading}
+                            className={`rounded-xl px-3 py-1.5 text-sm ${
+                                isMain
+                                    ? "bg-violet-600 text-white"
+                                    : "border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                            } disabled:opacity-60`}
+                        >
+                            {isMain ? "Główny" : isLoading ? "Ustawianie…" : "Ustaw jako główny"}
+                        </button>
+                    </li>
+                );
+            })}
             {items.length === 0 && <p className="text-zinc-400 text-sm">Brak sportów — dodaj pierwszy!</p>}
         </ul>
-        <button onClick={onOpenAdd} className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
+        <button
+            onClick={onOpenAdd}
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+        >
             <Plus size={16} />
             Dodaj sport
         </button>
@@ -469,9 +514,10 @@ const ProfilePage = () => {
     const [sports, setSports] = useState<UserSport[]>([]);
     const [openAdd, setOpenAdd] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [settingMainIndex, setSettingMainIndex] = useState<number | null>(null);
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
-        setUser(prev => prev ? { ...prev, urlOfPicture: newPhotoUrl } : null);
+        setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
     };
 
     useEffect(() => {
@@ -494,23 +540,51 @@ const ProfilePage = () => {
         api
             .get<UserSportsResponse>("/sport-type/user", { params: { token } })
             .then(({ data }) => {
-                const mapped: UserSport[] = (data.sports ?? []).map(s => ({
+                const mapped: UserSport[] = (data.sports ?? []).map((s) => ({
                     id: s.sportId,
                     name: s.name,
                     url: s.url,
                     level: s.rating,
+                    isMain: s.isMain,
                 }));
                 setSports(mapped);
             })
             .catch(() => {});
     }, []);
 
+    const mainSportName = useMemo(() => sports.find((s) => s.isMain)?.name ?? "", [sports]);
+
+    const handleSetMain = async (index: number) => {
+        const item = sports[index];
+        if (!item || item.isMain) return;
+        if (!user?.email) return;
+
+        setSettingMainIndex(index);
+
+        const prevSports = sports;
+        setSports((prev) => prev.map((s, i) => ({ ...s, isMain: i === index })));
+
+        try {
+            await api.patch("/sport-type/mainSport", {
+                email: user.email,
+                idSport: item.id,
+            });
+        } catch {
+            setSports(prevSports);
+        } finally {
+            setSettingMainIndex(null);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#1f2632] text-zinc-300">
             <header className="relative h-[180px] md:h-[220px] w-full overflow-hidden">
                 <div
                     className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: "url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)" }}
+                    style={{
+                        backgroundImage:
+                            "url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)",
+                    }}
                 />
                 <div className="absolute inset-0 bg-black/60" />
                 <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-4 pb-6 md:px-8">
@@ -523,21 +597,25 @@ const ProfilePage = () => {
 
             <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
                 <div className="rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800">
-                    <ProfileCard 
-                        user={user} 
-                        loading={loading} 
-                        onImageClick={() => setIsImageModalOpen(true)} 
+                    <ProfileCard
+                        user={user}
+                        loading={loading}
+                        onImageClick={() => setIsImageModalOpen(true)}
+                        mainSportName={mainSportName}
                     />
                     {errorMsg && (
-                        <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
-                            {errorMsg}
-                        </p>
+                        <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">{errorMsg}</p>
                     )}
                     <hr className="my-8 border-zinc-800" />
                     <div className="flex flex-col gap-8 lg:flex-row">
                         <Sidebar />
                         <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-2">
-                            <SportsList items={sports} onOpenAdd={() => setOpenAdd(true)} />
+                            <SportsList
+                                items={sports}
+                                onOpenAdd={() => setOpenAdd(true)}
+                                onSetMain={handleSetMain}
+                                settingIndex={settingMainIndex}
+                            />
                             <SavedEvents />
                         </div>
                     </div>
@@ -547,7 +625,16 @@ const ProfilePage = () => {
             <AddSportModal
                 open={openAdd}
                 onClose={() => setOpenAdd(false)}
-                onAdded={(s) => setSports((prev) => [...prev, s])}
+                onAdded={(s) => {
+                    setSports((prev) => {
+                        const wasEmpty = prev.length === 0;
+                        const next = [...prev, s];
+                        if (wasEmpty) {
+                            return next.map((item, i) => ({ ...item, isMain: i === next.length - 1 }));
+                        }
+                        return next;
+                    });
+                }}
             />
 
             <ProfileImageModal
