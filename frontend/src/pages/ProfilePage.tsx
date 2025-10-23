@@ -1,7 +1,6 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import api from "../Api/axios";
-import type { UpdatePhotoRequest } from "../Api/types";
 import Avatar from "../components/Avatar";
 import StarRatingInput from "../components/StarRatingInput";
 import {
@@ -13,20 +12,20 @@ import {
     Plus,
     Settings,
     UserRound,
-    Lock,
-    Bell,
-    Globe2,
     LogOut,
+    Lock,
+    Globe2,
+    Bell,
     Database,
-    X,
-    Upload,
     Camera,
+    Upload,
+    X,
+    Check
 } from "lucide-react";
 
 type SimpleUser = {
     name: string;
     email: string;
-    dateOfBirth: string;
     urlOfPicture: string | null;
 };
 
@@ -36,24 +35,32 @@ type UserSportsResponse = {
     sports: { sportId: number; name: string; url: string; rating: number; isMain?: boolean }[];
 };
 
-const savedEvents = [
-    {
-        id: 101,
-        title: "Luźna Gierka",
-        place: "Koszykowa 13 – Warszawa",
-        tag: "Piłka nożna",
-        cover:
-            "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=300&auto=format&fit=crop",
-    },
-    {
-        id: 102,
-        title: "Mecz Zawodowy",
-        place: "Łazienkowska 12 – Warszawa",
-        tag: "Piłka nożna",
-        cover:
-            "https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=300&auto=format&fit=crop",
-    },
-];
+type SavedEventRef = { id: number; userId: number; eventId: number };
+
+type EventDetails = {
+    eventId: number;
+    eventName: string;
+    numberOfParticipants: number;
+    cost: number;
+    currency: string;
+    status: string;
+    eventDate: string;
+    scoreTeam1: number | null;
+    scoreTeam2: number | null;
+    sportTypeName: string;
+    sportObjectName: string;
+    sportObjectId: number;
+    city: string;
+    street: string;
+    number: number | string;
+    secondNumber: string | null;
+    eventVisibilityId: number;
+    eventVisibilityName: string;
+    ownerId: number;
+    ownerName: string;
+    skillLevel: string;
+    paymentMethod: string;
+};
 
 const Sidebar = () => {
     const items = [
@@ -64,7 +71,7 @@ const Sidebar = () => {
         { label: "Email Notifications", icon: Bell },
         { label: "Sessions", icon: Users },
         { label: "Applications", icon: Trophy },
-        { label: "Data Export", icon: Database },
+        { label: "Data Export", icon: Database }
     ];
     return (
         <aside className="w-full md:w-64 shrink-0">
@@ -95,7 +102,7 @@ const ProfileImageModal = ({
                                imageUrl,
                                userName,
                                onPhotoUpdated,
-                               loading = false,
+                               loading = false
                            }: {
     isOpen: boolean;
     onClose: () => void;
@@ -127,17 +134,15 @@ const ProfileImageModal = ({
             const formData = new FormData();
             formData.append("file", selectedFile);
             const uploadResponse = await api.post("/images/upload/profile", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
+                headers: { "Content-Type": "multipart/form-data" }
             });
             const photoUrl = uploadResponse.data;
             const token = localStorage.getItem("accessToken");
             if (!token) throw new Error("Brak tokenu autoryzacji");
-            const updateRequest: UpdatePhotoRequest = { token, photoUrl };
-            await api.patch("/auth/user/photo", updateRequest);
+            await api.patch("/auth/user/photo", { token, photoUrl });
             onPhotoUpdated(photoUrl);
             handleClose();
-        } catch (error) {
-            console.error("Błąd podczas przesyłania zdjęcia:", error);
+        } catch {
             setError("Nie udało się przesłać zdjęcia. Spróbuj ponownie.");
         } finally {
             setUploading(false);
@@ -158,31 +163,16 @@ const ProfileImageModal = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/80" onClick={handleClose} />
             <div className="relative w-[95%] max-w-md rounded-2xl bg-zinc-900 p-6 ring-1 ring-zinc-800 shadow-2xl">
-                <button
-                    onClick={handleClose}
-                    className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
-                >
+                <button onClick={handleClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors">
                     <X size={24} />
                 </button>
                 <div className="flex flex-col items-center space-y-4">
                     <h3 className="text-white text-lg font-semibold">Zdjęcie profilowe</h3>
                     <div className="relative">
-                        <Avatar
-                            src={displayImage}
-                            name={userName}
-                            size="lg"
-                            loading={loading}
-                            className="ring-4 ring-zinc-700 shadow-2xl"
-                        />
+                        <Avatar src={displayImage} name={userName} size="lg" loading={loading} className="ring-4 ring-zinc-700 shadow-2xl" />
                     </div>
                     <div className="w-full space-y-3">
-                        <input
-                            type="file"
-                            id="profile-image-upload"
-                            accept="image/*"
-                            onChange={handleFileSelect}
-                            className="hidden"
-                        />
+                        <input type="file" id="profile-image-upload" accept="image/*" onChange={handleFileSelect} className="hidden" />
                         <label
                             htmlFor="profile-image-upload"
                             className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-zinc-600 hover:border-violet-500 px-4 py-3 text-sm text-zinc-300 hover:text-white transition-colors cursor-pointer"
@@ -217,7 +207,7 @@ const ProfileCard = ({
                          user,
                          loading,
                          onImageClick,
-                         mainSportName,
+                         mainSportName
                      }: {
     user: SimpleUser | null;
     loading: boolean;
@@ -233,18 +223,9 @@ const ProfileCard = ({
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
                 <button onClick={onImageClick} className="relative group" disabled={loading}>
-                    <Avatar
-                        src={user?.urlOfPicture ?? null}
-                        name={name}
-                        size="md"
-                        loading={loading}
-                        className="hover:ring-violet-500 transition-all duration-200 group-hover:scale-105"
-                    />
+                    <Avatar src={user?.urlOfPicture ?? null} name={name} size="md" loading={loading} className="hover:ring-violet-500 transition-all duration-200 group-hover:scale-105" />
                     <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
-                        <Camera
-                            size={16}
-                            className="opacity-0 group-hover:opacity-100 text-white transition-opacity duration-200"
-                        />
+                        <Camera size={16} className="opacity-0 group-hover:opacity-100 text-white transition-opacity duration-200" />
                     </div>
                 </button>
                 <div>
@@ -281,57 +262,100 @@ const ProfileCard = ({
     );
 };
 
-const SavedEvent = ({
-                        title,
-                        place,
-                        tag,
-                        cover,
-                    }: {
+const ClickableSavedEvent = ({
+                                 title,
+                                 place,
+                                 tag,
+                                 cover,
+                                 eventId
+                             }: {
     title: string;
     place: string;
     tag: string;
-    cover: string;
-}) => (
-    <li className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
-        <div className="flex items-center gap-3 min-w-0">
-            <div className="relative">
-                <img src={cover} alt="" className="h-12 w-12 rounded-full object-cover" />
-                <Bookmark className="absolute -left-1 -top-1 h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-                <p className="truncate text-white font-medium leading-tight">{title}</p>
-                <p className="truncate text-xs text-zinc-400">{place}</p>
-                <span className="mt-1 inline-block rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-200">
-          {tag}
-        </span>
-            </div>
-        </div>
-        <Link
-            to="#"
-            className="grid h-9 w-9 place-items-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition"
-            aria-label="Zobacz wydarzenie"
+    cover?: string | null;
+    eventId: number;
+}) => {
+    const navigate = useNavigate();
+    return (
+        <li
+            onClick={() => navigate(`/event/${eventId}`)}
+            className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 hover:bg-zinc-800/80 transition cursor-pointer"
         >
+            <div className="flex items-center gap-3 min-w-0">
+                <div className="relative">
+                    {cover ? (
+                        <img src={cover} alt="" className="h-12 w-12 rounded-full object-cover" />
+                    ) : (
+                        <div className="h-12 w-12 rounded-full bg-zinc-800 grid place-items-center text-xs text-zinc-400">img</div>
+                    )}
+                    <Bookmark className="absolute -left-1 -top-1 h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                    <p className="truncate text-white font-medium leading-tight">{title}</p>
+                    <p className="truncate text-xs text-zinc-400">{place}</p>
+                    <span className="mt-1 inline-block rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-200">{tag}</span>
+                </div>
+            </div>
             <ChevronRight />
-        </Link>
-    </li>
-);
+        </li>
+    );
+};
 
-const SavedEvents = () => (
-    <section className="space-y-4">
-        <h3 className="text-white text-xl font-semibold">Zapisane wydarzenia</h3>
-        <ul className="space-y-3">{savedEvents.map((e) => <SavedEvent key={e.id} {...e} />)}</ul>
-        <div className="pt-2">
-            <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">
-                Save Changes
-            </button>
-        </div>
-    </section>
-);
+const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [items, setItems] = useState<EventDetails[]>([]);
+
+    useEffect(() => {
+        if (!userEmail) return;
+        setLoading(true);
+        setError(null);
+        api
+            .get<SavedEventRef[]>("/user-saved-event/by-user-email", { params: { userEmail } })
+            .then(async ({ data }) => {
+                const ids = (data || []).map((d) => d.eventId);
+                if (ids.length === 0) {
+                    setItems([]);
+                    return;
+                }
+                const details = await Promise.all(ids.map(async (id) => (await api.get<EventDetails>(`/event/${id}`)).data));
+                setItems(details);
+            })
+            .catch(() => setError("Nie udało się pobrać zapisanych wydarzeń."))
+            .finally(() => setLoading(false));
+    }, [userEmail]);
+
+    return (
+        <section className="space-y-4">
+            <h3 className="text-white text-xl font-semibold">Zapisane wydarzenia</h3>
+            {loading && <p className="text-sm text-zinc-400">Ładowanie…</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            {!loading && !error && (
+                <ul className="space-y-3">
+                    {items.map((e) => {
+                        const place = [e.city, e.street, e.number].filter(Boolean).join(", ");
+                        return (
+                            <ClickableSavedEvent
+                                key={e.eventId}
+                                eventId={e.eventId}
+                                title={e.eventName}
+                                place={place || "—"}
+                                tag={e.sportTypeName || "Wydarzenie"}
+                                cover={null}
+                            />
+                        );
+                    })}
+                    {items.length === 0 && <p className="text-sm text-zinc-400">Brak zapisanych wydarzeń.</p>}
+                </ul>
+            )}
+        </section>
+    );
+};
 
 const AddSportModal = ({
                            open,
                            onClose,
-                           onAdded,
+                           onAdded
                        }: {
     open: boolean;
     onClose: () => void;
@@ -404,21 +428,12 @@ const AddSportModal = ({
                     </label>
                     {selected && (
                         <div className="flex items-center gap-3">
-                            <img
-                                src={selected.url}
-                                alt={selected.name}
-                                className="h-10 w-10 rounded-full object-cover border border-zinc-700"
-                            />
+                            <img src={selected.url} alt={selected.name} className="h-10 w-10 rounded-full object-cover border border-zinc-700" />
                             <span className="text-sm text-zinc-300">{selected.name}</span>
                         </div>
                     )}
                     <div>
-                        <StarRatingInput
-                            label="Poziom (1–5)"
-                            max={5}
-                            value={levelNum || 0}
-                            onChange={(v) => setLevel(String(v))}
-                        />
+                        <StarRatingInput label="Poziom (1–5)" max={5} value={levelNum || 0} onChange={(v) => setLevel(String(v))} />
                         {!level || levelValid ? (
                             <p className="text-xs text-zinc-500 mt-1">Wybierz liczbę gwiazdek 1–5.</p>
                         ) : (
@@ -428,11 +443,7 @@ const AddSportModal = ({
                     {err && <p className="text-sm text-red-400">{err}</p>}
                 </div>
                 <div className="mt-5 flex justify-end gap-2">
-                    <button
-                        onClick={onClose}
-                        className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
-                        disabled={saving}
-                    >
+                    <button onClick={onClose} className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800" disabled={saving}>
                         Anuluj
                     </button>
                     <button
@@ -452,7 +463,7 @@ const SportsList = ({
                         items,
                         onOpenAdd,
                         onSetMain,
-                        settingIndex,
+                        settingIndex
                     }: {
     items: UserSport[];
     onOpenAdd: () => void;
@@ -466,16 +477,9 @@ const SportsList = ({
                 const isMain = !!s.isMain;
                 const isLoading = settingIndex === index;
                 return (
-                    <li
-                        key={`${index}-${s.id}-${s.name}`}
-                        className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3"
-                    >
+                    <li key={`${index}-${s.id}-${s.name}`} className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
                         <div className="flex items-center gap-3">
-                            <img
-                                src={s.url}
-                                alt={s.name}
-                                className="h-10 w-10 rounded-full object-cover border border-zinc-700"
-                            />
+                            <img src={s.url} alt={s.name} className="h-10 w-10 rounded-full object-cover border border-zinc-700" />
                             <div>
                                 <p className="text-white font-medium leading-tight">{s.name}</p>
                                 <p className="text-xs text-zinc-400">Poziom: {s.level}</p>
@@ -485,22 +489,17 @@ const SportsList = ({
                             onClick={() => onSetMain(index)}
                             disabled={isMain || isLoading}
                             className={`rounded-xl px-3 py-1.5 text-sm ${
-                                isMain
-                                    ? "bg-violet-600 text-white"
-                                    : "border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                                isMain ? "bg-violet-600 text-white" : "border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                             } disabled:opacity-60`}
                         >
-                            {isMain ? "Główny" : isLoading ? "Ustawianie…" : "Ustaw jako główny"}
+                            {isMain ? <span className="inline-flex items-center gap-1"><Check size={16} /> Główny</span> : isLoading ? "Ustawianie…" : "Ustaw jako główny"}
                         </button>
                     </li>
                 );
             })}
             {items.length === 0 && <p className="text-zinc-400 text-sm">Brak sportów — dodaj pierwszy!</p>}
         </ul>
-        <button
-            onClick={onOpenAdd}
-            className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
-        >
+        <button onClick={onOpenAdd} className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800">
             <Plus size={16} />
             Dodaj sport
         </button>
@@ -545,7 +544,7 @@ const ProfilePage = () => {
                     name: s.name,
                     url: s.url,
                     level: s.rating,
-                    isMain: s.isMain,
+                    isMain: s.isMain
                 }));
                 setSports(mapped);
             })
@@ -558,17 +557,11 @@ const ProfilePage = () => {
         const item = sports[index];
         if (!item || item.isMain) return;
         if (!user?.email) return;
-
         setSettingMainIndex(index);
-
         const prevSports = sports;
         setSports((prev) => prev.map((s, i) => ({ ...s, isMain: i === index })));
-
         try {
-            await api.patch("/sport-type/mainSport", {
-                email: user.email,
-                idSport: item.id,
-            });
+            await api.patch("/sport-type/mainSport", { email: user.email, idSport: item.id });
         } catch {
             setSports(prevSports);
         } finally {
@@ -582,8 +575,7 @@ const ProfilePage = () => {
                 <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{
-                        backgroundImage:
-                            "url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)",
+                        backgroundImage: "url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)"
                     }}
                 />
                 <div className="absolute inset-0 bg-black/60" />
@@ -597,26 +589,14 @@ const ProfilePage = () => {
 
             <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
                 <div className="rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800">
-                    <ProfileCard
-                        user={user}
-                        loading={loading}
-                        onImageClick={() => setIsImageModalOpen(true)}
-                        mainSportName={mainSportName}
-                    />
-                    {errorMsg && (
-                        <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">{errorMsg}</p>
-                    )}
+                    <ProfileCard user={user} loading={loading} onImageClick={() => setIsImageModalOpen(true)} mainSportName={mainSportName} />
+                    {errorMsg && <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">{errorMsg}</p>}
                     <hr className="my-8 border-zinc-800" />
                     <div className="flex flex-col gap-8 lg:flex-row">
                         <Sidebar />
                         <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-2">
-                            <SportsList
-                                items={sports}
-                                onOpenAdd={() => setOpenAdd(true)}
-                                onSetMain={handleSetMain}
-                                settingIndex={settingMainIndex}
-                            />
-                            <SavedEvents />
+                            <SportsList items={sports} onOpenAdd={() => setOpenAdd(true)} onSetMain={handleSetMain} settingIndex={settingMainIndex} />
+                            <SavedEvents userEmail={user?.email} />
                         </div>
                     </div>
                 </div>
@@ -643,7 +623,6 @@ const ProfilePage = () => {
                 imageUrl={user?.urlOfPicture ?? ""}
                 userName={user?.name ?? "User"}
                 onPhotoUpdated={handlePhotoUpdated}
-                loading={loading}
             />
         </div>
     );
