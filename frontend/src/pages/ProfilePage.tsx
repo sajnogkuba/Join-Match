@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import api from "../Api/axios";
 import Avatar from "../components/Avatar";
+import Friends from "../components/Friends";
 import StarRatingInput from "../components/StarRatingInput";
 import {
     Star,
@@ -19,7 +20,8 @@ import {
     Camera,
     Upload,
     X,
-    Check
+    Check,
+    UserPlus
 } from "lucide-react";
 
 type SimpleUser = {
@@ -63,31 +65,33 @@ type EventDetails = {
 };
 
 type SidebarItemKey =
-    | "General"
-    | "Edit Profile"
-    | "Password"
-    | "Social Profiles"
-    | "Email Notifications"
-    | "Sessions"
-    | "Applications"
-    | "Data Export";
+    | "Ogólne"
+    | "Edytuj profil"
+    | "Hasło"
+    | "Profile społecznościowe"
+    | "E-mail i powiadomienia"
+    | "Znajomi"
+    | "Sesje"
+    | "Aplikacje"
+    | "Eksport danych";
 
 const Sidebar = ({
-                     active,
-                     onSelect
-                 }: {
+    active,
+    onSelect
+}: {
     active: SidebarItemKey;
     onSelect: (key: SidebarItemKey) => void;
 }) => {
     const items: { label: SidebarItemKey; icon: React.ComponentType<{ size?: number }> }[] = [
-        { label: "General", icon: UserRound },
-        { label: "Edit Profile", icon: Settings },
-        { label: "Password", icon: Lock },
-        { label: "Social Profiles", icon: Globe2 },
-        { label: "Email Notifications", icon: Bell },
-        { label: "Sessions", icon: Users },
-        { label: "Applications", icon: Trophy },
-        { label: "Data Export", icon: Database }
+        { label: "Ogólne", icon: UserRound },
+        { label: "Edytuj profil", icon: Settings },
+        { label: "Hasło", icon: Lock },
+        { label: "Profile społecznościowe", icon: Globe2 },
+        { label: "E-mail i powiadomienia", icon: Bell },
+        { label: "Znajomi", icon: UserPlus },
+        { label: "Sesje", icon: Users },
+        { label: "Aplikacje", icon: Trophy },
+        { label: "Eksport danych", icon: Database }
     ];
     return (
         <aside className="w-full md:w-64 shrink-0">
@@ -109,20 +113,20 @@ const Sidebar = ({
             </nav>
             <button className="mt-6 text-sm text-red-400 hover:text-red-300 inline-flex items-center gap-2">
                 <LogOut size={16} />
-                Delete Account
+                Usuń konto
             </button>
         </aside>
     );
 };
 
 const ProfileImageModal = ({
-                               isOpen,
-                               onClose,
-                               imageUrl,
-                               userName,
-                               onPhotoUpdated,
-                               loading = false
-                           }: {
+    isOpen,
+    onClose,
+    imageUrl,
+    userName,
+    onPhotoUpdated,
+    loading = false
+}: {
     isOpen: boolean;
     onClose: () => void;
     imageUrl: string;
@@ -240,18 +244,18 @@ const ProfileImageModal = ({
 };
 
 const ProfileCard = ({
-                         user,
-                         loading,
-                         onImageClick,
-                         mainSportName
-                     }: {
+    user,
+    loading,
+    onImageClick,
+    mainSportName
+}: {
     user: SimpleUser | null;
     loading: boolean;
     onImageClick: () => void;
     mainSportName: string;
 }) => {
     const name = user?.name ?? (loading ? "Ładowanie…" : "—");
-    const handle = "General";
+    const handle = "Profil";
     const rating = 4.7;
     const friends = 67;
 
@@ -277,7 +281,7 @@ const ProfileCard = ({
                     <p className="text-white font-semibold leading-tight">
                         {name} <span className="text-zinc-400">/ {handle}</span>
                     </p>
-                    <p className="text-sm text-zinc-400">Update your username and manage your account</p>
+                    <p className="text-sm text-zinc-400">Zaktualizuj swoje dane i zarządzaj kontem</p>
                 </div>
             </div>
             <div className="flex items-center gap-8">
@@ -308,12 +312,12 @@ const ProfileCard = ({
 };
 
 const ClickableSavedEvent = ({
-                                 title,
-                                 place,
-                                 tag,
-                                 cover,
-                                 eventId
-                             }: {
+    title,
+    place,
+    tag,
+    cover,
+    eventId
+}: {
     title: string;
     place: string;
     tag: string;
@@ -405,10 +409,10 @@ const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
 };
 
 const AddSportModal = ({
-                           open,
-                           onClose,
-                           onAdded
-                       }: {
+    open,
+    onClose,
+    onAdded
+}: {
     open: boolean;
     onClose: () => void;
     onAdded: (s: UserSport) => void;
@@ -542,11 +546,11 @@ const AddSportModal = ({
 };
 
 const SportsList = ({
-                        items,
-                        onOpenAdd,
-                        onSetMain,
-                        settingIndex
-                    }: {
+    items,
+    onOpenAdd,
+    onSetMain,
+    settingIndex
+}: {
     items: UserSport[];
     onOpenAdd: () => void;
     onSetMain: (index: number) => void;
@@ -752,10 +756,10 @@ const ProfilePage = () => {
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [sports, setSports] = useState<UserSport[]>([]);
-    const [openAdd, setOpenAdd] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [settingMainIndex, setSettingMainIndex] = useState<number | null>(null);
-    const [activeTab, setActiveTab] = useState<SidebarItemKey>("General");
+    const [activeTab, setActiveTab] = useState<SidebarItemKey>("Ogólne");
+    const [openAdd, setOpenAdd] = useState(false);
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
         setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
@@ -830,7 +834,7 @@ const ProfilePage = () => {
                 <div className="absolute inset-0 bg-black/60" />
                 <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-4 pb-6 md:px-8">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-semibold text-white">Panel Profilu</h1>
+                        <h1 className="text-2xl md:text-3xl font-semibold text-white">Panel profilu</h1>
                         <div className="mt-2 h-1 w-32 rounded-full bg-violet-600" />
                     </div>
                 </div>
@@ -852,7 +856,7 @@ const ProfilePage = () => {
                     <hr className="my-8 border-zinc-800" />
                     <div className="flex flex-col gap-8 lg:flex-row">
                         <Sidebar active={activeTab} onSelect={(t) => setActiveTab(t)} />
-                        {activeTab === "General" && (
+                        {activeTab === "Ogólne" && (
                             <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-2">
                                 <SportsList
                                     items={sports}
@@ -863,13 +867,32 @@ const ProfilePage = () => {
                                 <SavedEvents userEmail={user?.email} />
                             </div>
                         )}
-                        {activeTab === "Password" && (
+                        {activeTab === "Znajomi" && (
+                            <div className="flex-1">
+                                <Friends />
+                            </div>
+                        )}
+                        {activeTab === "Hasło" && (
                             <div className="flex-1">
                                 <ChangePasswordForm />
                             </div>
                         )}
-                        {activeTab !== "General" && activeTab !== "Password" && (
-                            <div className="flex-1 text-sm text-zinc-500">Wkrótce</div>
+                        {activeTab !== "Ogólne" && activeTab !== "Znajomi" && activeTab !== "Hasło" && (
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="text-center">
+                                    <h3 className="text-white text-xl font-semibold mb-2">
+                                        {activeTab === "Edytuj profil" && "Edytuj profil"}
+                                        {activeTab === "Profile społecznościowe" && "Profile społecznościowe"}
+                                        {activeTab === "E-mail i powiadomienia" && "E-mail i powiadomienia"}
+                                        {activeTab === "Sesje" && "Sesje"}
+                                        {activeTab === "Aplikacje" && "Aplikacje"}
+                                        {activeTab === "Eksport danych" && "Eksport danych"}
+                                    </h3>
+                                    <p className="text-zinc-400">
+                                        Ta sekcja będzie dostępna wkrótce
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -897,7 +920,7 @@ const ProfilePage = () => {
                 isOpen={isImageModalOpen}
                 onClose={() => setIsImageModalOpen(false)}
                 imageUrl={user?.urlOfPicture ?? ""}
-                userName={user?.name ?? "User"}
+                userName={user?.name ?? "Użytkownik"}
                 onPhotoUpdated={handlePhotoUpdated}
             />
         </div>

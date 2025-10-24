@@ -1,4 +1,3 @@
-// src/pages/MainPage.tsx
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -42,8 +41,10 @@ const MainPage: React.FC = () => {
 		api.get('/user-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setJoinedEventIds(new Set(data.map((x: any) => x.eventId))))
 			.catch(() => {})
-		api.get('/user-saved-event', { params: { userEmail } })
-			.then(({ data }) => setSavedEventIds(new Set(data.map((x: any) => x.eventId))))
+		
+		// Fetch saved events
+		api.get('/user-saved-event/by-user-email', { params: { userEmail } })
+			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(() => {})
 	}, [userEmail])
 
