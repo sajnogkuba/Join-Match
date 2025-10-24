@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, UserMinus, X, UserPlus } from "lucide-react";
+import { Search, UserMinus, X, UserPlus, Loader2 } from "lucide-react";
 import axiosInstance from "../Api/axios";
 import type { User } from "../Api/types/User";
 import type { Friend, SearchResult, PendingRequest } from "../Api/types/Friends";
@@ -7,7 +7,7 @@ import Avatar from "./Avatar";
 
 const FriendCard = ({ friend, onRemove }: { 
     friend: Friend; 
-    onRemove: (id: number) => void;
+    onRemove: (friend: Friend) => void;
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
         <div className="flex items-center gap-3">
@@ -23,11 +23,13 @@ const FriendCard = ({ friend, onRemove }: {
         </div>
         <div className="flex items-center gap-2">
             <button
-                onClick={() => onRemove(friend.id)}
+                onClick={() => onRemove(friend)}
                 className="p-2 rounded-xl bg-zinc-800 hover:bg-red-600/20 transition-colors"
-                title="Usuń ze znajomych"
+                title="Usuń znajomego"
             >
-                <UserMinus size={16} className="text-zinc-300 hover:text-red-400" />
+                <span className="flex items-center gap-2">
+                    <UserMinus size={16} /> Usuń znajomego
+                </span>
             </button>
         </div>
     </div>
@@ -115,7 +117,7 @@ const PendingRequestCard = ({ request, onAccept, onReject }: {
 
 const Friends = () => {
     const [friends, setFriends] = useState<Friend[]>([]);
-    const [loading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [showSearchPopup, setShowSearchPopup] = useState(false);
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -124,6 +126,8 @@ const Friends = () => {
     const [activeTab, setActiveTab] = useState<"friends" | "pending">("friends");
     const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
     const [pendingLoading, setPendingLoading] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [friendToDelete, setFriendToDelete] = useState<Friend | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
@@ -133,7 +137,23 @@ const Friends = () => {
         });
     }, []);
 
-    // Fetch pending requests when currentUser is loaded
+    useEffect(() => {
+        if (!currentUser?.id) return;
+        
+        setLoading(true);
+        axiosInstance.get(`/friends/${currentUser.id}`)
+            .then(response => {
+                setFriends(response.data);
+            })
+            .catch(error => {
+                console.error('Error fetching friends:', error);
+                setFriends([]);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, [currentUser]);
+
     useEffect(() => {
         if (!currentUser?.id) return;
         
@@ -152,17 +172,55 @@ const Friends = () => {
     }, [currentUser]);
 
 
-    const handleRemoveFriend = (friendId: number) => {
-        setFriends(prev => prev.filter(friend => friend.id !== friendId));
+    const handleRemoveFriend = (friend: Friend) => {
+        setFriendToDelete(friend);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteFriend = () => {
+        if (!friendToDelete) return;
+        
+        axiosInstance.delete(`/friends/${friendToDelete.friendshipId}`)
+            .then(() => {
+                setFriends(prev => prev.filter(friend => friend.friendshipId !== friendToDelete.friendshipId));
+                setShowDeleteConfirm(false);
+                setFriendToDelete(null);
+            })
+            .catch(error => {
+                console.error("Error deleting friendship:", error);
+                setShowDeleteConfirm(false);
+                setFriendToDelete(null);
+            });
+    };
+
+    const cancelDeleteFriend = () => {
+        setShowDeleteConfirm(false);
+        setFriendToDelete(null);
+    };
+
+    const handleCloseSearchPopup = () => {
+        setShowSearchPopup(false);
+        setSearchQuery("");
+        setSearchResults([]);
     };
 
     const handleAcceptRequest = (requestId: number) => {
-        console.log("Accepting friend request:", requestId);
-        
         axiosInstance.patch(`/friends/request/${requestId}/accept`)
-            .then(response => {
-                console.log("Friend request accepted successfully:", response.data);
+            .then(() => {
                 setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
+                if (currentUser?.id) {
+                    setLoading(true);
+                    axiosInstance.get(`/friends/${currentUser.id}`)
+                        .then(response => {
+                            setFriends(response.data);
+                        })
+                        .catch(error => {
+                            console.error('Error reloading friends:', error);
+                        })
+                        .finally(() => {
+                            setLoading(false);
+                        });
+                }
             })
             .catch(error => {
                 console.error("Error accepting friend request:", error);
@@ -170,11 +228,8 @@ const Friends = () => {
     };
 
     const handleRejectRequest = (requestId: number) => {
-        console.log("Rejecting friend request:", requestId);
-        
         axiosInstance.delete(`/friends/request/${requestId}`)
-            .then(response => {
-                console.log("Friend request rejected successfully:", response.data);
+            .then(() => {
                 setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
             })
             .catch(error => {
@@ -183,17 +238,10 @@ const Friends = () => {
     };
 
     const handleAddFriend = (userId: number) => {
-        console.log("Add friend clicked for user ID:", userId);
-        console.log(localStorage.getItem('accessToken'));
-        console.log(currentUser);
-        
         axiosInstance.post(`/friends/request`, {
             senderId: currentUser?.id,
             receiverId: userId
-        }).then(response => {
-            console.log(response.data);
-            
-            // Update the search results to show PENDING status for this user
+        }).then(() => {
             setSearchResults(prev => 
                 prev.map(user => 
                     user.id === userId 
@@ -214,7 +262,6 @@ const Friends = () => {
 
 
         if (!currentUser?.id) {
-            console.log("Current user not loaded yet, skipping search");
             setSearchResults([]);
             return;
         }
@@ -279,7 +326,6 @@ const Friends = () => {
                     </button>
                 </div>
 
-                {/* Tab Navigation */}
                 <div className="flex space-x-1 rounded-xl bg-zinc-800/60 p-1">
                     <button
                         onClick={() => setActiveTab("friends")}
@@ -303,11 +349,15 @@ const Friends = () => {
                     </button>
                 </div>
 
-                {/* Tab Content */}
                 <div className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
                     {activeTab === "friends" ? (
-                        // Current Friends Tab
-                        filteredFriends.length === 0 ? (
+                        loading ? (
+                            <div className="grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10">
+                                <div className="flex items-center gap-2 text-zinc-300">
+                                    <Loader2 className="animate-spin" /> Ładowanie…
+                                </div>
+                            </div>
+                        ) : filteredFriends.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">
@@ -329,7 +379,6 @@ const Friends = () => {
                             ))
                         )
                     ) : (
-                        // Pending Requests Tab
                         pendingLoading ? (
                             <div className="text-center py-8">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4"></div>
@@ -357,31 +406,25 @@ const Friends = () => {
                 </div>
             </div>
 
-            {/* Search Friends Popup */}
             {showSearchPopup && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    {/* Overlay */}
                     <div 
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setShowSearchPopup(false)}
+                        onClick={handleCloseSearchPopup}
                     />
                     
-                    {/* Popup Container */}
                     <div className="relative w-full max-w-5xl bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
-                        {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
                             <h3 className="text-white text-xl font-semibold">Szukaj znajomych</h3>
                             <button
-                                onClick={() => setShowSearchPopup(false)}
+                                onClick={handleCloseSearchPopup}
                                 className="p-2 rounded-xl hover:bg-zinc-800 transition-colors"
                             >
                                 <X size={20} className="text-zinc-400 hover:text-white" />
                             </button>
                         </div>
 
-                        {/* Content */}
                         <div className="p-6 space-y-4">
-                            {/* Search Input */}
                             <div className="relative">
                                 <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
                                 <input
@@ -393,7 +436,6 @@ const Friends = () => {
                                 />
                             </div>
 
-                            {/* Search Results */}
                             <div className="max-h-80 overflow-y-auto space-y-3 dark-scrollbar">
                                 {searchLoading ? (
                                     <div className="text-center py-8">
@@ -416,6 +458,48 @@ const Friends = () => {
                                         />
                                     ))
                                 )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteConfirm && friendToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div 
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={cancelDeleteFriend}
+                    />
+                    
+                    <div className="relative w-full max-w-md bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+                            <h3 className="text-white text-xl font-semibold">Usuń znajomego</h3>
+                            <button
+                                onClick={cancelDeleteFriend}
+                                className="p-2 rounded-xl hover:bg-zinc-800 transition-colors"
+                            >
+                                <X size={20} className="text-zinc-400 hover:text-white" />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            <p className="text-zinc-300 mb-6">
+                                Czy na pewno chcesz usunąć <span className="text-white font-medium">{friendToDelete.name}</span> ze znajomych?
+                            </p>
+                            
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={cancelDeleteFriend}
+                                    className="flex-1 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                >
+                                    Anuluj
+                                </button>
+                                <button
+                                    onClick={confirmDeleteFriend}
+                                    className="flex-1 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition-colors"
+                                >
+                                    Usuń znajomego
+                                </button>
                             </div>
                         </div>
                     </div>

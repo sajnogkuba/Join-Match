@@ -8,6 +8,7 @@ import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.FriendRequestRepository;
+import com.joinmatch.backend.repository.FriendshipRepository;
 import com.joinmatch.backend.repository.JoinMatchTokenRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
@@ -29,6 +30,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final JoinMatchTokenRepository joinMatchTokenRepository;
+    private final FriendshipRepository friendshipRepository;
 
 
     public void register(RegisterRequest request) {
@@ -145,26 +147,44 @@ public class UserService {
         var sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new IllegalArgumentException("Sender with id " + senderId + " not found"));
         var requestsSent = friendRequestRepository.findBySender(sender);
+        var requestsReceived = friendRequestRepository.findByReceiver(sender);
+        var friendships = friendshipRepository.findByUserOneOrUserTwo(sender, sender);
 
         List<SearchResponseDto> searchResults = new ArrayList<>();
 
         for (UserResponseDto userDto : users) {
-            if(Objects.equals(userDto.id(), senderId)){
-                continue;
-            }
-            var friendRequestOpt = requestsSent.stream()
-                    .filter(req -> req.getReceiver().getEmail().equals(userDto.email()))
-                    .findFirst();
+            if (Objects.equals(userDto.id(), senderId)) continue;
+            boolean isFriend = friendships.stream().anyMatch(f ->
+                    (Objects.equals(f.getUserOne().getId(), userDto.id()) ||
+                            Objects.equals(f.getUserTwo().getId(), userDto.id()))
+            );
+            if (isFriend) continue;
 
             FriendRequestStatus status = null;
+            var sentRequest = requestsSent.stream()
+                    .filter(req -> req.getReceiver().getEmail().equals(userDto.email()))
+                    .findFirst();
+            var receivedRequest = requestsReceived.stream()
+                    .filter(req -> req.getSender().getEmail().equals(userDto.email()))
+                    .findFirst();
 
-            if (friendRequestOpt.isPresent()) {
-                status = FriendRequestStatus.getStatusFromString(friendRequestOpt.get().getStatus().name());
+            if (sentRequest.isPresent()) {
+                status = sentRequest.get().getStatus();
+            } else if (receivedRequest.isPresent()) {
+                status = receivedRequest.get().getStatus();
             }
 
-            searchResults.add(new SearchResponseDto(userDto.id(), userDto.name(), userDto.email(), status, userDto.urlOfPicture()));
+            searchResults.add(new SearchResponseDto(
+                    userDto.id(),
+                    userDto.name(),
+                    userDto.email(),
+                    status,
+                    userDto.urlOfPicture()
+            ));
         }
 
         return searchResults;
     }
+
+
 }
