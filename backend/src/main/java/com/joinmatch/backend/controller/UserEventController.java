@@ -41,4 +41,10 @@ public class UserEventController {
         UserEventResponseDto createdUserEvent = userEventService.create(userEventRequestDto);
         return ResponseEntity.status(201).body(createdUserEvent);
     }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteUserEvent(@RequestBody @Valid UserEventRequestDto userEventRequestDto) {
+        userEventService.delete(userEventRequestDto);
+        return ResponseEntity.noContent().build();
+    }
 }

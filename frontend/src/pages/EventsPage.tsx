@@ -180,12 +180,37 @@ const EventsPage = () => {
 
 	const handleJoin = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
-		if (joinedEventIds.has(eventId)) return
+		
+		const isJoined = joinedEventIds.has(eventId)
+		
 		try {
-			await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
-			setJoinedEventIds(prev => new Set([...prev, eventId]))
+			if (isJoined) {
+				// Leave the event
+				await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
+				setJoinedEventIds(prev => {
+					const s = new Set(prev)
+					s.delete(eventId)
+					return s
+				})
+				// Decrease booked participants count
+				setEvents(prev => prev.map(ev => 
+					ev.eventId === eventId 
+						? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
+						: ev
+				))
+			} else {
+				// Join the event
+				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+				setJoinedEventIds(prev => new Set([...prev, eventId]))
+				// Increase booked participants count
+				setEvents(prev => prev.map(ev => 
+					ev.eventId === eventId 
+						? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
+						: ev
+				))
+			}
 		} catch (e) {
-			console.error('Błąd dołączania:', e)
+			console.error('Błąd dołączania/opuszczania:', e)
 		}
 	}
 
@@ -403,8 +428,8 @@ const EventsPage = () => {
 													<div className='flex items-center gap-2'><Ticket size={16} /> {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: (ev as any).currency || 'PLN' }).format((ev as any).cost || 0)}</div>
 												</div>
 												<div className='mt-4 flex justify-between'>
-													<button onClick={() => handleJoin(ev.eventId)} disabled={joinedEventIds.has(ev.eventId)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${joinedEventIds.has(ev.eventId) ? 'bg-zinc-700 text-zinc-400' : 'bg-violet-600 text-white hover:bg-violet-500'}`}>
-														{joinedEventIds.has(ev.eventId) ? 'Dołączono' : 'Dołącz'}
+													<button onClick={() => handleJoin(ev.eventId)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${joinedEventIds.has(ev.eventId) ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-violet-600 text-white hover:bg-violet-500'}`}>
+														{joinedEventIds.has(ev.eventId) ? 'Opuść' : 'Dołącz'}
 													</button>
 													<Link to={`/event/${ev.eventId}`} className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
 														Szczegóły <ChevronRight size={16} />
