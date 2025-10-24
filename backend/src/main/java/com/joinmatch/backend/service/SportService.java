@@ -37,7 +37,8 @@ public class SportService {
                         su.getSport().getId(),
                         su.getSport().getName(),
                         su.getSport().getURL(),   
-                        su.getRating()
+                        su.getRating(),
+                        su.getIsMain()
                 ))
                 .toList();
     }
@@ -48,6 +49,7 @@ public class SportService {
                 .map(SportTypeResponseDto::fromSportType)
                 .toList();
     }
+   @Transactional
     public void addNewSportForUser(String token, Integer idSport, Integer rating){
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if(byTokenValue.isEmpty()){
@@ -63,11 +65,36 @@ public class SportService {
         sportUser.setUser(user);
         sportUser.setSport(sport);
         sportUser.setRating(rating);
-        sport.getSportUsers().add(sportUser);
+        if(user.getSportUsers().isEmpty()){
+            sportUser.setIsMain(true);
+        }else{
+            sportUser.setIsMain(false);
+
+        }
+       boolean alreadyExists = user.getSportUsers().stream()
+               .anyMatch(su -> su.getSport().getId().equals(idSport));
+       if (alreadyExists) {
+           throw new IllegalArgumentException("Sport already exists");
+       }
+
         user.getSportUsers().add(sportUser);
+        sport.getSportUsers().add(sportUser);
         userRepository.save(user);
         sportUserRepository.save(sportUser);
         sportRepository.save(sport);
+        }
+        @Transactional
+        public void setMainSport(String email, Integer idSport){
+            Optional<User> byEmail = userRepository.findByEmail(email);
+            if(byEmail.isEmpty()){
+                throw new IllegalArgumentException("User not found");
+            }
+            byEmail.get().getSportUsers().forEach( sportUser -> sportUser.setIsMain(false));
+            SportUser sportUser= sportUserRepository.findByUserIdAndSportId(byEmail.get().getId(), idSport).orElseThrow(
+                    () -> new IllegalArgumentException("Not found sport for this user")
+            );
+            sportUser.setIsMain(true);
+            sportUserRepository.save(sportUser);
         }
     }
 

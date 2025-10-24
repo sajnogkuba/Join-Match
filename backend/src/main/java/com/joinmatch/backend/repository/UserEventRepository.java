@@ -9,4 +9,6 @@ import java.util.Optional;
 
 public interface UserEventRepository extends JpaRepository<UserEvent, Integer> {
     List<UserEvent> findByUserId(Integer id);
+
+    UserEvent findByUserIdAndEventEventId(Integer id, Integer integer);
 }
