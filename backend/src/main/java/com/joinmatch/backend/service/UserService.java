@@ -134,4 +134,12 @@ public class UserService {
         user.setUrlOfPicture(photoUrl);
         userRepository.save(user);
     }
+
+    public List<UserResponseDto> searchUsers(String query){
+        return userRepository.searchByNameOrEmail(query)
+                .stream()
+                .map(UserResponseDto::fromUser)
+                .toList();
+
+    }
 }
