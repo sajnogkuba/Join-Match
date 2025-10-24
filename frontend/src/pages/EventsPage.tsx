@@ -82,11 +82,9 @@ const EventsPage = () => {
 		axiosInstance.get('/user-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setJoinedEventIds(new Set((data || []).map((ue: any) => ue.eventId))))
 			.catch(e => console.error('Nie udało się pobrać dołączonych wydarzeń:', e))
-	}, [userEmail])
-
-	useEffect(() => {
-		if (!userEmail) return
-		axiosInstance.get('/user-saved-event', { params: { userEmail } })
+		
+		// Fetch saved events
+		axiosInstance.get('/user-saved-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
 	}, [userEmail])

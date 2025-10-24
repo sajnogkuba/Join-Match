@@ -41,6 +41,11 @@ const MainPage: React.FC = () => {
 		api.get('/user-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setJoinedEventIds(new Set(data.map((x: any) => x.eventId))))
 			.catch(() => {})
+		
+		// Fetch saved events
+		api.get('/user-saved-event/by-user-email', { params: { userEmail } })
+			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
+			.catch(() => {})
 	}, [userEmail])
 
 	const handleSignUp = async (eventId: number) => {
