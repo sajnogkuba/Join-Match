@@ -1,13 +1,13 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.config.JwtService;
-import com.joinmatch.backend.dto.ChangePassDto;
-import com.joinmatch.backend.dto.LoginRequest;
-import com.joinmatch.backend.dto.RegisterRequest;
-import com.joinmatch.backend.dto.UserResponseDto;
+import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.enums.FriendRequestStatus;
+import com.joinmatch.backend.model.FriendRequest;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.repository.FriendRequestRepository;
 import com.joinmatch.backend.repository.JoinMatchTokenRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
@@ -25,6 +25,7 @@ import java.util.*;
 @AllArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final FriendRequestRepository friendRequestRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final JoinMatchTokenRepository joinMatchTokenRepository;
@@ -122,7 +123,7 @@ public class UserService {
             throw new IllegalArgumentException("User Not Found");
         }
         User user = byTokenValue.get();
-        return new UserResponseDto(user.getName(), user.getEmail(), user.getDateOfBirth(), user.getUrlOfPicture());
+        return UserResponseDto.fromUser(user);
     }
 
     public void updateUserPhoto(String token, String photoUrl) {
@@ -135,11 +136,35 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public List<UserResponseDto> searchUsers(String query){
-        return userRepository.searchByNameOrEmail(query)
+    public List<SearchResponseDto> searchUsers(String query, Integer senderId) {
+        var users = userRepository.searchByNameOrEmail(query)
                 .stream()
                 .map(UserResponseDto::fromUser)
                 .toList();
 
+        var sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new IllegalArgumentException("Sender with id " + senderId + " not found"));
+        var requestsSent = friendRequestRepository.findBySender(sender);
+
+        List<SearchResponseDto> searchResults = new ArrayList<>();
+
+        for (UserResponseDto userDto : users) {
+            if(Objects.equals(userDto.id(), senderId)){
+                continue;
+            }
+            var friendRequestOpt = requestsSent.stream()
+                    .filter(req -> req.getReceiver().getEmail().equals(userDto.email()))
+                    .findFirst();
+
+            FriendRequestStatus status = null;
+
+            if (friendRequestOpt.isPresent()) {
+                status = FriendRequestStatus.getStatusFromString(friendRequestOpt.get().getStatus().name());
+            }
+
+            searchResults.add(new SearchResponseDto(userDto.id(), userDto.name(), userDto.email(), status, userDto.urlOfPicture()));
+        }
+
+        return searchResults;
     }
 }

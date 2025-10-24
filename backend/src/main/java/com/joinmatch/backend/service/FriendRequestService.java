@@ -12,6 +12,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class FriendRequestService {
@@ -48,13 +50,17 @@ public class FriendRequestService {
                 .build();
 
         FriendRequest saved = friendRequestRepository.save(friendRequest);
-        return new FriendRequestResponseDto(
-                saved.getRequestId(),
-                saved.getSender().getId(),
-                saved.getReceiver().getId(),
-                saved.getStatus().name(),
-                saved.getCreatedAt(),
-                saved.getUpdatedAt()
-        );
+        return FriendRequestResponseDto.fromFriendRequest(saved);
+    }
+
+    public List<FriendRequestResponseDto> getPendingRequestByReceiverId(Integer receiverId) {
+        var sender = userRepository.findById(receiverId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found for id: " + receiverId));
+
+        return friendRequestRepository.findByReceiver(sender)
+                .stream()
+                .filter(fr -> fr.getStatus() == FriendRequestStatus.PENDING)
+                .map(FriendRequestResponseDto::fromFriendRequest)
+                .toList();
     }
 }

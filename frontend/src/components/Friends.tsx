@@ -1,20 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, UserMinus, X, UserPlus } from "lucide-react";
 import axiosInstance from "../Api/axios";
-
-type Friend = {
-    id: number;
-    name: string;
-    email: string;
-    urlOfPicture: string | null;
-};
-
-type SearchResult = {
-    id: number;
-    name: string;
-    email: string;
-    urlOfPicture: string | null;
-};
+import type { User } from "../Api/types/User";
+import type { Friend, SearchResult, PendingRequest } from "../Api/types/Friends";
+import Avatar from "./Avatar";
 
 const FriendCard = ({ friend, onRemove }: { 
     friend: Friend; 
@@ -22,19 +11,11 @@ const FriendCard = ({ friend, onRemove }: {
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
         <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-zinc-700 flex items-center justify-center">
-                {friend.urlOfPicture ? (
-                    <img 
-                        src={friend.urlOfPicture} 
-                        alt={friend.name}
-                        className="h-12 w-12 rounded-full object-cover"
-                    />
-                ) : (
-                    <span className="text-zinc-300 font-medium text-lg">
-                        {friend.name.charAt(0).toUpperCase()}
-                    </span>
-                )}
-            </div>
+            <Avatar 
+                src={friend.urlOfPicture} 
+                name={friend.name}
+                size="sm"
+            />
             <div>
                 <p className="text-white font-medium">{friend.name}</p>
                 <p className="text-sm text-zinc-400">{friend.email}</p>
@@ -55,34 +36,78 @@ const FriendCard = ({ friend, onRemove }: {
 const SearchResultCard = ({ user, onAddFriend }: { 
     user: SearchResult; 
     onAddFriend: (id: number) => void;
+}) => {
+    const isPending = user.friendRequestStatus === "PENDING";
+    
+    return (
+        <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+        <div className="flex items-center gap-3">
+            <Avatar 
+                src={user.urlOfPicture} 
+                name={user.name}
+                size="sm"
+            />
+                <div>
+                    <p className="text-white font-medium">{user.name}</p>
+                    <p className="text-sm text-zinc-400">{user.email}</p>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                {isPending ? (
+                    <button
+                        disabled
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-sm font-medium"
+                        title="Zaproszenie oczekuje na odpowiedź"
+                    >
+                        <UserPlus size={16} />
+                        Oczekuje na odpowiedź
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => onAddFriend(user.id)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white"
+                        title="Wyślij zaproszenie"
+                    >
+                        <UserPlus size={16} />
+                        Wyślij zaproszenie
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const PendingRequestCard = ({ request, onAccept, onReject }: { 
+    request: PendingRequest; 
+    onAccept: (id: number) => void;
+    onReject: (id: number) => void;
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
         <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-zinc-700 flex items-center justify-center">
-                {user.urlOfPicture ? (
-                    <img 
-                        src={user.urlOfPicture} 
-                        alt={user.name}
-                        className="h-12 w-12 rounded-full object-cover"
-                    />
-                ) : (
-                    <span className="text-zinc-300 font-medium text-lg">
-                        {user.name.charAt(0).toUpperCase()}
-                    </span>
-                )}
-            </div>
+            <Avatar 
+                src={request.senderUrlOfPicture} 
+                name={request.senderName}
+                size="sm"
+            />
             <div>
-                <p className="text-white font-medium">{user.name}</p>
-                <p className="text-sm text-zinc-400">{user.email}</p>
+                <p className="text-white font-medium">{request.senderName}</p>
+                <p className="text-sm text-zinc-400">{request.senderEmail}</p>
             </div>
         </div>
         <div className="flex items-center gap-2">
             <button
-                onClick={() => onAddFriend(user.id)}
-                className="p-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors"
-                title="Dodaj do znajomych"
+                onClick={() => onAccept(request.requestId)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white"
+                title="Zaakceptuj zaproszenie"
             >
-                <UserPlus size={16} className="text-white" />
+                ✓ Zaakceptuj
+            </button>
+            <button
+                onClick={() => onReject(request.requestId)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-sm font-medium text-white"
+                title="Odrzuć zaproszenie"
+            >
+                ✗ Odrzuć
             </button>
         </div>
     </div>
@@ -95,31 +120,96 @@ const Friends = () => {
     const [showSearchPopup, setShowSearchPopup] = useState(false);
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [activeTab, setActiveTab] = useState<"friends" | "pending">("friends");
+    const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+    const [pendingLoading, setPendingLoading] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        axiosInstance.get<User>('/auth/user', { params: { token } }).then(response => {
+            setCurrentUser(response.data);
+        });
+    }, []);
+
+    // Fetch pending requests when currentUser is loaded
+    useEffect(() => {
+        if (!currentUser?.id) return;
+        
+        setPendingLoading(true);
+        axiosInstance.get(`/friends/requests/${currentUser.id}`)
+            .then(response => {
+                setPendingRequests(response.data);
+            })
+            .catch(error => {
+                console.error('Error fetching pending requests:', error);
+                setPendingRequests([]);
+            })
+            .finally(() => {
+                setPendingLoading(false);
+            });
+    }, [currentUser]);
+
 
     const handleRemoveFriend = (friendId: number) => {
         setFriends(prev => prev.filter(friend => friend.id !== friendId));
     };
 
-    const handleAddFriend = (userId: number) => {
-        // TODO: Implement add friend API call
-        console.log("Add friend:", userId);
-        // For now, just add to friends list (this should be replaced with actual API call)
-        const userToAdd = searchResults.find(user => user.id === userId);
-        if (userToAdd) {
-            setFriends(prev => [...prev, userToAdd]);
-        }
+    const handleAcceptRequest = (requestId: number) => {
+        console.log("Accepting friend request:", requestId);
+        // TODO: Implement accept friend request API call
+        // For now, just remove from pending requests
+        setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
     };
 
-    // Debounced search function
+    const handleRejectRequest = (requestId: number) => {
+        console.log("Rejecting friend request:", requestId);
+        // TODO: Implement reject friend request API call
+        // For now, just remove from pending requests
+        setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
+    };
+
+    const handleAddFriend = (userId: number) => {
+        console.log("Add friend clicked for user ID:", userId);
+        console.log(localStorage.getItem('accessToken'));
+        console.log(currentUser);
+        
+        axiosInstance.post(`/friends/request`, {
+            senderId: currentUser?.id,
+            receiverId: userId
+        }).then(response => {
+            console.log(response.data);
+            
+            // Update the search results to show PENDING status for this user
+            setSearchResults(prev => 
+                prev.map(user => 
+                    user.id === userId 
+                        ? { ...user, friendRequestStatus: "PENDING" }
+                        : user
+                )
+            );
+        }).catch(error => {
+            console.error("Error sending friend request:", error);
+        });
+    };
+
     const searchUsers = useCallback(async (query: string) => {
         if (!query.trim()) {
             setSearchResults([]);
             return;
         }
 
+
+        if (!currentUser?.id) {
+            console.log("Current user not loaded yet, skipping search");
+            setSearchResults([]);
+            return;
+        }
+
         setSearchLoading(true);
         try {
-            const response = await axiosInstance.get(`/auth/search?query=${encodeURIComponent(query)}`);
+            const response = await axiosInstance.get(`/auth/search?query=${encodeURIComponent(query)}&senderId=${currentUser.id}`);
             setSearchResults(response.data);
         } catch (error) {
             console.error('Error searching users:', error);
@@ -127,9 +217,8 @@ const Friends = () => {
         } finally {
             setSearchLoading(false);
         }
-    }, []);
+    }, [currentUser]);
 
-    // Debounce effect
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             searchUsers(searchQuery);
@@ -178,28 +267,80 @@ const Friends = () => {
                     </button>
                 </div>
 
+                {/* Tab Navigation */}
+                <div className="flex space-x-1 rounded-xl bg-zinc-800/60 p-1">
+                    <button
+                        onClick={() => setActiveTab("friends")}
+                        className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                            activeTab === "friends"
+                                ? "bg-violet-600 text-white"
+                                : "text-zinc-400 hover:text-white hover:bg-zinc-700/50"
+                        }`}
+                    >
+                        Aktualni znajomi
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("pending")}
+                        className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                            activeTab === "pending"
+                                ? "bg-violet-600 text-white"
+                                : "text-zinc-400 hover:text-white hover:bg-zinc-700/50"
+                        }`}
+                    >
+                        Oczekujące zaproszenia
+                    </button>
+                </div>
 
+                {/* Tab Content */}
                 <div className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
-                    {filteredFriends.length === 0 ? (
-                        <div className="text-center py-8">
-                            <Search size={48} className="mx-auto text-zinc-600 mb-4" />
-                            <p className="text-zinc-400">
-                                {searchQuery ? "Nie znaleziono znajomych" : "Brak znajomych"}
-                            </p>
-                            {!searchQuery && (
-                                <p className="text-sm text-zinc-500 mt-1">
-                                    Użyj wyszukiwania, aby znaleźć znajomych
+                    {activeTab === "friends" ? (
+                        // Current Friends Tab
+                        filteredFriends.length === 0 ? (
+                            <div className="text-center py-8">
+                                <Search size={48} className="mx-auto text-zinc-600 mb-4" />
+                                <p className="text-zinc-400">
+                                    {searchQuery ? "Nie znaleziono znajomych" : "Brak znajomych"}
                                 </p>
-                            )}
-                        </div>
+                                {!searchQuery && (
+                                    <p className="text-sm text-zinc-500 mt-1">
+                                        Użyj wyszukiwania, aby znaleźć znajomych
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            filteredFriends.map(friend => (
+                                <FriendCard
+                                    key={friend.id}
+                                    friend={friend}
+                                    onRemove={handleRemoveFriend}
+                                />
+                            ))
+                        )
                     ) : (
-                        filteredFriends.map(friend => (
-                            <FriendCard
-                                key={friend.id}
-                                friend={friend}
-                                onRemove={handleRemoveFriend}
-                            />
-                        ))
+                        // Pending Requests Tab
+                        pendingLoading ? (
+                            <div className="text-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4"></div>
+                                <p className="text-zinc-400">Ładowanie zaproszeń...</p>
+                            </div>
+                        ) : pendingRequests.length === 0 ? (
+                            <div className="text-center py-8">
+                                <Search size={48} className="mx-auto text-zinc-600 mb-4" />
+                                <p className="text-zinc-400">Brak oczekujących zaproszeń</p>
+                                <p className="text-sm text-zinc-500 mt-1">
+                                    Oczekujące zaproszenia znajomych pojawią się tutaj
+                                </p>
+                            </div>
+                        ) : (
+                            pendingRequests.map(request => (
+                                <PendingRequestCard
+                                    key={request.requestId}
+                                    request={request}
+                                    onAccept={handleAcceptRequest}
+                                    onReject={handleRejectRequest}
+                                />
+                            ))
+                        )
                     )}
                 </div>
             </div>

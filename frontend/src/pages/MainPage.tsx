@@ -1,9 +1,8 @@
-// src/pages/MainPage.tsx
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { motion } from 'framer-motion'
-import { MapPin, CalendarDays, Bookmark } from 'lucide-react'
+import { MapPin, CalendarDays, Bookmark, Users } from 'lucide-react'
 import BackgroundImage from '../assets/Background.jpg'
 import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
@@ -42,16 +41,39 @@ const MainPage: React.FC = () => {
 		api.get('/user-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setJoinedEventIds(new Set(data.map((x: any) => x.eventId))))
 			.catch(() => {})
-		api.get('/user-saved-event', { params: { userEmail } })
-			.then(({ data }) => setSavedEventIds(new Set(data.map((x: any) => x.eventId))))
-			.catch(() => {})
 	}, [userEmail])
 
 	const handleSignUp = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
+		
+		const isJoined = joinedEventIds.has(eventId)
+		
 		try {
-			await api.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
-			setJoinedEventIds(prev => new Set([...prev, eventId]))
+			if (isJoined) {
+				// Leave the event
+				await api.delete('/user-event', { data: { userEmail, eventId } })
+				setJoinedEventIds(prev => {
+					const s = new Set(prev)
+					s.delete(eventId)
+					return s
+				})
+				// Decrease booked participants count
+				setEvents(prev => prev.map(ev => 
+					ev.eventId === eventId 
+						? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
+						: ev
+				))
+			} else {
+				// Join the event
+				await api.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+				setJoinedEventIds(prev => new Set([...prev, eventId]))
+				// Increase booked participants count
+				setEvents(prev => prev.map(ev => 
+					ev.eventId === eventId 
+						? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
+						: ev
+				))
+			}
 		} catch {}
 	}
 
@@ -200,8 +222,11 @@ const MainPage: React.FC = () => {
 										<p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
 											<MapPin size={14} /> {event.sportObjectName}
 										</p>
-										<p className="text-sm text-zinc-400 mb-3 flex items-center gap-2">
+										<p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
 											<CalendarDays size={14} /> {dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}
+										</p>
+										<p className="text-sm text-zinc-400 mb-3 flex items-center gap-2">
+											<Users size={14} /> {(event as any).bookedParticipants || 0}/{event.numberOfParticipants}
 										</p>
 										<div className="flex justify-between items-center">
 											<button
@@ -214,13 +239,12 @@ const MainPage: React.FC = () => {
 											</button>
 											<button
 												onClick={() => handleSignUp(event.eventId)}
-												disabled={joinedEventIds.has(event.eventId)}
 												className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${joinedEventIds.has(event.eventId)
-													? 'bg-green-600'
+													? 'bg-red-600 hover:bg-red-500'
 													: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
 													}`}
 											>
-												{joinedEventIds.has(event.eventId) ? 'Dołączono' : 'Dołącz'}
+												{joinedEventIds.has(event.eventId) ? 'Opuść' : 'Dołącz'}
 											</button>
 										</div>
 									</div>
