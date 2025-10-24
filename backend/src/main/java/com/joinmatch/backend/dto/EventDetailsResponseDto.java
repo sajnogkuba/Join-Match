@@ -43,5 +43,5 @@ public class EventDetailsResponseDto {
     private String skillLevel;
     private String paymentMethod;
     //TODO
-    //private String imageUrl;
+    private String imageUrl;
 }

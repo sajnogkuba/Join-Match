@@ -65,7 +65,7 @@ public class EventService {
 
                 .skillLevel("Amator")
                 .paymentMethod("Gotówka")
-                // .imageUrl("/assets/" + e.getEventName() + ".jpeg") // TODO
+                 .imageUrl(e.getImageUrl())
                 .build();
     }
 

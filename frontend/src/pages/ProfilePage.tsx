@@ -8,7 +8,6 @@ import {
     Users,
     Trophy,
     ChevronRight,
-    Bookmark,
     Plus,
     Settings,
     UserRound,
@@ -60,6 +59,7 @@ type EventDetails = {
     ownerName: string;
     skillLevel: string;
     paymentMethod: string;
+    imageUrl?: string;
 };
 
 type SidebarItemKey =
@@ -229,9 +229,7 @@ const ProfileImageModal = ({
                                         {uploading ? "Przesyłanie..." : "Prześlij"}
                                     </button>
                                 </div>
-                                {error && (
-                                    <p className="text-sm text-red-400 text-center">{error}</p>
-                                )}
+                                {error && <p className="text-sm text-red-400 text-center">{error}</p>}
                             </div>
                         )}
                     </div>
@@ -260,11 +258,7 @@ const ProfileCard = ({
     return (
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-                <button
-                    onClick={onImageClick}
-                    className="relative group"
-                    disabled={loading}
-                >
+                <button onClick={onImageClick} className="relative group" disabled={loading}>
                     <Avatar
                         src={user?.urlOfPicture ?? null}
                         name={name}
@@ -283,9 +277,7 @@ const ProfileCard = ({
                     <p className="text-white font-semibold leading-tight">
                         {name} <span className="text-zinc-400">/ {handle}</span>
                     </p>
-                    <p className="text-sm text-zinc-400">
-                        Update your username and manage your account
-                    </p>
+                    <p className="text-sm text-zinc-400">Update your username and manage your account</p>
                 </div>
             </div>
             <div className="flex items-center gap-8">
@@ -306,9 +298,7 @@ const ProfileCard = ({
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
                         <Trophy size={16} />
-                        <span className="font-semibold text-white">
-                            {mainSportName || "—"}
-                        </span>
+                        <span className="font-semibold text-white">{mainSportName || "—"}</span>
                     </div>
                     <p className="text-xs text-zinc-400">Główny sport</p>
                 </div>
@@ -337,24 +327,15 @@ const ClickableSavedEvent = ({
             className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 hover:bg-zinc-800/80 transition cursor-pointer"
         >
             <div className="flex items-center gap-3 min-w-0">
-                <div className="relative">
-                    {cover ? (
-                        <img
-                            src={cover}
-                            alt=""
-                            className="h-12 w-12 rounded-full object-cover"
-                        />
-                    ) : (
-                        <div className="h-12 w-12 rounded-full bg-zinc-800 grid place-items-center text-xs text-zinc-400">
-                            img
-                        </div>
-                    )}
-                    <Bookmark className="absolute -left-1 -top-1 h-4 w-4" />
-                </div>
+                {cover ? (
+                    <img src={cover} alt="" className="h-12 w-12 rounded-full object-cover" />
+                ) : (
+                    <div className="h-12 w-12 rounded-full bg-zinc-800 grid place-items-center text-xs text-zinc-400">
+                        img
+                    </div>
+                )}
                 <div className="min-w-0">
-                    <p className="truncate text-white font-medium leading-tight">
-                        {title}
-                    </p>
+                    <p className="truncate text-white font-medium leading-tight">{title}</p>
                     <p className="truncate text-xs text-zinc-400">{place}</p>
                     <span className="mt-1 inline-block rounded-md bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-200">
                         {tag}
@@ -386,34 +367,23 @@ const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
                     return;
                 }
                 const details = await Promise.all(
-                    ids.map(
-                        async (id) =>
-                            (await api.get<EventDetails>(`/event/${id}`)).data
-                    )
+                    ids.map(async (id) => (await api.get<EventDetails>(`/event/${id}`)).data)
                 );
                 setItems(details);
             })
-            .catch(() =>
-                setError("Nie udało się pobrać zapisanych wydarzeń.")
-            )
+            .catch(() => setError("Nie udało się pobrać zapisanych wydarzeń."))
             .finally(() => setLoading(false));
     }, [userEmail]);
 
     return (
         <section className="space-y-4">
-            <h3 className="text-white text-xl font-semibold">
-                Zapisane wydarzenia
-            </h3>
-            {loading && (
-                <p className="text-sm text-zinc-400">Ładowanie…</p>
-            )}
+            <h3 className="text-white text-xl font-semibold">Zapisane wydarzenia</h3>
+            {loading && <p className="text-sm text-zinc-400">Ładowanie…</p>}
             {error && <p className="text-sm text-red-400">{error}</p>}
             {!loading && !error && (
                 <ul className="space-y-3">
                     {items.map((e) => {
-                        const place = [e.city, e.street, e.number]
-                            .filter(Boolean)
-                            .join(", ");
+                        const place = [e.city, e.street, e.number].filter(Boolean).join(", ");
                         return (
                             <ClickableSavedEvent
                                 key={e.eventId}
@@ -421,14 +391,12 @@ const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
                                 title={e.eventName}
                                 place={place || "—"}
                                 tag={e.sportTypeName || "Wydarzenie"}
-                                cover={null}
+                                cover={e.imageUrl || null}
                             />
                         );
                     })}
                     {items.length === 0 && (
-                        <p className="text-sm text-zinc-400">
-                            Brak zapisanych wydarzeń.
-                        </p>
+                        <p className="text-sm text-zinc-400">Brak zapisanych wydarzeń.</p>
                     )}
                 </ul>
             )}
@@ -453,8 +421,7 @@ const AddSportModal = ({
     const [err, setErr] = useState<string | null>(null);
 
     const levelNum = Number(level);
-    const levelValid =
-        Number.isInteger(levelNum) && levelNum >= 1 && levelNum <= 5;
+    const levelValid = Number.isInteger(levelNum) && levelNum >= 1 && levelNum <= 5;
 
     useEffect(() => {
         if (!open) return;
@@ -467,9 +434,7 @@ const AddSportModal = ({
             .finally(() => setLoading(false));
     }, [open]);
 
-    const selected = sportId
-        ? options.find((o) => o.id === sportId)
-        : undefined;
+    const selected = sportId ? options.find((o) => o.id === sportId) : undefined;
 
     const handleAdd = async () => {
         if (!sportId || !levelValid || !selected) return;
@@ -504,9 +469,7 @@ const AddSportModal = ({
             <div className="absolute inset-0 bg-black/70" onClick={onClose} />
             <div className="relative w-[95%] max-w-md rounded-2xl bg-zinc-900 p-5 ring-1 ring-zinc-800 shadow-2xl">
                 <h4 className="text-white text-lg font-semibold">Dodaj sport</h4>
-                <p className="text-sm text-zinc-400 mt-1">
-                    Wybierz sport i ustaw poziom.
-                </p>
+                <p className="text-sm text-zinc-400 mt-1">Wybierz sport i ustaw poziom.</p>
                 <div className="mt-4 space-y-3">
                     <label className="block">
                         <span className="text-sm text-zinc-300">Sport</span>
@@ -515,17 +478,11 @@ const AddSportModal = ({
                             className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-600"
                             value={sportId}
                             onChange={(e) =>
-                                setSportId(
-                                    e.target.value
-                                        ? Number(e.target.value)
-                                        : ""
-                                )
+                                setSportId(e.target.value ? Number(e.target.value) : "")
                             }
                         >
                             <option value="">
-                                {loading
-                                    ? "Ładowanie…"
-                                    : "— wybierz sport —"}
+                                {loading ? "Ładowanie…" : "— wybierz sport —"}
                             </option>
                             {options.map((o) => (
                                 <option key={o.id} value={o.id}>
@@ -541,9 +498,7 @@ const AddSportModal = ({
                                 alt={selected.name}
                                 className="h-10 w-10 rounded-full object-cover border border-zinc-700"
                             />
-                            <span className="text-sm text-zinc-300">
-                                {selected.name}
-                            </span>
+                            <span className="text-sm text-zinc-300">{selected.name}</span>
                         </div>
                     )}
                     <div>
@@ -563,9 +518,7 @@ const AddSportModal = ({
                             </p>
                         )}
                     </div>
-                    {err && (
-                        <p className="text-sm text-red-400">{err}</p>
-                    )}
+                    {err && <p className="text-sm text-red-400">{err}</p>}
                 </div>
                 <div className="mt-5 flex justify-end gap-2">
                     <button
@@ -617,12 +570,8 @@ const SportsList = ({
                                 className="h-10 w-10 rounded-full object-cover border border-zinc-700"
                             />
                             <div>
-                                <p className="text-white font-medium leading-tight">
-                                    {s.name}
-                                </p>
-                                <p className="text-xs text-zinc-400">
-                                    Poziom: {s.level}
-                                </p>
+                                <p className="text-white font-medium leading-tight">{s.name}</p>
+                                <p className="text-xs text-zinc-400">Poziom: {s.level}</p>
                             </div>
                         </div>
                         <button
@@ -648,9 +597,7 @@ const SportsList = ({
                 );
             })}
             {items.length === 0 && (
-                <p className="text-zinc-400 text-sm">
-                    Brak sportów — dodaj pierwszy!
-                </p>
+                <p className="text-zinc-400 text-sm">Brak sportów — dodaj pierwszy!</p>
             )}
         </ul>
         <button
@@ -713,18 +660,14 @@ const ChangePasswordForm = () => {
 
     return (
         <section className="space-y-6 max-w-md">
-            <h3 className="text-white text-xl font-semibold">
-                Zmień hasło
-            </h3>
+            <h3 className="text-white text-xl font-semibold">Zmień hasło</h3>
             <p className="text-sm text-zinc-400">
                 Wprowadź swoje stare hasło i ustaw nowe.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm text-zinc-300">
-                        Stare hasło
-                    </label>
+                    <label className="block text-sm text-zinc-300">Stare hasło</label>
                     <input
                         type="password"
                         value={oldPassword}
@@ -736,9 +679,7 @@ const ChangePasswordForm = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm text-zinc-300">
-                        Nowe hasło
-                    </label>
+                    <label className="block text-sm text-zinc-300">Nowe hasło</label>
                     <input
                         type="password"
                         value={newPassword}
@@ -750,9 +691,7 @@ const ChangePasswordForm = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm text-zinc-300">
-                        Powtórz nowe hasło
-                    </label>
+                    <label className="block text-sm text-zinc-300">Powtórz nowe hasło</label>
                     <input
                         type="password"
                         value={confirmPassword}
@@ -815,15 +754,11 @@ const ProfilePage = () => {
     const [sports, setSports] = useState<UserSport[]>([]);
     const [openAdd, setOpenAdd] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-    const [settingMainIndex, setSettingMainIndex] = useState<number | null>(
-        null
-    );
+    const [settingMainIndex, setSettingMainIndex] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<SidebarItemKey>("General");
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
-        setUser((prev) =>
-            prev ? { ...prev, urlOfPicture: newPhotoUrl } : null
-        );
+        setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
     };
 
     useEffect(() => {
@@ -869,9 +804,7 @@ const ProfilePage = () => {
         if (!user?.email) return;
         setSettingMainIndex(index);
         const prevSports = sports;
-        setSports((prev) =>
-            prev.map((s, i) => ({ ...s, isMain: i === index }))
-        );
+        setSports((prev) => prev.map((s, i) => ({ ...s, isMain: i === index })));
         try {
             await api.patch("/sport-type/mainSport", {
                 email: user.email,
@@ -897,9 +830,7 @@ const ProfilePage = () => {
                 <div className="absolute inset-0 bg-black/60" />
                 <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-4 pb-6 md:px-8">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-semibold text-white">
-                            Panel Profilu
-                        </h1>
+                        <h1 className="text-2xl md:text-3xl font-semibold text-white">Panel Profilu</h1>
                         <div className="mt-2 h-1 w-32 rounded-full bg-violet-600" />
                     </div>
                 </div>
@@ -920,10 +851,7 @@ const ProfilePage = () => {
                     )}
                     <hr className="my-8 border-zinc-800" />
                     <div className="flex flex-col gap-8 lg:flex-row">
-                        <Sidebar
-                            active={activeTab}
-                            onSelect={(t) => setActiveTab(t)}
-                        />
+                        <Sidebar active={activeTab} onSelect={(t) => setActiveTab(t)} />
                         {activeTab === "General" && (
                             <div className="grid flex-1 grid-cols-1 gap-8 md:grid-cols-2">
                                 <SportsList
@@ -940,12 +868,9 @@ const ProfilePage = () => {
                                 <ChangePasswordForm />
                             </div>
                         )}
-                        {activeTab !== "General" &&
-                            activeTab !== "Password" && (
-                                <div className="flex-1 text-sm text-zinc-500">
-                                    Wkrótce
-                                </div>
-                            )}
+                        {activeTab !== "General" && activeTab !== "Password" && (
+                            <div className="flex-1 text-sm text-zinc-500">Wkrótce</div>
+                        )}
                     </div>
                 </div>
             </main>
