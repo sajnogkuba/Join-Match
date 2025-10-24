@@ -4,8 +4,10 @@ import com.joinmatch.backend.dto.FriendRequestDto;
 import com.joinmatch.backend.dto.FriendRequestResponseDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.FriendRequest;
+import com.joinmatch.backend.model.Friendship;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.FriendRequestRepository;
+import com.joinmatch.backend.repository.FriendshipRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -20,6 +22,7 @@ public class FriendRequestService {
 
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
+    private final FriendshipRepository friendshipRepository;
 
     @Transactional
     public FriendRequestResponseDto sendRequest(FriendRequestDto requestDto) {
@@ -62,5 +65,26 @@ public class FriendRequestService {
                 .filter(fr -> fr.getStatus() == FriendRequestStatus.PENDING)
                 .map(FriendRequestResponseDto::fromFriendRequest)
                 .toList();
+    }
+
+    public void deleteRequest(Integer requestId) {
+        if (!friendRequestRepository.existsById(requestId)) {
+            throw new EntityNotFoundException("FriendRequest with id " + requestId + " not found");
+        }
+        friendRequestRepository.deleteById(requestId);
+    }
+
+    @Transactional
+    public void acceptRequest(Integer requestId) {
+        if (friendRequestRepository.findById(requestId).isEmpty()) {
+            throw new EntityNotFoundException("FriendRequest with id " + requestId + " not found");
+        }
+        FriendRequest request = friendRequestRepository.findById(requestId).get();
+        request.setStatus(FriendRequestStatus.ACCEPTED);
+        friendRequestRepository.save(request);
+        Friendship friendship = new Friendship();
+        friendship.setUserOne(request.getSender());
+        friendship.setUserTwo(request.getReceiver());
+        friendshipRepository.save(friendship);
     }
 }

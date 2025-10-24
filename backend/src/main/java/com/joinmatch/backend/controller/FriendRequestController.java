@@ -31,4 +31,18 @@ public class FriendRequestController {
         FriendRequestResponseDto response = friendRequestService.sendRequest(requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @DeleteMapping("/request/{requestId}")
+    public ResponseEntity<Void> respondToFriendRequest(
+            @PathVariable Integer requestId) {
+        friendRequestService.deleteRequest(requestId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/request/{requestId}/accept")
+    public ResponseEntity<Void> acceptFriendRequest(
+            @PathVariable Integer requestId) {
+        friendRequestService.acceptRequest(requestId);
+        return ResponseEntity.ok().build();
+    }
 }

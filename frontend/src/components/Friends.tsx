@@ -158,16 +158,28 @@ const Friends = () => {
 
     const handleAcceptRequest = (requestId: number) => {
         console.log("Accepting friend request:", requestId);
-        // TODO: Implement accept friend request API call
-        // For now, just remove from pending requests
-        setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
+        
+        axiosInstance.patch(`/friends/request/${requestId}/accept`)
+            .then(response => {
+                console.log("Friend request accepted successfully:", response.data);
+                setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
+            })
+            .catch(error => {
+                console.error("Error accepting friend request:", error);
+            });
     };
 
     const handleRejectRequest = (requestId: number) => {
         console.log("Rejecting friend request:", requestId);
-        // TODO: Implement reject friend request API call
-        // For now, just remove from pending requests
-        setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
+        
+        axiosInstance.delete(`/friends/request/${requestId}`)
+            .then(response => {
+                console.log("Friend request rejected successfully:", response.data);
+                setPendingRequests(prev => prev.filter(request => request.requestId !== requestId));
+            })
+            .catch(error => {
+                console.error("Error rejecting friend request:", error);
+            });
     };
 
     const handleAddFriend = (userId: number) => {
