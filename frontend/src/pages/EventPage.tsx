@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
+import type { Participant } from '../Api/types/Participant'
 import axiosInstance from '../Api/axios'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -32,7 +33,7 @@ const EventPage: React.FC = () => {
 	// user email will be fetched from backend using access token
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 
-	const [participants, setParticipants] = useState<any[]>([])
+	const [participants, setParticipants] = useState<Participant[]>([])
 	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
@@ -61,6 +62,18 @@ const EventPage: React.FC = () => {
 		fetchUserEmail()
 	}, [])
 
+	const fetchParticipants = async (eventId: number) => {
+		try {
+			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
+			setParticipants(data || [])
+			if (userEmail && data?.some(p => p.userEmail === userEmail)) setJoined(true)
+			else setJoined(false)
+		} catch (err) {
+			console.error('❌ Błąd pobierania uczestników:', err)
+			setParticipants([])
+		}
+	}
+
 	// ---------------- FETCH EVENT + PARTICIPANTS ----------------
 	useEffect(() => {
 		if (!id) {
@@ -74,13 +87,7 @@ const EventPage: React.FC = () => {
 				const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
 				setEvent(data)
 
-				const participantsRes = await axiosInstance.get(`/user-event/${id}/participants`)
-				setParticipants(participantsRes.data || [])
-
-				// sprawdź, czy user uczestniczy
-				if (participantsRes.data?.some((p: any) => p.userEmail === userEmail)) {
-					setJoined(true)
-				}
+				await fetchParticipants(Number(id))
 
 				// sprawdź, czy zapisany
 				if (userEmail) {
@@ -108,18 +115,14 @@ const EventPage: React.FC = () => {
 				await axiosInstance.delete(`/user-event`, {
 					data: { userEmail, eventId: Number(id), attendanceStatusId: 1 },
 				})
-				setParticipants(prev => prev.filter(p => p.userEmail !== userEmail))
-				setJoined(false)
 			} else {
 				await axiosInstance.post(`/user-event`, {
 					userEmail,
 					eventId: Number(id),
 					attendanceStatusId: 1,
 				})
-				const userObj = { id: Date.now(), userEmail, name: 'Ty', avatar: '👤', skillLevel: 'Średni' }
-				setParticipants(prev => [...prev, userObj])
-				setJoined(true)
 			}
+			await fetchParticipants(Number(id))
 		} catch (err) {
 			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
 		}
@@ -318,16 +321,25 @@ const EventPage: React.FC = () => {
 									{participants.slice(0, showParticipants ? participants.length : 8).map(p => (
 										<div
 											key={p.id}
-											className='group flex items-center gap-2 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800'>
-											<span className='text-xl'>{p.avatar}</span>
+											className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
+											<Avatar
+												src={p.userAvatarUrl || null}
+												name={p.userName}
+												size='sm'
+												className='ring-1 ring-zinc-700 shadow-sm'
+											/>
 											<div className='text-sm'>
-												<div className='font-medium text-white leading-tight'>{p.name}</div>
-												<div
-													className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-														p.skillLevel
-													)}`}>
-													{p.skillLevel}
+												<div className='font-medium text-white leading-tight'>
+													{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
 												</div>
+												{p.skillLevel && (
+													<div
+														className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+															p.skillLevel
+														)}`}>
+														{p.skillLevel}
+													</div>
+												)}
 											</div>
 										</div>
 									))}
