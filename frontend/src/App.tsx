@@ -13,9 +13,9 @@ import ProfilePage from './pages/ProfilePage.tsx'
 import PrivateRoute from './routes/PrivateRoute.tsx'
 import EventsPage from './pages/EventsPage.tsx'
 import AboutUsPage from './pages/AboutUsPage.tsx'
+import ContactPage from './pages/ContactPage.tsx'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
-const ContactPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Kontakt</div>
 const FAQPage = () => <div className='container mx-auto px-4 py-20 mt-20'>FAQ</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
 
