@@ -14,9 +14,9 @@ import PrivateRoute from './routes/PrivateRoute.tsx'
 import EventsPage from './pages/EventsPage.tsx'
 import AboutUsPage from './pages/AboutUsPage.tsx'
 import ContactPage from './pages/ContactPage.tsx'
+import FAQPage from './pages/FAQPage.tsx'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
-const FAQPage = () => <div className='container mx-auto px-4 py-20 mt-20'>FAQ</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
