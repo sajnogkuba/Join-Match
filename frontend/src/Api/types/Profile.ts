@@ -7,4 +7,4 @@ export type SimpleUser = {
 export type SidebarItemKey =
     | "Ogólne"
     | "Hasło"
-    | "Znajomi";
+    | "Znajomi"
