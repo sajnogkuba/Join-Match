@@ -61,4 +61,12 @@ public class UserEventService {
                 .map(UserEventResponseDto::fromUserEvent)
                 .toList();
     }
+
+    public List<UserEventResponseDto> getUserEventsByEventId(Integer eventId) {
+        return userEventRepository.findByEvent_EventId(eventId)
+                .stream()
+                .map(UserEventResponseDto::fromUserEvent)
+                .toList();
+    }
+
 }

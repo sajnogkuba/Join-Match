@@ -41,4 +41,11 @@ public class UserEventController {
         UserEventResponseDto createdUserEvent = userEventService.create(userEventRequestDto);
         return ResponseEntity.status(201).body(createdUserEvent);
     }
+
+    @GetMapping("/{id}/participants")
+    public ResponseEntity<List<UserEventResponseDto>> getParticipants(@PathVariable Integer id) {
+        List<UserEventResponseDto> participants = userEventService.getUserEventsByEventId(id);
+        return ResponseEntity.ok(participants);
+    }
+
 }
