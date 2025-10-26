@@ -12,11 +12,13 @@ import CreateEventPage from './pages/CreateEventPage.tsx'
 import ProfilePage from './pages/ProfilePage.tsx'
 import PrivateRoute from './routes/PrivateRoute.tsx'
 import EventsPage from './pages/EventsPage.tsx'
+import AboutUsPage from './pages/AboutUsPage.tsx'
+import ContactPage from './pages/ContactPage.tsx'
+import FAQPage from './pages/FAQPage.tsx'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage.tsx'
+import TermsOfServicePage from './pages/TermsOfServicePage.tsx'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
-const AboutPage = () => <div className='container mx-auto px-4 py-20 mt-20'>O nas</div>
-const ContactPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Kontakt</div>
-const FAQPage = () => <div className='container mx-auto px-4 py-20 mt-20'>FAQ</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
@@ -31,9 +33,11 @@ const App: React.FC = () => (
 						<Route path='events' element={<EventsPage />} />
 						<Route path='event/:id' element={<EventPage />} />
 						<Route path='rankingi' element={<RankingsPage />} />
-						<Route path='o-nas' element={<AboutPage />} />
+						<Route path='about' element={<AboutUsPage />} />
 						<Route path='kontakt' element={<ContactPage />} />
 						<Route path='faq' element={<FAQPage />} />
+						<Route path='privacy' element={<PrivacyPolicyPage />} />
+						<Route path='terms' element={<TermsOfServicePage />} />
 						<Route path='login' element={<LoginPage />} />
 						<Route path='register' element={<RegisterPage />} />
 						<Route path='stworz-wydarzenie' element={<CreateEventPage />} />

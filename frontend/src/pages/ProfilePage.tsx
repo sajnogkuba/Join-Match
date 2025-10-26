@@ -9,6 +9,7 @@ import ProfileSidebar from "../components/ProfileSidebar";
 import type { SimpleUser, SidebarItemKey } from "../Api/types/Profile";
 
 
+
 const ProfilePage = () => {
     const [user, setUser] = useState<SimpleUser | null>(null);
     const [loading, setLoading] = useState(true);
