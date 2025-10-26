@@ -31,4 +31,7 @@ public class SportUser {
     @Column(name = "rating", nullable = false)
     private Integer rating;
 
+    @Column(name = "Is_main")
+    private Boolean isMain;
+
 }

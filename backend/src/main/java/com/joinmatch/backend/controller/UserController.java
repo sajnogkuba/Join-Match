@@ -4,6 +4,7 @@ import com.joinmatch.backend.config.JwtService;
 
 import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.model.SportUser;
+import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
@@ -94,5 +95,16 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/search")
+    public List<SearchResponseDto> searchUsers(@RequestParam String query, @RequestParam Integer senderId) {
+        return userService.searchUsers(query, senderId);
+    }
+
+    @GetMapping("/user")
+    public ResponseEntity<UserResponseDto> getUser(@RequestParam String token) {
+        UserResponseDto user =  userService.getSimpleInfo(token);
+        return ResponseEntity.ok(user);
     }
 }
