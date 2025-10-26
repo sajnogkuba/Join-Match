@@ -4,6 +4,7 @@ import type { EventDetails } from '../Api/types'
 import axiosInstance from '../Api/axios'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
+import Avatar from '../components/Avatar'
 import {
 	Share2,
 	Shield,
@@ -86,7 +87,7 @@ const EventPage: React.FC = () => {
 					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
 					if (savedRes.data?.some?.((s: any) => s.eventId === Number(id))) {
 						setSaved(true)
-					}					
+					}
 				}
 			} catch (err) {
 				console.error('❌ Błąd pobierania szczegółów wydarzenia:', err)
@@ -224,50 +225,38 @@ const EventPage: React.FC = () => {
 
 	// ---------------- UI ----------------
 	return (
-		<div className='min-h-screen bg-[#1f2632] text-zinc-300 pt-20'>
-			{/* GŁÓWNE ZDJĘCIE */}
-			<div className='relative w-full h-80 rounded-b-3xl overflow-hidden border-b border-zinc-800'>
-				{event.imageUrl && event.imageUrl.trim() !== '' ? (
-					<img
-						src={event.imageUrl}
-						alt={event.eventName}
-						className='h-full w-full object-cover opacity-0 transition-opacity duration-700'
-						onLoad={e => (e.currentTarget.style.opacity = '1')}
-						onError={e => {
-							e.currentTarget.style.display = 'none'
-							const fallback = e.currentTarget.nextElementSibling as HTMLElement
-							if (fallback) fallback.style.display = 'flex'
-						}}
-					/>
-				) : null}
-
-				{/* fallback / placeholder */}
-				<div
-					className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900 ${
-						event.imageUrl && event.imageUrl.trim() !== '' ? 'hidden' : 'flex'
-					}`}>
-					<div className='text-center text-zinc-400'>
-						<div className='text-3xl font-bold mb-1 text-white/80'>JoinMatch</div>
-						<div className='text-sm font-medium text-zinc-300'>{event.sportTypeName}</div>
-					</div>
-				</div>
-
-				{/* delikatne przyciemnienie */}
-				<div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent' />
-			</div>
-
-			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
+		<>
+			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-					{/* Nagłówek */}
-					<div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
-						<div>
-							<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
-							<p className='text-sm text-zinc-400 mt-1'>{dayjs(event.eventDate).format('dddd, DD.MM.YYYY • HH:mm')}</p>
-							<p className='text-sm text-zinc-400'>{event.sportObjectName}</p>
+					{/* --- Nagłówek z miniaturą zdjęcia --- */}
+					<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5'>
+						<div className='flex flex-col sm:flex-row sm:items-center gap-5'>
+							{/* Miniaturka wydarzenia */}
+							{event.imageUrl && event.imageUrl.trim() !== '' ? (
+								<img
+									src={event.imageUrl}
+									alt={event.eventName}
+									className='h-36 w-36 object-cover rounded-2xl border border-zinc-700 shadow-md bg-zinc-800'
+									onError={e => (e.currentTarget.style.display = 'none')}
+								/>
+							) : (
+								<div className='h-36 w-36 flex items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-400 text-sm'>
+									Brak zdjęcia
+								</div>
+							)}
+
+							{/* Tytuł i szczegóły */}
+							<div>
+								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
+								<p className='text-sm text-zinc-400 mt-1'>
+									{dayjs(event.eventDate).format('dddd, DD.MM.YYYY • HH:mm')}
+								</p>
+								<p className='text-sm text-zinc-400'>{event.sportObjectName}</p>
+							</div>
 						</div>
 
-						<div className='flex items-center gap-3'>
-			
+						{/* Akcje */}
+						<div className='flex items-center gap-3 self-start sm:self-auto'>
 							<button
 								onClick={() => setShowShareModal(true)}
 								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/50 px-3 py-2 text-sm text-white hover:bg-zinc-800'>
@@ -282,6 +271,7 @@ const EventPage: React.FC = () => {
 							</button>
 						</div>
 					</div>
+
 					<hr className='my-6 border-zinc-800' />
 
 					<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
@@ -409,7 +399,7 @@ const EventPage: React.FC = () => {
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							{/* Akcja dołączenia */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
-								{event.status === 'planned' && spotsLeft > 0 ? (
+								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
 									<button
 										onClick={handleJoinEvent}
 										className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
@@ -434,17 +424,18 @@ const EventPage: React.FC = () => {
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Organizator</h3>
 								<div className='mt-4 flex items-center gap-3'>
-									<div className='grid h-12 w-12 place-items-center rounded-full bg-violet-600 text-white font-bold'>
-										{event.ownerName
-											.split(' ')
-											.map(n => n[0])
-											.join('')}
-									</div>
+									<Avatar
+										src={event.ownerAvatarUrl || null}
+										name={event.ownerName}
+										size='sm'
+										className='ring-2 ring-zinc-700 shadow-md'
+									/>
 									<div>
 										<div className='font-medium text-white'>{event.ownerName}</div>
 										<div className='text-xs text-zinc-400'>Organizator</div>
 									</div>
 								</div>
+
 								<div className='mt-4 space-y-2'>
 									<button className='w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 inline-flex items-center justify-center gap-2'>
 										<MessageCircle size={16} /> Wyślij wiadomość
@@ -464,7 +455,7 @@ const EventPage: React.FC = () => {
 									</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
 										<CalendarDays size={16} /> Dodaj do kalendarza
-										</button>
+									</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
 										<AlertTriangle size={16} /> Zgłoś wydarzenie
 									</button>
@@ -533,7 +524,7 @@ const EventPage: React.FC = () => {
 					Link skopiowany do schowka!
 				</div>
 			)}
-		</div>
+		</>
 	)
 }
 
