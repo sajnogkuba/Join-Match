@@ -107,4 +107,13 @@ public class UserController {
         UserResponseDto user =  userService.getSimpleInfo(token);
         return ResponseEntity.ok(user);
     }
+
+    @GetMapping("/user/{id}")
+    public ResponseEntity<UsersResponseDto> getUserById(@PathVariable Integer id) {
+        UsersResponseDto user = userService.getUserById(id);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(user);
+    }
 }

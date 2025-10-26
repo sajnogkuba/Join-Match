@@ -186,5 +186,44 @@ public class UserService {
         return searchResults;
     }
 
+    private UsersResponseDto mapToUserResponseDto(User user) {
+        List<UsersResponseDto.SportInfo> sports = user.getSportUsers()
+                .stream()
+                .map(su -> new UsersResponseDto.SportInfo(
+                        su.getSport().getId(),
+                        su.getSport().getName(),
+                        su.getRating().toString()
+                ))
+                .toList();
 
+        var friendships = friendshipRepository.findByUserOneOrUserTwo(user, user);
+
+        List<UsersResponseDto.FriendInfo> friends = friendships.stream()
+                .map(f -> {
+                    User friend = f.getUserOne().equals(user) ? f.getUserTwo() : f.getUserOne();
+                    return new UsersResponseDto.FriendInfo(
+                            friend.getId(),
+                            friend.getName(),
+                            friend.getEmail(),
+                            friend.getUrlOfPicture()
+                    );
+                })
+                .toList();
+
+        return new UsersResponseDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getDateOfBirth(),
+                user.getUrlOfPicture(),
+                sports,
+                friends
+        );
+    }
+
+    public UsersResponseDto getUserById(Integer id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return mapToUserResponseDto(user);
+    }
 }
