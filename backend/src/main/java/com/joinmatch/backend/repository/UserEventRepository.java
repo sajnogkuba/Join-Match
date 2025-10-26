@@ -1,5 +1,7 @@
 package com.joinmatch.backend.repository;
 
+import com.joinmatch.backend.model.Event;
+import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.model.UserEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,5 +14,7 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Integer> {
     List<UserEvent> findByUserId(Integer id);
 
     List<UserEvent> findByEvent_EventId(Integer eventId);
+
+    void deleteByUserAndEvent(User user, Event event);
 
 }

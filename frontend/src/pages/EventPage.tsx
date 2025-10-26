@@ -267,14 +267,7 @@ const EventPage: React.FC = () => {
 						</div>
 
 						<div className='flex items-center gap-3'>
-							<button
-								onClick={handleJoinEvent}
-								className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-									joined ? 'bg-zinc-700 text-zinc-400' : 'bg-violet-600 text-white hover:bg-violet-500'
-								}`}>
-								{joined ? 'Dołączono' : 'Dołącz'}
-							</button>
-
+			
 							<button
 								onClick={() => setShowShareModal(true)}
 								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/50 px-3 py-2 text-sm text-white hover:bg-zinc-800'>
@@ -471,7 +464,7 @@ const EventPage: React.FC = () => {
 									</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
 										<CalendarDays size={16} /> Dodaj do kalendarza
-									</button>
+										</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
 										<AlertTriangle size={16} /> Zgłoś wydarzenie
 									</button>

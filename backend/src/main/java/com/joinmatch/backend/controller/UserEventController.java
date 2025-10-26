@@ -48,4 +48,10 @@ public class UserEventController {
         return ResponseEntity.ok(participants);
     }
 
+    @DeleteMapping
+    public ResponseEntity<Void> leaveEvent(@RequestBody UserEventRequestDto dto) {
+        userEventService.leaveEvent(dto.userEmail(), dto.eventId());
+        return ResponseEntity.noContent().build();
+    }
+
 }

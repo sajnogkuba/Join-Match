@@ -69,4 +69,14 @@ public class UserEventService {
                 .toList();
     }
 
+    @Transactional
+    public void leaveEvent(String userEmail, Integer eventId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + userEmail + " not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + eventId + " not found"));
+
+        userEventRepository.deleteByUserAndEvent(user, event);
+    }
+
 }
