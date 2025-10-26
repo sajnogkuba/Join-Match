@@ -24,7 +24,7 @@ export const Footer: React.FC = () => (
           <ul className="space-y-2 text-gray-300">
             <li><Link to="/kontakt" className="hover:text-purple-300 transition-colors">Kontakt</Link></li>
             <li><Link to="/faq" className="hover:text-purple-300 transition-colors">Najczęstsze pytania (FAQ)</Link></li>
-            <li><a href="/privacy" className="hover:text-purple-300 transition-colors">Polityka prywatności</a></li>
+            <li><Link to="/privacy" className="hover:text-purple-300 transition-colors">Polityka prywatności</Link></li>
             <li><a href="/terms" className="hover:text-purple-300 transition-colors">Regulamin</a></li>
           </ul>
         </div>
