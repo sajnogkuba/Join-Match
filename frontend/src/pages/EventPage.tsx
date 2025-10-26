@@ -84,9 +84,9 @@ const EventPage: React.FC = () => {
 				// sprawdź, czy zapisany
 				if (userEmail) {
 					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
-					if (savedRes.data?.some((s: any) => s.eventId === Number(id))) {
+					if (savedRes.data?.some?.((s: any) => s.eventId === Number(id))) {
 						setSaved(true)
-					}
+					}					
 				}
 			} catch (err) {
 				console.error('❌ Błąd pobierania szczegółów wydarzenia:', err)
@@ -177,7 +177,7 @@ const EventPage: React.FC = () => {
 
 	const getSkillLevelColor = (level?: string) => {
 		if (!level) return 'bg-zinc-600/20 text-zinc-300'
-	
+
 		switch (level.toLowerCase()) {
 			case 'niski':
 				return 'bg-emerald-500/15 text-emerald-300'
@@ -188,7 +188,7 @@ const EventPage: React.FC = () => {
 			default:
 				return 'bg-zinc-600/20 text-zinc-300'
 		}
-	}	
+	}
 
 	// ---------------- LOADING / ERROR ----------------
 	if (loading)
@@ -226,30 +226,34 @@ const EventPage: React.FC = () => {
 	return (
 		<div className='min-h-screen bg-[#1f2632] text-zinc-300 pt-20'>
 			{/* GŁÓWNE ZDJĘCIE */}
-			<div className='relative w-full h-72 overflow-hidden rounded-b-3xl border-b border-zinc-800'>
+			<div className='relative w-full h-80 rounded-b-3xl overflow-hidden border-b border-zinc-800'>
 				{event.imageUrl && event.imageUrl.trim() !== '' ? (
 					<img
 						src={event.imageUrl}
 						alt={event.eventName}
-						className='h-full w-full object-cover'
+						className='h-full w-full object-cover opacity-0 transition-opacity duration-700'
+						onLoad={e => (e.currentTarget.style.opacity = '1')}
 						onError={e => {
-							const target = e.currentTarget as HTMLImageElement
-							target.style.display = 'none'
-							const fallback = target.nextElementSibling as HTMLElement
+							e.currentTarget.style.display = 'none'
+							const fallback = e.currentTarget.nextElementSibling as HTMLElement
 							if (fallback) fallback.style.display = 'flex'
 						}}
 					/>
 				) : null}
 
+				{/* fallback / placeholder */}
 				<div
-					className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 ${
+					className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900 ${
 						event.imageUrl && event.imageUrl.trim() !== '' ? 'hidden' : 'flex'
 					}`}>
 					<div className='text-center text-zinc-400'>
-						<div className='text-4xl mb-2'>JoinMatch</div>
-						<div className='text-sm font-medium'>{event.sportTypeName}</div>
+						<div className='text-3xl font-bold mb-1 text-white/80'>JoinMatch</div>
+						<div className='text-sm font-medium text-zinc-300'>{event.sportTypeName}</div>
 					</div>
 				</div>
+
+				{/* delikatne przyciemnienie */}
+				<div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent' />
 			</div>
 
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
