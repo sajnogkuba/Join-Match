@@ -269,65 +269,57 @@ const EventsPage = () => {
 		if (!userEmail) return navigate('/login')
 		if (joinedEventIds.has(eventId)) return
 		try {
-			await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
-			setJoinedEventIds(prev => new Set([...prev, eventId]))
-			if (isJoined) {
-				// Leave the event
-				await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
-				setJoinedEventIds(prev => {
-					const s = new Set(prev)
-					s.delete(eventId)
-					return s
-				})
-				// Decrease booked participants count
-				setEvents(prev => prev.map(ev =>
-					ev.eventId === eventId
-						? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
-						: ev
-				))
-			} else {
-				// Check if event has available places
-				const event = events.find(ev => ev.eventId === eventId)
-				const bookedParticipants = (event as any)?.bookedParticipants || 0
-				const numberOfParticipants = event?.numberOfParticipants || 0
-
-				if (bookedParticipants >= numberOfParticipants) {
-					setAlertModal({
-						isOpen: true,
-						title: "Wydarzenie pełne",
-						message: "Przepraszamy, to wydarzenie jest już pełne."
-					})
-					return
-				}
-
-				// Check if user has required skill level
-				if (event?.minLevel) {
-					const userLevel = userSports.get(event.sportTypeName)
-					const requiredLevel = event.minLevel
-
-					if (userLevel === undefined || userLevel < requiredLevel) {
-						const modalMessage = userLevel === undefined
-							? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
-							: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
-						setAlertModal({
-							isOpen: true,
-							title: "Niewystarczający poziom",
-							message: modalMessage
-						})
-						return
-					}
-				}
-
-				// Join the event
-				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
-				setJoinedEventIds(prev => new Set([...prev, eventId]))
-				// Increase booked participants count
-				setEvents(prev => prev.map(ev =>
-					ev.eventId === eventId
-						? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
-						: ev
-				))
-			}
+if (isJoined) {
+	await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
+	setJoinedEventIds(prev => {
+		const s = new Set(prev)
+		s.delete(eventId)
+		return s
+	})
+	setEvents(prev => prev.map(ev => 
+		ev.eventId === eventId 
+			? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
+			: ev
+	))
+} else {
+	const event = events.find(ev => ev.eventId === eventId)
+	const bookedParticipants = (event as any)?.bookedParticipants || 0
+	const numberOfParticipants = event?.numberOfParticipants || 0
+	
+	if (bookedParticipants >= numberOfParticipants) {
+		setAlertModal({
+			isOpen: true,
+			title: "Wydarzenie pełne",
+			message: "Przepraszamy, to wydarzenie jest już pełne."
+		})
+		return
+	}
+	
+	if (event?.minLevel) {
+		const userLevel = userSports.get(event.sportTypeName)
+		const requiredLevel = event.minLevel
+		
+		if (userLevel === undefined || userLevel < requiredLevel) {
+			const modalMessage = userLevel === undefined 
+				? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+				: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
+			setAlertModal({
+				isOpen: true,
+				title: "Niewystarczający poziom",
+				message: modalMessage
+			})
+			return
+		}
+	}
+	
+	await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+	setJoinedEventIds(prev => new Set([...prev, eventId]))
+	setEvents(prev => prev.map(ev => 
+		ev.eventId === eventId 
+			? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
+			: ev
+	))
+}
 		} catch (e) {
 			console.error('Błąd dołączania:', e)
 		}
@@ -369,7 +361,6 @@ const EventsPage = () => {
 
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-
 					{/* Pasek wyszukiwania i sortowania */}
 					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
 						<div className='flex flex-1 items-stretch gap-3'>
@@ -626,19 +617,30 @@ const EventsPage = () => {
 													</div>
 												</div>
 												<div className='mt-4 flex justify-between'>
-													<button
-														onClick={() => handleJoin(ev.eventId)}
-														disabled={joinedEventIds.has(ev.eventId)}
-														className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-															joinedEventIds.has(ev.eventId)
-																? 'bg-zinc-700 text-zinc-400'
-																: 'bg-violet-600 text-white hover:bg-violet-500'
-														}`}>
-														{joinedEventIds.has(ev.eventId) ? 'Dołączono' : 'Dołącz'}
-													</button>
-													<Link
-														to={`/event/${ev.eventId}`}
-														className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
+{(() => {
+	const isJoined = joinedEventIds.has(ev.eventId)
+	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+	return (
+		<button 
+			onClick={() => handleJoin(ev.eventId)} 
+			disabled={isFull}
+			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+				isJoined 
+					? 'bg-red-600 text-white hover:bg-red-500' 
+					: isFull 
+					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed' 
+					: 'bg-violet-600 text-white hover:bg-violet-500'
+			}`}
+		>
+			{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+		</button>
+	)
+})()}
+<Link 
+	to={`/event/${ev.eventId}`} 
+	className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'
+>
+
 														Szczegóły <ChevronRight size={16} />
 													</Link>
 												</div>
