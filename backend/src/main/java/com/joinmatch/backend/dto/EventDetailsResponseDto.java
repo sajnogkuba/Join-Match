@@ -13,9 +13,7 @@ public class EventDetailsResponseDto {
     private Integer eventId;
     private String eventName;
     private Integer numberOfParticipants;
-
-    //TODO
-    // private Integer bookedParticipants;
+    private Integer bookedParticipants;
 
     private BigDecimal cost;
     private String currency;
@@ -35,10 +33,10 @@ public class EventDetailsResponseDto {
 
     private Integer eventVisibilityId;
     private String eventVisibilityName;
+
     private Integer ownerId;
     private String ownerName;
-    //TODO
-    //private String ownerAvatarUrl;
+    private String ownerAvatarUrl;
 
     private String skillLevel;
     private String paymentMethod;
