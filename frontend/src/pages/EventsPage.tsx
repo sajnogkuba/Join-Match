@@ -267,61 +267,69 @@ const EventsPage = () => {
 
 	const handleJoin = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
-		if (joinedEventIds.has(eventId)) return
-		try {
-if (isJoined) {
-	await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
-	setJoinedEventIds(prev => {
-		const s = new Set(prev)
-		s.delete(eventId)
-		return s
-	})
-	setEvents(prev => prev.map(ev => 
-		ev.eventId === eventId 
-			? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
-			: ev
-	))
-} else {
-	const event = events.find(ev => ev.eventId === eventId)
-	const bookedParticipants = (event as any)?.bookedParticipants || 0
-	const numberOfParticipants = event?.numberOfParticipants || 0
-	
-	if (bookedParticipants >= numberOfParticipants) {
-		setAlertModal({
-			isOpen: true,
-			title: "Wydarzenie pełne",
-			message: "Przepraszamy, to wydarzenie jest już pełne."
-		})
-		return
-	}
-	
-	if (event?.minLevel) {
-		const userLevel = userSports.get(event.sportTypeName)
-		const requiredLevel = event.minLevel
 		
-		if (userLevel === undefined || userLevel < requiredLevel) {
-			const modalMessage = userLevel === undefined 
-				? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
-				: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
-			setAlertModal({
-				isOpen: true,
-				title: "Niewystarczający poziom",
-				message: modalMessage
-			})
-			return
-		}
-	}
-	
-	await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
-	setJoinedEventIds(prev => new Set([...prev, eventId]))
-	setEvents(prev => prev.map(ev => 
-		ev.eventId === eventId 
-			? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
-			: ev
-	))
-}
+		const isJoined = joinedEventIds.has(eventId)
+		
+		try {
+			if (isJoined) {
+				// Leave the event
+				await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
+				setJoinedEventIds(prev => {
+					const s = new Set(prev)
+					s.delete(eventId)
+					return s
+				})
+				// Decrease booked participants count
+				setEvents(prev => prev.map(ev => 
+					ev.eventId === eventId 
+						? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
+						: ev
+				))
+			} else {
+				// Check if event has available places
+				const event = events.find(ev => ev.eventId === eventId)
+				const bookedParticipants = (event as any)?.bookedParticipants || 0
+				const numberOfParticipants = event?.numberOfParticipants || 0
+				
+				if (bookedParticipants >= numberOfParticipants) {
+					setAlertModal({
+						isOpen: true,
+						title: "Wydarzenie pełne",
+						message: "Przepraszamy, to wydarzenie jest już pełne."
+					})
+					return
+				}
+				
+				// Check if user has required skill level
+				if (event?.minLevel) {
+					const userLevel = userSports.get(event.sportTypeName)
+					const requiredLevel = event.minLevel
+					
+					if (userLevel === undefined || userLevel < requiredLevel) {
+						const modalMessage = userLevel === undefined 
+							? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+							: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
+						setAlertModal({
+							isOpen: true,
+							title: "Niewystarczający poziom",
+							message: modalMessage
+						})
+						return
+					}
+				}
+				
+				// Join the event
+				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+				setJoinedEventIds(prev => new Set([...prev, eventId]))
+				// Increase booked participants count
+				setEvents(prev => prev.map(ev => 
+					ev.eventId === eventId 
+						? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
+						: ev
+				))
+			}
 		} catch (e) {
-			console.error('Błąd dołączania:', e)
+			console.error('Błąd dołączania/opuszczania:', e)
 		}
 	}
 
