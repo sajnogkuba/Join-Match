@@ -109,11 +109,11 @@ public class UserController {
     }
 
     @GetMapping("/user/{id}")
-    public ResponseEntity<UsersResponseDto> getUserById(@PathVariable Integer id) {
-        UsersResponseDto user = userService.getUserById(id);
-        if (user == null) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<UsersResponseDto> getUserById(
+            @PathVariable Integer id,
+            @RequestParam(required = false) Integer viewerId
+    ) {
+        UsersResponseDto user = userService.getUserById(id, viewerId);
         return ResponseEntity.ok(user);
     }
 }

@@ -17,6 +17,7 @@ import ContactPage from './pages/ContactPage.tsx'
 import FAQPage from './pages/FAQPage.tsx'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.tsx'
 import TermsOfServicePage from './pages/TermsOfServicePage.tsx'
+import UserProfilePage from './pages/UserProfilePage.tsx'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
@@ -41,6 +42,7 @@ const App: React.FC = () => (
 						<Route path='login' element={<LoginPage />} />
 						<Route path='register' element={<RegisterPage />} />
 						<Route path='stworz-wydarzenie' element={<CreateEventPage />} />
+						<Route path="profile/:id" element={<UserProfilePage />} />
 						<Route
 							path='/profile'
 							element={

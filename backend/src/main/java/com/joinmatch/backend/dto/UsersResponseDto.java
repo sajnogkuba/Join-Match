@@ -10,7 +10,8 @@ public record UsersResponseDto(
         LocalDate dateOfBirth,
         String urlOfPicture,
         List<SportInfo> sports,
-        List<FriendInfo> friends
+        List<FriendInfo> friends,
+        String relationStatus
 ) {
     public record SportInfo(Integer id, String name, String level) {}
     public record FriendInfo(Integer id, String name, String email, String urlOfPicture) {}
