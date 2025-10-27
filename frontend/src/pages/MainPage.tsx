@@ -61,7 +61,7 @@ const MainPage: React.FC = () => {
 			api.get<UserSportsResponse>('/sport-type/user', { params: { token } })
 				.then(({ data }) => {
 					const sportsMap = new Map<string, number>()
-					data.sports?.forEach((s: any) => {
+					data.sports?.forEach((s: UserSportsResponse['sports'][number]) => {
 						sportsMap.set(s.name, s.rating)
 					})
 					setUserSports(sportsMap)
