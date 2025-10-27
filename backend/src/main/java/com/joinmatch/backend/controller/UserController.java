@@ -107,4 +107,13 @@ public class UserController {
         UserResponseDto user =  userService.getSimpleInfo(token);
         return ResponseEntity.ok(user);
     }
+
+    @GetMapping("/user/{id}")
+    public ResponseEntity<UsersResponseDto> getUserById(
+            @PathVariable Integer id,
+            @RequestParam(required = false) Integer viewerId
+    ) {
+        UsersResponseDto user = userService.getUserById(id, viewerId);
+        return ResponseEntity.ok(user);
+    }
 }

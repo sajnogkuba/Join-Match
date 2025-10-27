@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
 import type { Participant } from '../Api/types/Participant'
 import axiosInstance from '../Api/axios'
@@ -319,8 +319,9 @@ const EventPage: React.FC = () => {
 
 								<div className='mb-2 flex flex-wrap gap-2'>
 									{participants.slice(0, showParticipants ? participants.length : 8).map(p => (
-										<div
+										<Link
 											key={p.id}
+											to={`/profile/${p.userId}`}
 											className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
 											<Avatar
 												src={p.userAvatarUrl || null}
@@ -341,7 +342,7 @@ const EventPage: React.FC = () => {
 													</div>
 												)}
 											</div>
-										</div>
+										</Link>
 									))}
 								</div>
 
@@ -452,9 +453,11 @@ const EventPage: React.FC = () => {
 									<button className='w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 inline-flex items-center justify-center gap-2'>
 										<MessageCircle size={16} /> Wyślij wiadomość
 									</button>
-									<button className='w-full rounded-xl bg-transparent px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 ring-1 ring-zinc-700 inline-flex items-center justify-center gap-2'>
+									<Link
+										to={`/profile/${event.ownerId}`}
+										className='w-full rounded-xl bg-transparent px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 ring-1 ring-zinc-700 inline-flex items-center justify-center gap-2'>
 										<UserRound size={16} /> Zobacz profil
-									</button>
+									</Link>
 								</div>
 							</div>
 
