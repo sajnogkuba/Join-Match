@@ -12,6 +12,7 @@ import CreateEventPage from './pages/CreateEventPage.tsx'
 import ProfilePage from './pages/ProfilePage.tsx'
 import PrivateRoute from './routes/PrivateRoute.tsx'
 import EventsPage from './pages/EventsPage.tsx'
+import UserProfilePage from './pages/UserProfilePage'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const AboutPage = () => <div className='container mx-auto px-4 py-20 mt-20'>O nas</div>
@@ -30,6 +31,7 @@ const App: React.FC = () => (
 						<Route index element={<MainPage />} />
 						<Route path='events' element={<EventsPage />} />
 						<Route path='event/:id' element={<EventPage />} />
+						<Route path='user/:id' element={<UserProfilePage />} />
 						<Route path='rankingi' element={<RankingsPage />} />
 						<Route path='o-nas' element={<AboutPage />} />
 						<Route path='kontakt' element={<ContactPage />} />
