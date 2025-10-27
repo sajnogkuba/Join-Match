@@ -8,6 +8,8 @@ import type { Event } from '../Api/types'
 import type { SportObject } from '../Api/types/SportObject'
 import MapView from '../components/MapView'
 import PlaceAutocomplete from '../components/PlaceAutocomplete'
+import type { UserSportsResponse } from '../Api/types/Sports'
+import AlertModal from '../components/AlertModal'
 import {
 	Map as MapIcon,
 	Grid as GridIcon,
@@ -50,6 +52,12 @@ const EventsPage = () => {
 	const [error, setError] = useState<string | null>(null)
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
+	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
+	const [alertModal, setAlertModal] = useState<{
+		isOpen: boolean;
+		title: string;
+		message: string;
+	}>({ isOpen: false, title: "", message: "" })
 
 	const [view, setView] = useState<'grid' | 'map'>('grid')
 	const [search, setSearch] = useState('')
@@ -97,6 +105,20 @@ const EventsPage = () => {
 			.get('/user-saved-event', { params: { userEmail } })
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
+		
+		// Fetch user's sports
+		const token = localStorage.getItem('accessToken')
+		if (token) {
+			axiosInstance.get<UserSportsResponse>('/sport-type/user', { params: { token } })
+				.then(({ data }) => {
+					const sportsMap = new Map<string, number>()
+					data.sports?.forEach((s: any) => {
+						sportsMap.set(s.name, s.rating)
+					})
+					setUserSports(sportsMap)
+				})
+				.catch(e => console.error('Nie udało się pobrać sportów użytkownika:', e))
+		}
 	}, [userEmail])
 
 	const sports = useMemo(() => {
@@ -247,8 +269,57 @@ const EventsPage = () => {
 		if (!userEmail) return navigate('/login')
 		if (joinedEventIds.has(eventId)) return
 		try {
-			await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
-			setJoinedEventIds(prev => new Set([...prev, eventId]))
+if (isJoined) {
+	await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
+	setJoinedEventIds(prev => {
+		const s = new Set(prev)
+		s.delete(eventId)
+		return s
+	})
+	setEvents(prev => prev.map(ev => 
+		ev.eventId === eventId 
+			? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
+			: ev
+	))
+} else {
+	const event = events.find(ev => ev.eventId === eventId)
+	const bookedParticipants = (event as any)?.bookedParticipants || 0
+	const numberOfParticipants = event?.numberOfParticipants || 0
+	
+	if (bookedParticipants >= numberOfParticipants) {
+		setAlertModal({
+			isOpen: true,
+			title: "Wydarzenie pełne",
+			message: "Przepraszamy, to wydarzenie jest już pełne."
+		})
+		return
+	}
+	
+	if (event?.minLevel) {
+		const userLevel = userSports.get(event.sportTypeName)
+		const requiredLevel = event.minLevel
+		
+		if (userLevel === undefined || userLevel < requiredLevel) {
+			const modalMessage = userLevel === undefined 
+				? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+				: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
+			setAlertModal({
+				isOpen: true,
+				title: "Niewystarczający poziom",
+				message: modalMessage
+			})
+			return
+		}
+	}
+	
+	await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+	setJoinedEventIds(prev => new Set([...prev, eventId]))
+	setEvents(prev => prev.map(ev => 
+		ev.eventId === eventId 
+			? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
+			: ev
+	))
+}
 		} catch (e) {
 			console.error('Błąd dołączania:', e)
 		}
@@ -546,19 +617,30 @@ const EventsPage = () => {
 													</div>
 												</div>
 												<div className='mt-4 flex justify-between'>
-													<button
-														onClick={() => handleJoin(ev.eventId)}
-														disabled={joinedEventIds.has(ev.eventId)}
-														className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-															joinedEventIds.has(ev.eventId)
-																? 'bg-zinc-700 text-zinc-400'
-																: 'bg-violet-600 text-white hover:bg-violet-500'
-														}`}>
-														{joinedEventIds.has(ev.eventId) ? 'Dołączono' : 'Dołącz'}
-													</button>
-													<Link
-														to={`/event/${ev.eventId}`}
-														className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
+{(() => {
+	const isJoined = joinedEventIds.has(ev.eventId)
+	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+	return (
+		<button 
+			onClick={() => handleJoin(ev.eventId)} 
+			disabled={isFull}
+			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+				isJoined 
+					? 'bg-red-600 text-white hover:bg-red-500' 
+					: isFull 
+					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed' 
+					: 'bg-violet-600 text-white hover:bg-violet-500'
+			}`}
+		>
+			{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+		</button>
+	)
+})()}
+<Link 
+	to={`/event/${ev.eventId}`} 
+	className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'
+>
+
 														Szczegóły <ChevronRight size={16} />
 													</Link>
 												</div>
@@ -581,6 +663,13 @@ const EventsPage = () => {
 					</div>
 				</div>
 			</main>
+			<AlertModal
+				isOpen={alertModal.isOpen}
+				onClose={() => setAlertModal({ isOpen: false, title: "", message: "" })}
+				title={alertModal.title}
+				message={alertModal.message}
+				variant="warning"
+			/>
 		</div>
 	)
 }

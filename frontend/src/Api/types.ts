@@ -28,6 +28,7 @@ export interface Event {
 	coverUrl?: string
 	city?: string
 	currency?: string
+	minLevel?: number
 }
 
 export type EventDetails = {
