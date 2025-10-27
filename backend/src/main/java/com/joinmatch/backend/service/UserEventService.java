@@ -62,15 +62,21 @@ public class UserEventService {
                 .toList();
     }
 
-    @Transactional
-    public void delete(UserEventRequestDto eventRequestDto) {
-        User user = userRepository.findByEmail(eventRequestDto.userEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User with email " + eventRequestDto.userEmail() + " not found"));
-        UserEvent userEvent = userEventRepository.findByUserIdAndEventEventId(user.getId(), eventRequestDto.eventId());
-        if (userEvent != null) {
-            userEventRepository.delete(userEvent);
-        } else {
-            throw new IllegalArgumentException("UserEvent not found for user id " + user.getId() + " and event id " + eventRequestDto.eventId());
-        }
+    public List<UserEventResponseDto> getUserEventsByEventId(Integer eventId) {
+        return userEventRepository.findByEvent_EventId(eventId)
+                .stream()
+                .map(UserEventResponseDto::fromUserEvent)
+                .toList();
     }
+
+    @Transactional
+    public void leaveEvent(String userEmail, Integer eventId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User with email " + userEmail + " not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + eventId + " not found"));
+
+        userEventRepository.deleteByUserAndEvent(user, event);
+    }
+
 }

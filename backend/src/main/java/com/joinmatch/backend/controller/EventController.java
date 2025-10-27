@@ -36,12 +36,6 @@ public class EventController {
         return ResponseEntity.ok(eventService.getDetailsById(id));
     }
 
-//    @GetMapping("/{id}/participants")
-//    public ResponseEntity<List<ParticipantResponseDto>> getParticipants(@PathVariable Long id) {
-//        return ResponseEntity.ok(eventService.getParticipants(id));
-//    }
-
-
     @PostMapping
     public ResponseEntity<EventResponseDto> createEvent(@RequestBody @Valid EventRequestDto eventRequestDto) {
         EventResponseDto createdEvent = eventService.create(eventRequestDto);

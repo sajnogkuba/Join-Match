@@ -4,18 +4,27 @@ import com.joinmatch.backend.model.UserEvent;
 
 public record UserEventResponseDto(
         Integer id,
+        Integer userId,
         String userEmail,
-        String eventName,
+        String userName,
+        String userAvatarUrl,
         String attendanceStatusName,
-        Integer eventId
+        Integer eventId,
+        String eventName
 ) {
     public static UserEventResponseDto fromUserEvent(UserEvent userEvent) {
+        var user = userEvent.getUser();
+        var event = userEvent.getEvent();
+
         return new UserEventResponseDto(
                 userEvent.getId(),
-                userEvent.getUser().getEmail(),
-                userEvent.getEvent().getEventName(),
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getUrlOfPicture(),
                 userEvent.getAttendanceStatus().getName(),
-                userEvent.getEvent().getEventId()
+                event.getEventId(),
+                event.getEventName()
         );
     }
 }
