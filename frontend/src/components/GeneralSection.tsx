@@ -84,7 +84,7 @@ const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
             {loading && <p className="text-sm text-zinc-400">Ładowanie…</p>}
             {error && <p className="text-sm text-red-400">{error}</p>}
             {!loading && !error && (
-                <ul className="space-y-3">
+                <ul className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
                     {items.map((e) => {
                         const place = [e.city, e.street, e.number].filter(Boolean).join(", ");
                         return (
@@ -282,9 +282,9 @@ const SportsList = ({
                             disabled={isMain || isLoading}
                             className={`rounded-xl px-3 py-1.5 text-sm ${
                                 isMain
-                                    ? "bg-violet-600 text-white"
+                                    ? "bg-violet-500 text-white"
                                     : "border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-                            } disabled:opacity-60`}
+                            } disabled:opacity-100`}
                         >
                             {isMain ? (
                                 <span className="inline-flex items-center gap-1">
@@ -313,7 +313,13 @@ const SportsList = ({
     </section>
 );
 
-const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
+const GeneralSection = ({ 
+    userEmail, 
+    onMainSportChanged 
+}: { 
+    userEmail?: string; 
+    onMainSportChanged?: () => void;
+}) => {
     const [sports, setSports] = useState<UserSport[]>([]);
     const [settingMainIndex, setSettingMainIndex] = useState<number | null>(null);
     const [openAdd, setOpenAdd] = useState(false);
@@ -348,6 +354,7 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
                 email: userEmail,
                 idSport: item.id
             });
+            onMainSportChanged?.();
         } catch {
             setSports(prevSports);
         } finally {
@@ -370,9 +377,9 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
             <AddSportModal
                 open={openAdd}
                 onClose={() => setOpenAdd(false)}
-                onAdded={(s) => {
+                onAdded={async (s) => {
+                    const wasEmpty = sports.length === 0;
                     setSports((prev) => {
-                        const wasEmpty = prev.length === 0;
                         const next = [...prev, s];
                         if (wasEmpty) {
                             return next.map((item, i) => ({
@@ -382,6 +389,19 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
                         }
                         return next;
                     });
+                    
+                    // If this is the first sport, set it as main in the backend
+                    if (wasEmpty && userEmail) {
+                        try {
+                            await api.patch("/sport-type/mainSport", {
+                                email: userEmail,
+                                idSport: s.id
+                            });
+                            onMainSportChanged?.();
+                        } catch (error) {
+                            console.error("Failed to set main sport:", error);
+                        }
+                    }
                 }}
             />
         </>

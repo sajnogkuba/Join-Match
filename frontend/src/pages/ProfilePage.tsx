@@ -7,6 +7,8 @@ import ProfileCard from "../components/ProfileCard";
 import ProfileImageModal from "../components/ProfileImageModal";
 import ProfileSidebar from "../components/ProfileSidebar";
 import type { SimpleUser, SidebarItemKey } from "../Api/types/Profile";
+import type { UserSportsResponse } from "../Api/types/Sports";
+
 
 
 const ProfilePage = () => {
@@ -15,9 +17,23 @@ const ProfilePage = () => {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<SidebarItemKey>("Ogólne");
+    const [mainSportName, setMainSportName] = useState<string>("");
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
         setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
+    };
+
+    const refreshMainSport = () => {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+        
+        api
+            .get<UserSportsResponse>("/sport-type/user", { params: { token } })
+            .then(({ data }) => {
+                const mainSport = data.sports?.find((s) => s.isMain);
+                setMainSportName(mainSport?.name || "");
+            })
+            .catch(() => setMainSportName(""));
     };
 
     useEffect(() => {
@@ -33,6 +49,10 @@ const ProfilePage = () => {
             .catch(() => setErrorMsg("Nie udało się pobrać profilu."))
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        refreshMainSport();
+    }, [activeTab]);
 
     return (
         <div className="min-h-screen bg-[#1f2632] text-zinc-300">
@@ -59,7 +79,7 @@ const ProfilePage = () => {
                         user={user}
                         loading={loading}
                         onImageClick={() => setIsImageModalOpen(true)}
-                        mainSportName=""
+                        mainSportName={mainSportName}
                     />
                     {errorMsg && (
                         <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
@@ -70,7 +90,10 @@ const ProfilePage = () => {
                     <div className="flex flex-col gap-8 lg:flex-row">
                         <ProfileSidebar active={activeTab} onSelect={(t) => setActiveTab(t)} />
                         {activeTab === "Ogólne" && (
-                            <GeneralSection userEmail={user?.email} />
+                            <GeneralSection 
+                                userEmail={user?.email} 
+                                onMainSportChanged={refreshMainSport}
+                            />
                         )}
                         {activeTab === "Znajomi" && (
                             <div className="flex-1">

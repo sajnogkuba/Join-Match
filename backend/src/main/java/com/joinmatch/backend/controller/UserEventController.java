@@ -42,9 +42,16 @@ public class UserEventController {
         return ResponseEntity.status(201).body(createdUserEvent);
     }
 
+    @GetMapping("/{id}/participants")
+    public ResponseEntity<List<UserEventResponseDto>> getParticipants(@PathVariable Integer id) {
+        List<UserEventResponseDto> participants = userEventService.getUserEventsByEventId(id);
+        return ResponseEntity.ok(participants);
+    }
+
     @DeleteMapping
-    public ResponseEntity<Void> deleteUserEvent(@RequestBody @Valid UserEventRequestDto userEventRequestDto) {
-        userEventService.delete(userEventRequestDto);
+    public ResponseEntity<Void> leaveEvent(@RequestBody UserEventRequestDto dto) {
+        userEventService.leaveEvent(dto.userEmail(), dto.eventId());
         return ResponseEntity.noContent().build();
     }
+
 }
