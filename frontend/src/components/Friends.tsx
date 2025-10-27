@@ -24,11 +24,12 @@ const FriendCard = ({ friend, onRemove }: {
         <div className="flex items-center gap-2">
             <button
                 onClick={() => onRemove(friend)}
-                className="p-2 rounded-xl bg-zinc-800 hover:bg-red-600/20 transition-colors"
+                className="p-1.5 sm:p-2 rounded-xl bg-zinc-800 hover:bg-red-600/20 transition-colors"
                 title="Usuń znajomego"
             >
-                <span className="flex items-center gap-2">
-                    <UserMinus size={16} /> Usuń znajomego
+                <span className="flex items-center gap-1 sm:gap-2">
+                    <UserMinus size={14} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline text-xs sm:text-sm">Usuń znajomego</span>
                 </span>
             </button>
         </div>
@@ -58,20 +59,22 @@ const SearchResultCard = ({ user, onAddFriend }: {
                 {isPending ? (
                     <button
                         disabled
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-sm font-medium"
+                        className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-xs sm:text-sm font-medium"
                         title="Zaproszenie oczekuje na odpowiedź"
                     >
-                        <UserPlus size={16} />
-                        Oczekuje na odpowiedź
+                        <UserPlus size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Oczekuje na odpowiedź</span>
+                        <span className="sm:hidden">Oczekuje</span>
                     </button>
                 ) : (
                     <button
                         onClick={() => onAddFriend(user.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white"
+                        className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white"
                         title="Wyślij zaproszenie"
                     >
-                        <UserPlus size={16} />
-                        Wyślij zaproszenie
+                        <UserPlus size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Wyślij zaproszenie</span>
+                        <span className="sm:hidden">Wyślij</span>
                     </button>
                 )}
             </div>
@@ -96,20 +99,22 @@ const PendingRequestCard = ({ request, onAccept, onReject }: {
                 <p className="text-sm text-zinc-400">{request.senderEmail}</p>
             </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
             <button
                 onClick={() => onAccept(request.requestId)}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white"
+                className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white"
                 title="Zaakceptuj zaproszenie"
             >
-                ✓ Zaakceptuj
+                <span>✓</span>
+                <span className="hidden sm:inline">Zaakceptuj</span>
             </button>
             <button
                 onClick={() => onReject(request.requestId)}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-sm font-medium text-white"
+                className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-xs sm:text-sm font-medium text-white"
                 title="Odrzuć zaproszenie"
             >
-                ✗ Odrzuć
+                <span>✗</span>
+                <span className="hidden sm:inline">Odrzuć</span>
             </button>
         </div>
     </div>
@@ -487,16 +492,16 @@ const Friends = () => {
                                 Czy na pewno chcesz usunąć <span className="text-white font-medium">{friendToDelete.name}</span> ze znajomych?
                             </p>
                             
-                            <div className="flex gap-3">
+                            <div className="flex gap-2 sm:gap-3">
                                 <button
                                     onClick={cancelDeleteFriend}
-                                    className="flex-1 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                    className="flex-1 rounded-xl border border-zinc-700 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
                                 >
                                     Anuluj
                                 </button>
                                 <button
                                     onClick={confirmDeleteFriend}
-                                    className="flex-1 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition-colors"
+                                    className="flex-1 rounded-xl bg-red-600 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-red-500 transition-colors"
                                 >
                                     Usuń znajomego
                                 </button>

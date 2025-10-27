@@ -5,6 +5,8 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import axiosInstance from '../Api/axios'
 import type { Event } from '../Api/types'
+import type { UserSportsResponse } from '../Api/types/Sports'
+import AlertModal from '../components/AlertModal'
 import {
 	Map as MapIcon,
 	Grid as GridIcon,
@@ -46,6 +48,12 @@ const EventsPage = () => {
 	const [error, setError] = useState<string | null>(null)
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
+	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
+	const [alertModal, setAlertModal] = useState<{
+		isOpen: boolean;
+		title: string;
+		message: string;
+	}>({ isOpen: false, title: "", message: "" })
 
 	const [view, setView] = useState<'grid' | 'map'>('grid')
 	const [search, setSearch] = useState('')
@@ -87,6 +95,20 @@ const EventsPage = () => {
 		axiosInstance.get('/user-saved-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
+		
+		// Fetch user's sports
+		const token = localStorage.getItem('accessToken')
+		if (token) {
+			axiosInstance.get<UserSportsResponse>('/sport-type/user', { params: { token } })
+				.then(({ data }) => {
+					const sportsMap = new Map<string, number>()
+					data.sports?.forEach((s: any) => {
+						sportsMap.set(s.name, s.rating)
+					})
+					setUserSports(sportsMap)
+				})
+				.catch(e => console.error('Nie udało się pobrać sportów użytkownika:', e))
+		}
 	}, [userEmail])
 
 	const sports = useMemo(() => {
@@ -199,6 +221,38 @@ const EventsPage = () => {
 						: ev
 				))
 			} else {
+				// Check if event has available places
+				const event = events.find(ev => ev.eventId === eventId)
+				const bookedParticipants = (event as any)?.bookedParticipants || 0
+				const numberOfParticipants = event?.numberOfParticipants || 0
+				
+				if (bookedParticipants >= numberOfParticipants) {
+					setAlertModal({
+						isOpen: true,
+						title: "Wydarzenie pełne",
+						message: "Przepraszamy, to wydarzenie jest już pełne."
+					})
+					return
+				}
+				
+				// Check if user has required skill level
+				if (event?.minLevel) {
+					const userLevel = userSports.get(event.sportTypeName)
+					const requiredLevel = event.minLevel
+					
+					if (userLevel === undefined || userLevel < requiredLevel) {
+						const modalMessage = userLevel === undefined 
+							? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+							: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
+						setAlertModal({
+							isOpen: true,
+							title: "Niewystarczający poziom",
+							message: modalMessage
+						})
+						return
+					}
+				}
+				
 				// Join the event
 				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
 				setJoinedEventIds(prev => new Set([...prev, eventId]))
@@ -428,9 +482,25 @@ const EventsPage = () => {
 													<div className='flex items-center gap-2'><Ticket size={16} /> {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: (ev as any).currency || 'PLN' }).format((ev as any).cost || 0)}</div>
 												</div>
 												<div className='mt-4 flex justify-between'>
-													<button onClick={() => handleJoin(ev.eventId)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${joinedEventIds.has(ev.eventId) ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-violet-600 text-white hover:bg-violet-500'}`}>
-														{joinedEventIds.has(ev.eventId) ? 'Opuść' : 'Dołącz'}
-													</button>
+													{(() => {
+														const isJoined = joinedEventIds.has(ev.eventId)
+														const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+														return (
+															<button 
+																onClick={() => handleJoin(ev.eventId)} 
+																disabled={isFull}
+																className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+																	isJoined 
+																		? 'bg-red-600 text-white hover:bg-red-500' 
+																		: isFull 
+																		? 'bg-zinc-600 text-zinc-400 cursor-not-allowed' 
+																		: 'bg-violet-600 text-white hover:bg-violet-500'
+																}`}
+															>
+																{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+															</button>
+														)
+													})()}
 													<Link to={`/event/${ev.eventId}`} className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
 														Szczegóły <ChevronRight size={16} />
 													</Link>
@@ -452,6 +522,13 @@ const EventsPage = () => {
 					</div>
 				</div>
 			</main>
+			<AlertModal
+				isOpen={alertModal.isOpen}
+				onClose={() => setAlertModal({ isOpen: false, title: "", message: "" })}
+				title={alertModal.title}
+				message={alertModal.message}
+				variant="warning"
+			/>
 		</div>
 	)
 }

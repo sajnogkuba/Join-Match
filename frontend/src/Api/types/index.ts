@@ -7,6 +7,9 @@ export type { SportTypeOption, UserSport, UserSportsResponse } from "./Sports";
 // Events types
 export type { SavedEventRef, EventDetails } from "./Events";
 
+// Re-export from main types.ts
+export type { JwtResponse, UpdatePhotoRequest, Event } from "../types";
+
 // Friends types
 export type { Friend, SearchResult, PendingRequest } from "./Friends";
 
