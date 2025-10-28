@@ -24,6 +24,7 @@ import {
 	FilterX,
 	Loader2,
 	ArrowUpDown,
+	Plus,
 } from 'lucide-react'
 
 dayjs.locale('pl')
@@ -359,11 +360,18 @@ const EventsPage = () => {
 					}}
 				/>
 				<div className='absolute inset-0 bg-black/60' />
-				<div className='relative z-10 mx-auto flex h-full max-w-7xl items-end px-4 pb-6 md:px-8'>
+				<div className='relative z-10 mx-auto flex h-full max-w-7xl items-end justify-between px-4 pb-6 md:px-8'>
 					<div>
 						<h1 className='text-2xl md:text-3xl font-semibold text-white'>Wydarzenia</h1>
 						<div className='mt-2 h-1 w-28 rounded-full bg-violet-600' />
 					</div>
+					<Link
+						to="/stworz-wydarzenie"
+						className='bg-white/10 border border-white/20 px-4 py-2 rounded-xl font-semibold text-white hover:bg-white/20 transition-all inline-flex items-center gap-2'
+					>
+						<Plus size={18} />
+						Stwórz wydarzenie
+					</Link>
 				</div>
 			</header>
 
