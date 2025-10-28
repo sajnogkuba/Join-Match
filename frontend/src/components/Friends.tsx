@@ -130,7 +130,7 @@ const Friends = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [activeTab, setActiveTab] = useState<"friends" | "pending">("friends");
     const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
-    const [pendingLoading, setPendingLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [friendToDelete, setFriendToDelete] = useState<Friend | null>(null);
 
@@ -145,36 +145,44 @@ const Friends = () => {
     useEffect(() => {
         if (!currentUser?.id) return;
         
-        setLoading(true);
-        axiosInstance.get(`/friends/${currentUser.id}`)
-            .then(response => {
-                setFriends(response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching friends:', error);
-                setFriends([]);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+        setIsInitialLoading(true);
+        
+        // Ładuj oba endpointy jednocześnie
+        Promise.all([
+            axiosInstance.get(`/friends/${currentUser.id}`),
+            axiosInstance.get(`/friends/requests/${currentUser.id}`)
+        ])
+        .then(([friendsResponse, pendingResponse]) => {
+            setFriends(friendsResponse.data);
+            setPendingRequests(pendingResponse.data);
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            setFriends([]);
+            setPendingRequests([]);
+        })
+        .finally(() => {
+            setIsInitialLoading(false);
+        });
     }, [currentUser]);
 
+    // Obsługa hash routing dla automatycznego otwierania zakładki pending
     useEffect(() => {
-        if (!currentUser?.id) return;
-        
-        setPendingLoading(true);
-        axiosInstance.get(`/friends/requests/${currentUser.id}`)
-            .then(response => {
-                setPendingRequests(response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching pending requests:', error);
-                setPendingRequests([]);
-            })
-            .finally(() => {
-                setPendingLoading(false);
-            });
-    }, [currentUser]);
+        const hash = window.location.hash;
+        if (hash === '#pending-requests') {
+            setActiveTab('pending');
+            // Wyczyść hash po krótkim opóźnieniu, żeby ProfilePage zdążył go przeczytać
+            setTimeout(() => {
+                window.history.replaceState(null, '', window.location.pathname);
+            }, 100);
+        } else if (hash === '#friends') {
+            setActiveTab('friends');
+            // Wyczyść hash po krótkim opóźnieniu
+            setTimeout(() => {
+                window.history.replaceState(null, '', window.location.pathname);
+            }, 100);
+        }
+    }, []);
 
 
     const handleRemoveFriend = (friend: Friend) => {
@@ -355,14 +363,14 @@ const Friends = () => {
                 </div>
 
                 <div className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
-                    {activeTab === "friends" ? (
-                        loading ? (
-                            <div className="grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10">
-                                <div className="flex items-center gap-2 text-zinc-300">
-                                    <Loader2 className="animate-spin" /> Ładowanie…
-                                </div>
+                    {isInitialLoading ? (
+                        <div className="grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10">
+                            <div className="flex items-center gap-2 text-zinc-300">
+                                <Loader2 className="animate-spin" /> Ładowanie…
                             </div>
-                        ) : filteredFriends.length === 0 ? (
+                        </div>
+                    ) : activeTab === "friends" ? (
+                        filteredFriends.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">
@@ -384,12 +392,7 @@ const Friends = () => {
                             ))
                         )
                     ) : (
-                        pendingLoading ? (
-                            <div className="text-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4"></div>
-                                <p className="text-zinc-400">Ładowanie zaproszeń...</p>
-                            </div>
-                        ) : pendingRequests.length === 0 ? (
+                        pendingRequests.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">Brak oczekujących zaproszeń</p>

@@ -23,6 +23,7 @@ public class FriendRequestService {
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public FriendRequestResponseDto sendRequest(FriendRequestDto requestDto) {
@@ -53,6 +54,9 @@ public class FriendRequestService {
                 .build();
 
         FriendRequest saved = friendRequestRepository.save(friendRequest);
+
+        notificationService.sendFriendRequestNotification(receiver, sender, saved.getRequestId());
+        
         return FriendRequestResponseDto.fromFriendRequest(saved);
     }
 
@@ -67,10 +71,13 @@ public class FriendRequestService {
                 .toList();
     }
 
+    @Transactional
     public void deleteRequest(Integer requestId) {
-        if (!friendRequestRepository.existsById(requestId)) {
+        if (friendRequestRepository.findById(requestId).isEmpty()) {
             throw new EntityNotFoundException("FriendRequest with id " + requestId + " not found");
         }
+        FriendRequest request = friendRequestRepository.findById(requestId).get();
+        notificationService.sendFriendRequestRejectedNotification(request.getSender(), request.getReceiver());
         friendRequestRepository.deleteById(requestId);
     }
 
@@ -86,5 +93,6 @@ public class FriendRequestService {
         friendship.setUserOne(request.getSender());
         friendship.setUserTwo(request.getReceiver());
         friendshipRepository.save(friendship);
+        notificationService.sendFriendRequestAcceptedNotification(request.getSender(), request.getReceiver());
     }
 }
