@@ -1,0 +1,11 @@
+package com.joinmatch.backend.enums;
+
+public enum NotificationType {
+    FRIEND_REQUEST,
+    FRIEND_REQUEST_ACCEPTED,
+    FRIEND_REQUEST_REJECTED,
+    EVENT_INVITE,
+    EVENT_UPDATE,
+    EVENT_CANCELLED
+}
+

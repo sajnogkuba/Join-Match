@@ -1,5 +1,5 @@
 // src/pages/EventsPage.tsx
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -127,10 +127,6 @@ const EventsPage = () => {
 		return Array.from(set).sort()
 	}, [events])
 
-	const cities = useMemo(() => {
-		const set = new Set(events.map((e: any) => e.city).filter(Boolean))
-		return Array.from(set).sort()
-	}, [events])
 
 	const eventsWithCoords = useMemo(() => {
 		const levelMap: Record<number, string> = {

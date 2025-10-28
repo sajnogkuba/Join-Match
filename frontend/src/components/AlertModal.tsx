@@ -37,14 +37,6 @@ const AlertModal = ({
             ? "bg-blue-500/10 border-blue-500"
             : "bg-amber-500/10 border-amber-500";
 
-    const iconColor =
-        variant === "error"
-            ? "text-red-400"
-            : variant === "success"
-            ? "text-green-400"
-            : variant === "info"
-            ? "text-blue-400"
-            : "text-amber-400";
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

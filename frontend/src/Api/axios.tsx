@@ -9,7 +9,6 @@ const axiosInstance: AxiosInstance = axios.create({
     },
 });
 
-// Funkcja do parsowania access tokena (JWT)
 function parseJwt(token: string) {
     try {
         const base64Url = token.split('.')[1];
@@ -25,11 +24,15 @@ function parseJwt(token: string) {
         return null;
     }
 }
-
-// Globalna zmienna do timeoutu
+    
 let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
-// Funkcja do ustawiania automatycznego odświeżania
+let disconnectWebSocket: (() => void) | null = null;
+
+export function setDisconnectWebSocket(disconnectFn: () => void) {
+    disconnectWebSocket = disconnectFn;
+}
+
 export function scheduleTokenRefresh() {
     if (refreshTimeout) clearTimeout(refreshTimeout);
 
@@ -64,7 +67,7 @@ const refreshToken = async (): Promise<string> => {
 
     try {
         const response = await axios.post<JwtResponse>(
-            'http://localhost:8080/api/auth/refreshToken',
+            `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/refreshToken`,
             { refreshToken: storedRefreshToken }
         );
         const newAccessToken = response.data.token;
@@ -73,7 +76,6 @@ const refreshToken = async (): Promise<string> => {
         localStorage.setItem('accessToken', newAccessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
 
-        // Wywołanie scheduleTokenRefresh za KAŻDYM razem, gdy masz nowy accessToken:
         scheduleTokenRefresh();
 
         return newAccessToken;
@@ -86,7 +88,7 @@ const refreshToken = async (): Promise<string> => {
 }
 
 
-// Request Interceptor: dodaj token do każdego zapytania
+
 axiosInstance.interceptors.request.use(
 	(config: InternalAxiosRequestConfig) => {
 		const accessToken = localStorage.getItem('accessToken')
@@ -98,7 +100,6 @@ axiosInstance.interceptors.request.use(
 	error => Promise.reject(error)
 )
 
-// Response Interceptor: obsługa 401
 axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => response,
 	async (error: AxiosError) => {
@@ -114,9 +115,12 @@ axiosInstance.interceptors.response.use(
 				}
 				return axiosInstance(originalRequest)
 			} catch (refreshError) {
-				console.error('Błąd podczas ponownego logowania:', refreshError) // Improved error logging
+				console.error('Błąd podczas ponownego logowania:', refreshError);
 				localStorage.removeItem('accessToken')
 				localStorage.removeItem('refreshToken')
+				if (disconnectWebSocket) {
+					disconnectWebSocket();
+				}
 				window.location.href = '/login'
 				return Promise.reject(refreshError)
 			}

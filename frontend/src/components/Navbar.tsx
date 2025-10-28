@@ -5,6 +5,7 @@ import { Menu, X, User, LogOut, LogIn, UserPlus } from 'lucide-react'
 import Logo from '../assets/LogoWhite.png'
 import { useAuth } from '../Context/authContext'
 import Avatar from './Avatar'
+import NotificationBell from './NotificationBell'
 import api from '../Api/axios'
 
 type UserDetails = {
@@ -81,6 +82,7 @@ export const Navbar: React.FC = () => {
 
 		{/* Right side */}
 		<div className="hidden md:flex items-center space-x-4">
+		{isAuthenticated && <NotificationBell />}
 		{!isAuthenticated ? (
 		  <>
 			<Link
@@ -200,6 +202,9 @@ export const Navbar: React.FC = () => {
                 </>
               ) : (
                 <>
+                  <div className="px-3 py-2">
+                    <NotificationBell />
+                  </div>
                   <Link
                     to="/profile"
                     onClick={() => setIsMenuOpen(false)}

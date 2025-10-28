@@ -54,6 +54,28 @@ const ProfilePage = () => {
         refreshMainSport();
     }, [activeTab]);
 
+    // Obsługa hash w URL dla przekierowań z powiadomień
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash;
+            if (hash === '#pending-requests') {
+                setActiveTab('Znajomi');
+            } else if (hash === '#friends') {
+                setActiveTab('Znajomi');
+            }
+        };
+
+        // Sprawdź hash przy załadowaniu
+        handleHashChange();
+
+        // Dodaj listener na zmiany hash
+        window.addEventListener('hashchange', handleHashChange);
+
+        return () => {
+            window.removeEventListener('hashchange', handleHashChange);
+        };
+    }, []);
+
     return (
         <div className="min-h-screen bg-[#1f2632] text-zinc-300">
             <header className="relative h-[180px] md:h-[220px] w-full overflow-hidden">
