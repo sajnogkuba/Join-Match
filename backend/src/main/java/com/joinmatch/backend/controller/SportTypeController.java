@@ -51,4 +51,13 @@ public class SportTypeController {
         }
         return ResponseEntity.ok().build();
     }
+    @DeleteMapping("/user/sport")
+    public ResponseEntity<Void> removeSportForUser(@RequestBody RemoveSportDto removeSportDto){
+        try{
+            sportService.removeSport(removeSportDto);
+        }catch (IllegalArgumentException exception){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
 }

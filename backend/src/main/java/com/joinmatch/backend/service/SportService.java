@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.dto.RemoveSportDto;
 import com.joinmatch.backend.dto.SportTypeResponseDto;
 import com.joinmatch.backend.dto.SportWithRatingDto;
 import com.joinmatch.backend.model.JoinMatchToken;
@@ -96,5 +97,27 @@ public class SportService {
             sportUser.setIsMain(true);
             sportUserRepository.save(sportUser);
         }
-    }
+
+        @Transactional
+        public void removeSport(RemoveSportDto removeSportDto) {
+        User user = userRepository.findByTokenValue(removeSportDto.token()).orElseThrow( ()->
+        new IllegalArgumentException("User not found"));
+        SportUser sportUser= sportUserRepository.findByUserIdAndSportId(user.getId(), removeSportDto.idSport()).orElseThrow(
+                () -> new IllegalArgumentException("Not found sport for this user")
+        );
+        Sport sport= sportRepository.findSportById(removeSportDto.idSport()).orElseThrow(
+                    () -> new IllegalArgumentException("Not found sport")
+        );
+
+        if(sportUser.getIsMain()){
+            throw new IllegalArgumentException("This is main sport");
+        }
+
+        user.getSportUsers().remove(sportUser);
+        sport.getSportUsers().remove(sportUser);
+        sportUserRepository.delete(sportUser);
+        userRepository.save(user);
+        sportRepository.save(sport);
+        }
+}
 
