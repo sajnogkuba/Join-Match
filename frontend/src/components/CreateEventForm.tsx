@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import StarRatingInput from './StarRatingInput'
 import Checkbox from './Checkbox'
+import DatePicker from './DatePicker'
+import TimePicker from './TimePicker'
 import api from '../Api/axios'
 import type { SportType } from '../Api/types/SportType.ts'
 import type { SportObject } from '../Api/types/SportObject.ts'
@@ -276,22 +278,25 @@ export default function CreateEventForm() {
 						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
 							<CalendarDays size={16} /> Data wydarzenia
 						</label>
-						<input
-							type='date'
+						<DatePicker
 							value={eventDate}
-							onChange={e => setEventDate(e.target.value)}
-							className={`${inputBase} ${errors.eventDate ? 'border-red-500' : ''}`}
+							onChange={setEventDate}
+							placeholder="Wybierz datę wydarzenia"
+							error={!!errors.eventDate}
+							mode="event"
+							theme="violet"
 						/>
 						{errors.eventDate && <p className='text-red-400 text-sm mt-1'>{errors.eventDate}</p>}
 					</div>
 
 					<div className={card}>
 						<label className='block text-zinc-400 mb-2'>Godzina</label>
-						<input
-							type='time'
+						<TimePicker
 							value={eventTime}
-							onChange={e => setEventTime(e.target.value)}
-							className={`${inputBase} ${errors.eventTime ? 'border-red-500' : ''}`}
+							onChange={setEventTime}
+							placeholder="Wybierz godzinę"
+							error={!!errors.eventTime}
+							theme="violet"
 						/>
 						{errors.eventTime && <p className='text-red-400 text-sm mt-1'>{errors.eventTime}</p>}
 					</div>
@@ -372,7 +377,7 @@ export default function CreateEventForm() {
 						type='submit'
 						onClick={handleSubmit}
 						disabled={submitting}
-						className='bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900 px-10 py-4 rounded-xl font-semibold text-white shadow-lg shadow-violet-900/30 transition-all hover:-translate-y-0.5 disabled:opacity-60'>
+						className='bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-500 px-10 py-4 rounded-xl font-semibold text-white shadow-lg shadow-violet-900/30 transition-all hover:-translate-y-0.5 disabled:opacity-60'>
 						{uploadingImage ? 'Przesyłanie zdjęcia...' : submitting ? 'Tworzenie...' : 'Stwórz Wydarzenie'}
 					</button>
 				</div>

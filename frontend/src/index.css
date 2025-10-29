@@ -24,3 +24,51 @@
   background: #71717a;
 }
 
+/* Google Login Button Dark Theme - More Aggressive Override */
+.gsi-material-button,
+.gsi-material-button *,
+[data-testid="google-login-button"],
+[data-testid="google-login-button"] * {
+  background-color: #27272a !important;
+  border: 1px solid #52525b !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  height: 48px !important;
+  padding: 0 16px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: none !important;
+}
+
+.gsi-material-button:hover,
+[data-testid="google-login-button"]:hover {
+  background-color: #3f3f46 !important;
+  border-color: #71717a !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.gsi-material-button:focus,
+[data-testid="google-login-button"]:focus {
+  outline: 2px solid #8b5cf6 !important;
+  outline-offset: 2px !important;
+}
+
+.gsi-material-button .gsi-material-button-icon,
+[data-testid="google-login-button"] .gsi-material-button-icon {
+  margin-right: 8px !important;
+}
+
+.gsi-material-button .gsi-material-button-contents,
+[data-testid="google-login-button"] .gsi-material-button-contents {
+  color: #ffffff !important;
+}
+
+/* Override any iframe styles */
+iframe[src*="accounts.google.com"] {
+  background-color: #27272a !important;
+  border: 1px solid #52525b !important;
+  border-radius: 8px !important;
+}
+

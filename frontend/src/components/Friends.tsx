@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, UserMinus, X, UserPlus, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios";
 import type { User } from "../Api/types/User";
 import type { Friend, SearchResult, PendingRequest } from "../Api/types/Friends";
@@ -10,7 +11,10 @@ const FriendCard = ({ friend, onRemove }: {
     onRemove: (friend: Friend) => void;
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center gap-3">
+        <Link 
+            to={`/profile/${friend.id}`}
+            className="flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors"
+        >
             <Avatar 
                 src={friend.urlOfPicture} 
                 name={friend.name}
@@ -20,7 +24,7 @@ const FriendCard = ({ friend, onRemove }: {
                 <p className="text-white font-medium">{friend.name}</p>
                 <p className="text-sm text-zinc-400">{friend.email}</p>
             </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
             <button
                 onClick={() => onRemove(friend)}
@@ -44,7 +48,10 @@ const SearchResultCard = ({ user, onAddFriend }: {
     
     return (
         <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center gap-3">
+        <Link 
+            to={`/profile/${user.id}`}
+            className="flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors"
+        >
             <Avatar 
                 src={user.urlOfPicture} 
                 name={user.name}
@@ -54,7 +61,7 @@ const SearchResultCard = ({ user, onAddFriend }: {
                     <p className="text-white font-medium">{user.name}</p>
                     <p className="text-sm text-zinc-400">{user.email}</p>
                 </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-2">
                 {isPending ? (
                     <button
@@ -88,7 +95,10 @@ const PendingRequestCard = ({ request, onAccept, onReject }: {
     onReject: (id: number) => void;
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center gap-3">
+        <Link 
+            to={`/profile/${request.senderId}`}
+            className="flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors"
+        >
             <Avatar 
                 src={request.senderUrlOfPicture} 
                 name={request.senderName}
@@ -98,7 +108,7 @@ const PendingRequestCard = ({ request, onAccept, onReject }: {
                 <p className="text-white font-medium">{request.senderName}</p>
                 <p className="text-sm text-zinc-400">{request.senderEmail}</p>
             </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-1 sm:gap-2">
             <button
                 onClick={() => onAccept(request.requestId)}
@@ -147,7 +157,6 @@ const Friends = () => {
         
         setIsInitialLoading(true);
         
-        // Ładuj oba endpointy jednocześnie
         Promise.all([
             axiosInstance.get(`/friends/${currentUser.id}`),
             axiosInstance.get(`/friends/requests/${currentUser.id}`)
@@ -166,18 +175,15 @@ const Friends = () => {
         });
     }, [currentUser]);
 
-    // Obsługa hash routing dla automatycznego otwierania zakładki pending
     useEffect(() => {
         const hash = window.location.hash;
         if (hash === '#pending-requests') {
             setActiveTab('pending');
-            // Wyczyść hash po krótkim opóźnieniu, żeby ProfilePage zdążył go przeczytać
             setTimeout(() => {
                 window.history.replaceState(null, '', window.location.pathname);
             }, 100);
         } else if (hash === '#friends') {
             setActiveTab('friends');
-            // Wyczyść hash po krótkim opóźnieniu
             setTimeout(() => {
                 window.history.replaceState(null, '', window.location.pathname);
             }, 100);
