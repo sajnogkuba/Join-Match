@@ -7,18 +7,19 @@ interface ProfileCardProps {
     loading: boolean;
     onImageClick: () => void;
     mainSportName: string;
+    friendsCount?: number;
 }
 
 const ProfileCard = ({
     user,
     loading,
     onImageClick,
-    mainSportName
+    mainSportName,
+    friendsCount = 0
 }: ProfileCardProps) => {
     const name = user?.name ?? (loading ? "Ładowanie…" : "—");
     const handle = "Profil";
     const rating = 4.7;
-    const friends = 67;
 
     return (
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -56,7 +57,7 @@ const ProfileCard = ({
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
                         <Users size={16} />
-                        <span className="font-semibold text-white">{friends}</span>
+                        <span className="font-semibold text-white">{friendsCount}</span>
                     </div>
                     <p className="text-xs text-zinc-400">Znajomi</p>
                 </div>

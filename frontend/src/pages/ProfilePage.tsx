@@ -8,16 +8,19 @@ import ProfileImageModal from "../components/ProfileImageModal";
 import ProfileSidebar from "../components/ProfileSidebar";
 import type { SimpleUser, SidebarItemKey } from "../Api/types/Profile";
 import type { UserSportsResponse } from "../Api/types/Sports";
+import type { User } from "../Api/types/User";
 
 
 
 const ProfilePage = () => {
     const [user, setUser] = useState<SimpleUser | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<SidebarItemKey>("Ogólne");
     const [mainSportName, setMainSportName] = useState<string>("");
+    const [friendsCount, setFriendsCount] = useState<number>(0);
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
         setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
@@ -36,6 +39,20 @@ const ProfilePage = () => {
             .catch(() => setMainSportName(""));
     };
 
+    const fetchFriendsCount = () => {
+        const token = localStorage.getItem("accessToken");
+        if (!token || !currentUser?.id) return;
+        
+        api
+            .get(`/friends/${currentUser.id}`)
+            .then(({ data }) => {
+                setFriendsCount(data.length);
+            })
+            .catch(() => {
+                setFriendsCount(0);
+            });
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
@@ -43,9 +60,19 @@ const ProfilePage = () => {
             setLoading(false);
             return;
         }
+        
+        // Pobierz pełny obiekt User dla ID
         api
-            .get<SimpleUser>("/auth/user/details", { params: { token } })
-            .then(({ data }) => setUser(data))
+            .get<User>("/auth/user", { params: { token } })
+            .then(({ data: userData }) => {
+                setCurrentUser(userData);
+                
+                // Pobierz szczegóły użytkownika dla wyświetlania
+                return api.get<SimpleUser>("/auth/user/details", { params: { token } });
+            })
+            .then(({ data: userDetails }) => {
+                setUser(userDetails);
+            })
             .catch(() => setErrorMsg("Nie udało się pobrać profilu."))
             .finally(() => setLoading(false));
     }, []);
@@ -53,6 +80,12 @@ const ProfilePage = () => {
     useEffect(() => {
         refreshMainSport();
     }, [activeTab]);
+
+    useEffect(() => {
+        if (currentUser?.id) {
+            fetchFriendsCount();
+        }
+    }, [currentUser]);
 
     // Obsługa hash w URL dla przekierowań z powiadomień
     useEffect(() => {
@@ -102,6 +135,7 @@ const ProfilePage = () => {
                         loading={loading}
                         onImageClick={() => setIsImageModalOpen(true)}
                         mainSportName={mainSportName}
+                        friendsCount={friendsCount}
                     />
                     {errorMsg && (
                         <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
