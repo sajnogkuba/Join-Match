@@ -25,4 +25,9 @@ public class ImageController {
         return ResponseEntity.ok(s3Service.uploadFile(file, "profiles"));
     }
 
+    @PostMapping("/upload/team")
+    public ResponseEntity<String> uploadTeamImage(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(s3Service.uploadFile(file, "team"));
+    }
+
 }

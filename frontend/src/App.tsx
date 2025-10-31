@@ -19,7 +19,9 @@ import FAQPage from './pages/FAQPage.tsx'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage.tsx'
 import TermsOfServicePage from './pages/TermsOfServicePage.tsx'
 import UserProfilePage from './pages/UserProfilePage.tsx'
+import TeamsPage from './pages/TeamsPage.tsx'
 import { default as api } from './Api/axios.tsx'
+import CreateTeamPage from './pages/CreateTeamPage.tsx'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
@@ -38,6 +40,8 @@ const App: React.FC = () => (
 							<Route path='event/:id' element={<EventPage />} />
 							<Route path='rankingi' element={<RankingsPage />} />
 							<Route path='about' element={<AboutUsPage />} />
+							<Route path='teams' element={<TeamsPage />} />
+							<Route path='stworz-druzyne' element={<CreateTeamPage />} />
 							<Route path='kontakt' element={<ContactPage />} />
 							<Route path='faq' element={<FAQPage />} />
 							<Route path='privacy' element={<PrivacyPolicyPage />} />

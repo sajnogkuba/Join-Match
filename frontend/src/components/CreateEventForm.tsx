@@ -50,14 +50,12 @@ export default function CreateEventForm() {
 	const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
 
 	const [useCustomPlace, setUseCustomPlace] = useState(false)
-	// Używamy full Google PlaceResult żeby pobrać address_components (miasto, ulica, numer)
 	const [customPlace, setCustomPlace] = useState<google.maps.places.PlaceResult | null>(null)
 
 	useEffect(() => {
 		setOwnerEmail(localStorage.getItem('email'))
 	}, [])
 
-	// Helper: pobiera komponent adresu z place.address_components
 	const getComponent = (place: google.maps.places.PlaceResult | null, types: string[]): string => {
 		if (!place || !place.address_components) return ''
 		const comp = place.address_components.find(c => types.some(t => c.types.includes(t)))
@@ -118,10 +116,8 @@ export default function CreateEventForm() {
 				imageUrl = res.data
 			}
 
-			// If user provided a custom place, create it first and use its id
 			let sportObjectId = placeId
 			if (useCustomPlace && customPlace) {
-				// Używamy danych z Google PlaceResult (address_components) do wydobycia miasta, ulicy i numeru
 				const city = getComponent(customPlace, ['locality', 'administrative_area_level_2'])
 				const street = getComponent(customPlace, ['route'])
 				const number = getComponent(customPlace, ['street_number'])
