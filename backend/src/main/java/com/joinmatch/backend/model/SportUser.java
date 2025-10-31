@@ -19,9 +19,11 @@ public class SportUser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID", nullable = false)
     private Integer ID;
+
     @JoinColumn(name = "joinmatchuser_user_id", nullable = false)
     @ManyToOne
     private User user;
+    
     @NotNull
     @JoinColumn(name = "sport_id", nullable = false)
     @ManyToOne

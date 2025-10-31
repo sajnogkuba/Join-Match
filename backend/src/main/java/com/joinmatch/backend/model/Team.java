@@ -1,0 +1,40 @@
+package com.joinmatch.backend.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "team")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Team {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "team_id", nullable = false)
+    private Integer id;
+
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(length = 100)
+    private String city;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sport_type_id", referencedColumnName = "id")
+    private Sport sportType;
+
+    @Column(length = 40)
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "leader_id", referencedColumnName = "id")
+    private User leader;
+
+    @Column(name = "photo_url", columnDefinition = "text")
+    private String photoUrl;
+
+}

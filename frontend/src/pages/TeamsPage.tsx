@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserCheck, Plus } from 'lucide-react'
+import { Users, Crown, CheckCircle, Plus } from 'lucide-react'
 import { useAuth } from '../Context/authContext'
 
-type TeamsTab = 'my-teams' | 'all-teams'
+type TeamsTab = 'all-teams' | 'owned-teams' | 'joined-teams'
 
 const TeamsPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<TeamsTab>('all-teams')
@@ -11,7 +11,7 @@ const TeamsPage: React.FC = () => {
 	const navigate = useNavigate()
 
 	const handleTabSelect = (tab: TeamsTab) => {
-		if (tab === 'my-teams' && !isAuthenticated) {
+		if ((tab === 'owned-teams' || tab === 'joined-teams') && !isAuthenticated) {
 			navigate('/login')
 			return
 		}
@@ -27,8 +27,9 @@ const TeamsPage: React.FC = () => {
 	}
 
 	const sidebarItems = [
-		{ key: 'all-teams' as TeamsTab, label: 'Drużyny', icon: Users },
-		{ key: 'my-teams' as TeamsTab, label: 'Twoje drużyny', icon: UserCheck },
+		{ key: 'all-teams' as TeamsTab, label: 'Wszystkie', icon: Users },
+		{ key: 'owned-teams' as TeamsTab, label: 'Utworzone', icon: Crown },
+		{ key: 'joined-teams' as TeamsTab, label: 'Dołączyłem', icon: CheckCircle },
 	]
 
 	return (
@@ -76,25 +77,37 @@ const TeamsPage: React.FC = () => {
 						</aside>
 
 						<div className='flex-1'>
-							{activeTab === 'my-teams' && (
+							{activeTab === 'all-teams' && (
 								<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
 									<div>
-										<UserCheck className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-										<h2 className='text-white text-xl font-semibold mb-2'>Twoje drużyny</h2>
+										<Users className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+										<h2 className='text-white text-xl font-semibold mb-2'>Wszystkie drużyny</h2>
 										<p className='text-zinc-400 text-sm'>
-											Tutaj znajdziesz drużyny, do których należysz.
+											Przeglądaj i dołączaj do różnych drużyn sportowych.
 										</p>
 									</div>
 								</div>
 							)}
 
-							{activeTab === 'all-teams' && (
+							{activeTab === 'owned-teams' && (
 								<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
 									<div>
-										<Users className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-										<h2 className='text-white text-xl font-semibold mb-2'>Drużyny</h2>
+										<Crown className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+										<h2 className='text-white text-xl font-semibold mb-2'>Utworzone drużyny</h2>
 										<p className='text-zinc-400 text-sm'>
-											Przeglądaj i dołączaj do różnych drużyn sportowych.
+											Tutaj znajdziesz drużyny, które utworzyłeś.
+										</p>
+									</div>
+								</div>
+							)}
+
+							{activeTab === 'joined-teams' && (
+								<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+									<div>
+										<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+										<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
+										<p className='text-zinc-400 text-sm'>
+											Tutaj znajdziesz drużyny, do których należysz.
 										</p>
 									</div>
 								</div>
