@@ -10,6 +10,10 @@ import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,6 +32,19 @@ public class TeamService {
         Team team = new Team();
         return getTeamResponseDto(teamRequestDto, team);
     }
+
+    public Page<TeamResponseDto> findAll(Pageable pageable, String sortBy, String direction) {
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        Page<Team> teams = teamRepository.findAll(sortedPageable);
+        return teams.map(TeamResponseDto::fromTeam);
+    }
+
 
     private TeamResponseDto getTeamResponseDto(TeamRequestDto teamRequestDto, Team team) {
         Sport sport = sportRepository.findById(teamRequestDto.sportTypeId())

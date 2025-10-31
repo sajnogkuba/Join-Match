@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, Crown, CheckCircle, Plus } from 'lucide-react'
 import { useAuth } from '../Context/authContext'
+import TeamsList from '../components/TeamsList'
 
 type TeamsTab = 'all-teams' | 'owned-teams' | 'joined-teams'
 
@@ -57,7 +58,7 @@ const TeamsPage: React.FC = () => {
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
 					<div className='flex flex-col gap-8 lg:flex-row'>
-						<aside className='w-full md:w-64 shrink-0'>
+						<aside className='w-full md:w-64 shrink-0 lg:sticky lg:top-8 lg:self-start lg:pr-8 lg:border-r lg:border-zinc-800'>
 							<nav className='space-y-1'>
 								{sidebarItems.map(({ key, label, icon: Icon }) => (
 									<button
@@ -76,42 +77,34 @@ const TeamsPage: React.FC = () => {
 							</nav>
 						</aside>
 
-						<div className='flex-1'>
-							{activeTab === 'all-teams' && (
-								<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
-									<div>
-										<Users className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-										<h2 className='text-white text-xl font-semibold mb-2'>Wszystkie drużyny</h2>
-										<p className='text-zinc-400 text-sm'>
-											Przeglądaj i dołączaj do różnych drużyn sportowych.
-										</p>
-									</div>
-								</div>
-							)}
+						<div className='flex-1 min-w-0 lg:pl-8'>
+							<div className='max-h-[calc(100vh-280px)] overflow-y-auto pr-2 rounded-xl bg-zinc-900/30 p-4 border border-zinc-800/50 dark-scrollbar'>
+								{activeTab === 'all-teams' && <TeamsList />}
 
-							{activeTab === 'owned-teams' && (
-								<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
-									<div>
-										<Crown className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-										<h2 className='text-white text-xl font-semibold mb-2'>Utworzone drużyny</h2>
-										<p className='text-zinc-400 text-sm'>
-											Tutaj znajdziesz drużyny, które utworzyłeś.
-										</p>
+								{activeTab === 'owned-teams' && (
+									<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+										<div>
+											<Crown className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+											<h2 className='text-white text-xl font-semibold mb-2'>Utworzone drużyny</h2>
+											<p className='text-zinc-400 text-sm'>
+												Tutaj znajdziesz drużyny, które utworzyłeś.
+											</p>
+										</div>
 									</div>
-								</div>
-							)}
+								)}
 
-							{activeTab === 'joined-teams' && (
-								<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
-									<div>
-										<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-										<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
-										<p className='text-zinc-400 text-sm'>
-											Tutaj znajdziesz drużyny, do których należysz.
-										</p>
+								{activeTab === 'joined-teams' && (
+									<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+										<div>
+											<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+											<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
+											<p className='text-zinc-400 text-sm'>
+												Tutaj znajdziesz drużyny, do których należysz.
+											</p>
+										</div>
 									</div>
-								</div>
-							)}
+								)}
+							</div>
 						</div>
 					</div>
 				</div>

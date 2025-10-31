@@ -8,6 +8,7 @@ public record TeamResponseDto(
         String city,
         String sportType,
         String description,
+        Integer leaderId,
         String leaderName,
         String photoUrl
 ) {
@@ -15,9 +16,10 @@ public record TeamResponseDto(
         return new TeamResponseDto(
                 team.getId(),
                 team.getName(),
-                team.getDescription(),
                 team.getCity(),
                 team.getSportType().getName(),
+                team.getDescription(),
+                team.getLeader().getId(),
                 team.getLeader().getName(),
                 team.getPhotoUrl()
         );
