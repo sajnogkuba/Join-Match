@@ -23,7 +23,7 @@ public class SportUser {
     @JoinColumn(name = "joinmatchuser_user_id", nullable = false)
     @ManyToOne
     private User user;
-    
+
     @NotNull
     @JoinColumn(name = "sport_id", nullable = false)
     @ManyToOne
