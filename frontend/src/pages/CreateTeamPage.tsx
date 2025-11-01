@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
-import CreateEventForm from "../components/CreateEventForm.tsx";
+import CreateTeamForm from "../components/CreateTeamForm.tsx";
 
-const CreateEventPage = () => {
+const CreateTeamPage = () => {
   const ownerEmail = localStorage.getItem("email");
 
   if (!ownerEmail) {
@@ -10,9 +10,9 @@ const CreateEventPage = () => {
 
   return (
     <div className="bg-gray-800 pt-10">
-      <CreateEventForm />
+      <CreateTeamForm />
     </div>
   );
 };
 
-export default CreateEventPage;
+export default CreateTeamPage;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 interface UniversalDatePickerProps {
 	value: string
@@ -154,18 +154,6 @@ export default function DatePicker({
 				newMonth.setMonth(prev.getMonth() - 1)
 			} else {
 				newMonth.setMonth(prev.getMonth() + 1)
-			}
-			return newMonth
-		})
-	}
-
-	const navigateYear = (direction: 'prev' | 'next') => {
-		setCurrentMonth(prev => {
-			const newMonth = new Date(prev)
-			if (direction === 'prev') {
-				newMonth.setFullYear(prev.getFullYear() - 1)
-			} else {
-				newMonth.setFullYear(prev.getFullYear() + 1)
 			}
 			return newMonth
 		})

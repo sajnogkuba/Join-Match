@@ -27,6 +27,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { to: '/', label: 'Strona główna' },
     { to: '/events', label: 'Eventy' },
+	{ to: '/teams', label: 'Drużyny' },
     { to: '/about', label: 'O nas' },
   ]
 

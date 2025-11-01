@@ -1,0 +1,24 @@
+package com.joinmatch.backend.repository;
+
+import com.joinmatch.backend.model.Team;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface TeamRepository extends JpaRepository<Team, Integer> {
+    boolean existsByName(String name);
+
+    @Query("""
+    SELECT t FROM Team t
+    ORDER BY 
+      CASE WHEN :sortBy = 'city' THEN LOWER(t.city)
+           WHEN :sortBy = 'name' THEN LOWER(t.name)
+           ELSE LOWER(t.name)
+      END
+      ASC
+""")
+    Page<Team> findAllCaseInsensitive(Pageable pageable, @Param("sortBy") String sortBy);
+
+}
