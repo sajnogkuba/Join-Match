@@ -1,15 +1,13 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.EventRatingRequestDto;
-import com.joinmatch.backend.dto.UserRatingRequestDto;
-import com.joinmatch.backend.model.Event;
-import com.joinmatch.backend.model.EventRating;
-import com.joinmatch.backend.model.User;
-import com.joinmatch.backend.model.UserRating;
+import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,14 +20,18 @@ public class RatingService {
     private final UserEventRepository userEventRepository;
 
     @Transactional
-    public UserRating addUserRating(UserRatingRequestDto request) {
+    public UserRatingResponseDto addUserRating(UserRatingRequestDto request) {
         User rater = userRepository.findById(request.raterId())
                 .orElseThrow(() -> new RuntimeException("Rater not found"));
         User rated = userRepository.findById(request.ratedId())
                 .orElseThrow(() -> new RuntimeException("Rated user not found"));
 
-        boolean canRate = userEventRepository.haveCommonEventOrOrganizer(rater.getId(), rated.getId());
+        boolean alreadyRated = userRatingRepository.existsByRaterAndRated(rater, rated);
+        if (alreadyRated) {
+            throw new RuntimeException("Nie możesz ocenić tego użytkownika ponownie");
+        }
 
+        boolean canRate = userEventRepository.haveCommonEventOrOrganizer(rater.getId(), rated.getId());
         if (!canRate) {
             throw new RuntimeException("Nie możesz ocenić tego użytkownika – brak wspólnego wydarzenia");
         }
@@ -41,18 +43,42 @@ public class RatingService {
                 .comment(request.comment())
                 .build();
 
-        return userRatingRepository.save(rating);
+        userRatingRepository.save(rating);
+
+        return new UserRatingResponseDto(
+                rating.getUserRateId(),
+                rating.getRating(),
+                rating.getComment(),
+                rater.getName(),
+                rating.getCreatedAt()
+        );
     }
 
+    public List<UserRatingResponseDto> getRatingsByUser(Integer userId) {
+        return userRatingRepository.findByRated_Id(userId)
+                .stream()
+                .map(r -> new UserRatingResponseDto(
+                        r.getUserRateId(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getRater().getName(),
+                        r.getCreatedAt()
+                ))
+                .toList();
+    }
     @Transactional
-    public EventRating addEventRating(EventRatingRequestDto request) {
+    public EventRatingResponseDto addEventRating(EventRatingRequestDto request) {
         User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Event event = eventRepository.findById(request.eventId())
                 .orElseThrow(() -> new RuntimeException("Event not found"));
 
-        boolean participated = userEventRepository.existsByUserAndEvent(user, event);
+        boolean alreadyRated = eventRatingRepository.existsByUserAndEvent(user, event);
+        if (alreadyRated) {
+            throw new RuntimeException("Nie możesz ocenić tego wydarzenia więcej niż raz");
+        }
 
+        boolean participated = userEventRepository.existsByUserAndEvent(user, event);
         if (!participated) {
             throw new RuntimeException("Nie możesz ocenić wydarzenia, w którym nie brałeś udziału");
         }
@@ -64,6 +90,32 @@ public class RatingService {
                 .comment(request.comment())
                 .build();
 
-        return eventRatingRepository.save(rating);
+        eventRatingRepository.save(rating);
+
+        return new EventRatingResponseDto(
+                rating.getEventRatingId(),
+                rating.getRating(),
+                rating.getComment(),
+                user.getName(),
+                rating.getCreatedAt()
+        );
+    }
+
+    public Double getAverageUserRating(Integer userId) {
+        return userRatingRepository.getAverageUserRating(userId);
+    }
+
+
+    public List<EventRatingResponseDto> getRatingsByEvent(Integer eventId) {
+        return eventRatingRepository.findByEvent_EventId(eventId)
+                .stream()
+                .map(r -> new EventRatingResponseDto(
+                        r.getEventRatingId(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getUser().getName(),
+                        r.getCreatedAt()
+                ))
+                .toList();
     }
 }

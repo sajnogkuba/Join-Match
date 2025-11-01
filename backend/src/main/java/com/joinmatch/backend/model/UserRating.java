@@ -21,11 +21,11 @@ public class UserRating {
     private Integer userRateId;
 
     @ManyToOne
-    @JoinColumn(name = "rater_ID", nullable = false)
+    @JoinColumn(name = "rater_id", nullable = false)
     private User rater;
 
     @ManyToOne
-    @JoinColumn(name = "rated_ID", nullable = false)
+    @JoinColumn(name = "rated_id", nullable = false)
     private User rated;
 
     @Column(nullable = false)
@@ -37,5 +37,10 @@ public class UserRating {
     private String comment;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 }

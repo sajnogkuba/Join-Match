@@ -7,7 +7,9 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import Avatar from '../components/Avatar'
 import EventRatingForm from '../components/EventRatingForm'
-import StarRatingInput from '../components/StarRatingInput'
+import StarRatingDisplay from '../components/StarRatingDisplay'
+import { formatEventDate, parseEventDate } from '../utils/formatDate'
+import type { EventRatingResponse } from '../Api/types/Rating'
 import {
 	Share2,
 	Shield,
@@ -45,14 +47,17 @@ const EventPage: React.FC = () => {
 	const [showDetailsAccordion, setShowDetailsAccordion] = useState(false)
 	const [showParticipants, setShowParticipants] = useState(false)
 
-	const [eventRatings, setEventRatings] = useState<any[]>([])
+	const [eventRatings, setEventRatings] = useState<EventRatingResponse[]>([])
 	const [isSending, setIsSending] = useState(false)
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
-	const isEventPast = event && dayjs(event.eventDate).isBefore(dayjs())
+	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
+	const isEventPast = event && parseEventDate(event.eventDate).isBefore(dayjs())
 
 	const averageRating = eventRatings.length
-		? eventRatings.reduce((acc: number, r: any) => acc + r.rating, 0) / eventRatings.length
+		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
 		: null
+
+	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
 
 	// fetch user email from backend based on stored access token (similar to ProfilePage)
 	useEffect(() => {
@@ -79,9 +84,10 @@ const EventPage: React.FC = () => {
 			const token = localStorage.getItem('accessToken')
 			if (!token) return
 			try {
-				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
-				setCurrentUserId(data.id)
-				setUserEmail(data.email)
+					const { data } = await axiosInstance.get('/auth/user', { params: { token } })
+					setCurrentUserId(data.id)
+					setCurrentUserName(data.name)
+					setUserEmail(data.email)
 			} catch (err) {
 				console.error('❌ Błąd pobierania usera:', err)
 			}
@@ -310,16 +316,14 @@ const EventPage: React.FC = () => {
 
 							{/* Tytuł i szczegóły */}
 							<div>
-								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
-								{averageRating && (
-									<div className='flex items-center gap-1 text-yellow-400 mt-2'>
-										<StarRatingInput value={averageRating} onChange={() => {}} readOnly size={16} />
-										<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
-									</div>
-								)}
-								<p className='text-sm text-zinc-400 mt-1'>
-									{dayjs(event.eventDate).format('dddd, DD.MM.YYYY • HH:mm')}
-								</p>
+									<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
+									{isEventPast && averageRating && (
+										<div className='flex items-center gap-2 mt-2'>
+											<StarRatingDisplay value={averageRating} size={16} />
+											<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
+										</div>
+									)}
+								<p className='text-sm text-zinc-400 mt-1'>{formatEventDate(event.eventDate)}</p>
 								<p className='text-sm text-zinc-400'>{event.sportObjectName}</p>
 							</div>
 						</div>
@@ -477,7 +481,9 @@ const EventPage: React.FC = () => {
 								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
 
 								{/* Formularz oceny tylko jeśli użytkownik brał udział */}
-								{joined && isEventPast && <EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />}
+								{joined && isEventPast && !hasRated && (
+									<EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />
+								)}
 
 								{joined && !isEventPast && (
 									<p className='text-sm text-zinc-400 italic mt-3'>
@@ -485,18 +491,36 @@ const EventPage: React.FC = () => {
 									</p>
 								)}
 
+								{joined && isEventPast && hasRated && (
+									<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś to wydarzenie.</p>
+								)}
+
 								{/* Lista ocen */}
 								{eventRatings.length ? (
 									<ul className='space-y-3 mt-6'>
 										{eventRatings.map(r => (
 											<li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
-												<div className='flex items-center justify-between mb-1'>
-													<StarRatingInput value={r.rating} onChange={() => {}} readOnly size={20} />
-													<span className='text-xs text-zinc-500'>
-														{new Date(r.createdAt).toLocaleDateString('pl-PL')}
-													</span>
-												</div>
-												{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
+													<div className='flex items-center justify-between mb-1'>
+														{(() => {
+															const participant = participants.find(p => p.userName === r.userName)
+															return (
+																<div className='flex items-center gap-3'>
+																	<Avatar src={participant?.userAvatarUrl || null} name={r.userName} size='sm' className='ring-1 ring-zinc-700' />
+																	<div className='leading-tight'>
+																		<div className='text-white text-sm font-medium'>{r.userName}</div>
+																		{participant?.userEmail && <div className='text-xs text-zinc-400'>{participant.userEmail}</div>}
+																	</div>
+																</div>
+														)
+														})()}
+														<span className='text-xs text-zinc-500'>
+															{dayjs(r.createdAt).format('DD.MM.YYYY HH:mm')}
+														</span>
+													</div>
+													<div className='mb-2'>
+														<StarRatingDisplay value={r.rating} size={18} />
+													</div>
+													{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
 											</li>
 										))}
 									</ul>
