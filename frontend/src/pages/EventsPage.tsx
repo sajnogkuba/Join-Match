@@ -1,4 +1,3 @@
-// src/pages/EventsPage.tsx
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -10,6 +9,7 @@ import MapView from '../components/MapView'
 import PlaceAutocomplete from '../components/PlaceAutocomplete'
 import type { UserSportsResponse } from '../Api/types/Sports'
 import AlertModal from '../components/AlertModal'
+import { parseEventDate } from '../utils/formatDate'
 import {
 	Map as MapIcon,
 	Grid as GridIcon,
@@ -28,18 +28,6 @@ import {
 } from 'lucide-react'
 
 dayjs.locale('pl')
-
-// const LazyMapView = ({ }: { events: Event[] }) => (
-// 	<div className='grid h-[520px] place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
-// 		<div>
-// 			<div className='text-4xl mb-3'>🗺️</div>
-// 			<p className='text-white font-semibold'>Widok mapy będzie dostępny wkrótce</p>
-// 			<p className='mt-1 text-sm text-zinc-400'>
-// 				Po dodaniu współrzędnych do wydarzeń (latitude/longitude) pokażemy markery na mapie.
-// 			</p>
-// 		</div>
-// 	</div>
-// )
 
 type SortKey = 'date_asc' | 'date_desc' | 'price_asc' | 'price_desc' | 'popularity'
 const PAGE_SIZE = 12
@@ -189,16 +177,16 @@ const EventsPage = () => {
 		if (onlyAvailable) list = list.filter(e => e.numberOfParticipants - (e as any).bookedParticipants > 0)
 
 		if (dateFrom)
-			list = list.filter(
-				e =>
-					dayjs(e.eventDate).isAfter(dayjs(dateFrom).startOf('day')) ||
-					dayjs(e.eventDate).isSame(dayjs(dateFrom), 'day')
-			)
+			list = list.filter(e => {
+            const eventDate = parseEventDate(e.eventDate)
+            return eventDate.isAfter(dayjs(dateFrom).startOf('day')) || eventDate.isSame(dayjs(dateFrom), 'day')
+        })
 
 		if (dateTo)
-			list = list.filter(
-				e => dayjs(e.eventDate).isBefore(dayjs(dateTo).endOf('day')) || dayjs(e.eventDate).isSame(dayjs(dateTo), 'day')
-			)
+			list = list.filter(e => {
+            const eventDate = parseEventDate(e.eventDate)
+            return eventDate.isBefore(dayjs(dateTo).endOf('day')) || eventDate.isSame(dayjs(dateTo), 'day')
+        })
 
 		if (priceMin) list = list.filter((e: any) => Number(e.cost) >= Number(priceMin))
 
@@ -209,9 +197,9 @@ const EventsPage = () => {
 		list.sort((a, b) => {
 			switch (sort) {
 				case 'date_asc':
-					return +new Date(a.eventDate) - +new Date(b.eventDate)
+					return parseEventDate(a.eventDate).valueOf() - parseEventDate(b.eventDate).valueOf()
 				case 'date_desc':
-					return +new Date(b.eventDate) - +new Date(a.eventDate)
+					return parseEventDate(b.eventDate).valueOf() - parseEventDate(a.eventDate).valueOf()
 				case 'price_asc':
 					return (a as any).cost - (b as any).cost
 				case 'price_desc':
@@ -612,7 +600,7 @@ const EventsPage = () => {
 												</div>
 												<div className='mt-2 text-sm text-zinc-300 space-y-1'>
 													<div className='flex items-center gap-2'>
-														<CalendarDays size={16} /> {dayjs(ev.eventDate).format('DD.MM.YYYY HH:mm')}
+														<CalendarDays size={16} /> {parseEventDate(ev.eventDate).format('DD.MM.YYYY HH:mm')}
 													</div>
 													<div className='flex items-center gap-2'>
 														<MapPin size={16} /> {ev.sportObjectName}
