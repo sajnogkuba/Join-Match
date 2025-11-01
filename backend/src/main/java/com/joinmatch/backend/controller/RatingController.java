@@ -20,7 +20,6 @@ public class RatingController {
 
     private final RatingService ratingService;
 
-    // --- Oceny użytkowników ---
     @PostMapping("/user")
     public ResponseEntity<UserRatingResponseDto> addUserRating(@RequestBody UserRatingRequestDto request) {
         UserRatingResponseDto response = ratingService.addUserRating(request);
@@ -33,7 +32,6 @@ public class RatingController {
         return ResponseEntity.ok(ratings);
     }
 
-    // --- Oceny wydarzeń ---
     @PostMapping("/event")
     public ResponseEntity<EventRatingResponseDto> addEventRating(@RequestBody EventRatingRequestDto request) {
         EventRatingResponseDto response = ratingService.addEventRating(request);
@@ -46,7 +44,6 @@ public class RatingController {
         return ResponseEntity.ok(ratings);
     }
 
-    // --- (opcjonalnie) średnia ocen użytkownika ---
     @GetMapping("/user/{userId}/average")
     public ResponseEntity<Double> getAverageUserRating(@PathVariable Integer userId) {
         Double average = ratingService.getAverageUserRating(userId);

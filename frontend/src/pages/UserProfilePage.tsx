@@ -5,7 +5,7 @@ import type { UsersResponse } from '../Api/types/User'
 import { UserPlus, UserMinus } from 'lucide-react'
 import Avatar from '../components/Avatar'
 import StarRatingDisplay from '../components/StarRatingDisplay'
-import StarRatingInput from '../components/StarRatingInput'
+import type { UserRatingResponse } from '../Api/types/Rating'
 import UserRatingForm from '../components/UserRatingForm'
 import { toast } from 'sonner'
 
@@ -23,22 +23,31 @@ const UserProfilePage = () => {
 	const [friendStatus, setFriendStatus] = useState<FriendStatus>({
 		isFriend: false,
 	})
-	const [userRatings, setUserRatings] = useState<any[]>([])
+    const [userRatings, setUserRatings] = useState<UserRatingResponse[]>([])
 	const [isSending, setIsSending] = useState(false)
 
 	const [showAllEvents, setShowAllEvents] = useState(false)
 	const EVENTS_PREVIEW = 3
 
-	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+    const [currentUserName, setCurrentUserName] = useState<string | null>(null)
+    const [viewerEvents, setViewerEvents] = useState<any[]>([])
 
-	const fetchUserRatings = async () => {
-		try {
-			const res = await api.get(`/ratings/user/${id}`)
-			setUserRatings(res.data || [])
-		} catch {
-			setUserRatings([])
-		}
-	}
+    const fetchUserRatings = async () => {
+        try {
+            const res = await api.get(`/ratings/user/${id}`)
+            setUserRatings(res.data || [])
+        } catch {
+            setUserRatings([])
+        }
+    }
+
+    const averageRating = userRatings.length
+        ? userRatings.reduce((acc, r) => acc + r.rating, 0) / userRatings.length
+        : null
+
+    const hasRated = !!(currentUserName && userRatings.some(r => r.raterName === currentUserName))
+    const hasCommonEvent = viewerEvents.length > 0 && events.length > 0 && viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
 
 	const handleAddUserRating = async (rating: number, comment: string) => {
 		if (!currentUserId || !id) return
@@ -86,33 +95,41 @@ const UserProfilePage = () => {
 		if (!token || !id) return
 
 		const fetchData = async () => {
-			try {
-				// first get current user (to obtain viewerId)
-				const currentUserRes = await api.get('/auth/user', { params: { token } })
-				// then fetch profile passing viewerId so backend returns relationStatus
-				const profileRes = await api.get(`/auth/user/${id}`, {
-					params: { viewerId: currentUserRes.data.id },
-				})
+            try {
+                // first get current user (to obtain viewerId)
+                const currentUserRes = await api.get('/auth/user', { params: { token } })
+                // then fetch profile passing viewerId so backend returns relationStatus
+                const profileRes = await api.get(`/auth/user/${id}`, {
+                    params: { viewerId: currentUserRes.data.id },
+                })
 
-				setCurrentUserId(currentUserRes.data.id)
-				setUser(profileRes.data)
+                setCurrentUserId(currentUserRes.data.id)
+                setCurrentUserName(currentUserRes.data.name)
+                setUser(profileRes.data)
 
 				const relation = profileRes.data.relationStatus
 				if (relation === 'FRIEND') setFriendStatus({ isFriend: true })
 				else if (relation === 'PENDING') setFriendStatus({ isFriend: false, pendingRequestId: -1 })
 				else setFriendStatus({ isFriend: false })
 
-				const userEmail = profileRes.data.email
-				const eventsRes = await api.get(`/user-event/by-user-email`, { params: { userEmail } })
-				setEvents(eventsRes.data || [])
-			} catch {
-				setErrorMsg('Nie udało się pobrać profilu użytkownika.')
-			} finally {
-				setLoading(false)
-			}
-		}
-		fetchData()
-	}, [id])
+                const targetEmail = profileRes.data.email
+                const targetEventsRes = await api.get(`/user-event/by-user-email`, { params: { userEmail: targetEmail } })
+                setEvents(targetEventsRes.data || [])
+
+                // fetch viewer's events as well (to check common events for UI gating)
+                const viewerEmail = currentUserRes.data.email
+                if (viewerEmail) {
+                    const viewerEventsRes = await api.get(`/user-event/by-user-email`, { params: { userEmail: viewerEmail } })
+                    setViewerEvents(viewerEventsRes.data || [])
+                }
+            } catch {
+                setErrorMsg('Nie udało się pobrać profilu użytkownika.')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchData()
+    }, [id])
 
 	useEffect(() => {
 		if (currentUserId && id && currentUserId === parseInt(id)) {
@@ -174,14 +191,21 @@ const UserProfilePage = () => {
 				<div className='rounded-3xl bg-black/60 p-6 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800 flex flex-col md:flex-row gap-6'>
 					{/* Avatar */}
 					<div className='flex flex-col items-center md:w-1/3 text-center'>
-						<Avatar
-							src={user.urlOfPicture}
-							name={user.name}
-							size='md'
-							className='ring-4 ring-violet-700 shadow-xl mb-4'
-						/>
-						<h2 className='text-xl font-semibold text-white'>{user.name}</h2>
-						<p className='text-sm text-zinc-400'>{user.email}</p>
+                <Avatar
+                    src={user.urlOfPicture}
+                    name={user.name}
+                    size='md'
+                    className='ring-4 ring-violet-700 shadow-xl mb-4'
+                />
+                <h2 className='text-xl font-semibold text-white'>{user.name}</h2>
+                <p className='text-sm text-zinc-400'>{user.email}</p>
+
+                {averageRating && (
+                    <div className='mt-3 inline-flex items-center gap-2'>
+                        <StarRatingDisplay value={averageRating} size={18} />
+                        <span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
+                    </div>
+                )}
 
 						<div className='mt-6 flex flex-col gap-3 w-full'>
 							{!friendStatus.isFriend && friendStatus.pendingRequestId !== -1 && (
@@ -282,29 +306,43 @@ const UserProfilePage = () => {
 						<section className='mt-8'>
 							<h3 className='text-lg font-semibold text-white mb-3'>Oceny użytkownika</h3>
 
-							{/* Formularz oceny */}
-							{currentUserId && currentUserId !== parseInt(id ?? '0') && (
-								<UserRatingForm onSubmit={handleAddUserRating} disabled={isSending} />
-							)}
+                {/* Formularz oceny: tylko inni, jednorazowo, opcjonalnie z wspólnym wydarzeniem */}
+                {currentUserId && currentUserId !== parseInt(id ?? '0') && !hasRated && hasCommonEvent && (
+                    <UserRatingForm onSubmit={handleAddUserRating} disabled={isSending} />
+                )}
+                {hasRated && (
+                    <p className='text-sm text-emerald-300 italic'>Dziękujemy! Już oceniłeś tego użytkownika.</p>
+                )}
+                {!hasRated && currentUserId && currentUserId !== parseInt(id ?? '0') && !hasCommonEvent && (
+                    <p className='text-sm text-zinc-400 italic'>Możesz ocenić użytkownika tylko, jeśli uczestniczyliście w tym samym wydarzeniu.</p>
+                )}
 
 							{/* Lista ocen */}
-							{userRatings.length ? (
-								<ul className='space-y-3 mt-6'>
-									{userRatings.map(r => (
-										<li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
-											<div className='flex items-center justify-between mb-1'>
-												<StarRatingInput value={r.rating} onChange={() => {}} readOnly size={20} />
-												<span className='text-xs text-zinc-500'>
-													{new Date(r.createdAt).toLocaleDateString('pl-PL')}
-												</span>
-											</div>
-											{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
-										</li>
-									))}
-								</ul>
-							) : (
-								<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego użytkownika.</p>
-							)}
+                {userRatings.length ? (
+                    <ul className='space-y-3 mt-6'>
+                        {userRatings.map(r => (
+                            <li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
+                                <div className='flex items-center justify-between mb-1'>
+                                    <div className='flex items-center gap-3'>
+                                        <Avatar src={null} name={r.raterName} size='sm' className='ring-1 ring-zinc-700' />
+                                        <div className='leading-tight'>
+                                            <div className='text-white text-sm font-medium'>{r.raterName}</div>
+                                        </div>
+                                    </div>
+                                    <span className='text-xs text-zinc-500'>
+                                        {new Date(r.createdAt).toLocaleDateString('pl-PL')}
+                                    </span>
+                                </div>
+                                <div className='mb-2'>
+                                    <StarRatingDisplay value={r.rating} size={18} />
+                                </div>
+                                {r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego użytkownika.</p>
+                )}
 						</section>
 					</div>
 				</div>
