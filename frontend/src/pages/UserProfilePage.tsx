@@ -7,6 +7,7 @@ import Avatar from '../components/Avatar'
 import StarRatingDisplay from '../components/StarRatingDisplay'
 import type { UserRatingResponse } from '../Api/types/Rating'
 import UserRatingForm from '../components/UserRatingForm'
+import { parseLocalDate } from '../utils/formatDate'
 import { toast } from 'sonner'
 
 interface FriendStatus {
@@ -268,13 +269,17 @@ const UserProfilePage = () => {
 									<ul className='space-y-3'>
 										{(showAllEvents ? events : events.slice(0, EVENTS_PREVIEW)).map(e => (
 											<li key={e.eventId} className='flex items-center gap-4 bg-zinc-800/50 px-4 py-2 rounded-lg'>
-												{e.imageUrl ? (
-													<img src={e.imageUrl} alt='' className='h-12 w-12 rounded-full object-cover' />
-												) : (
-													<div className='h-12 w-12 rounded-full bg-zinc-700 grid place-items-center text-xs text-zinc-400'>
-														img
-													</div>
-												)}
+                                {e.imageUrl ? (
+                                    <img
+                                        src={e.imageUrl}
+                                        alt=''
+                                        className='h-12 w-12 rounded-full object-cover'
+                                    />
+                                ) : (
+                                    <div className='h-12 w-12 rounded-full bg-zinc-700 grid place-items-center text-xs text-zinc-400'>
+                                        img
+                                    </div>
+                                )}
 												<div className='flex-1 min-w-0'>
 													<p className='text-white font-medium truncate'>{e.eventName}</p>
 													<p className='text-xs text-zinc-400 truncate'>Status: {e.attendanceStatusName}</p>
@@ -324,13 +329,13 @@ const UserProfilePage = () => {
                             <li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
                                 <div className='flex items-center justify-between mb-1'>
                                     <div className='flex items-center gap-3'>
-                                        <Avatar src={null} name={r.raterName} size='sm' className='ring-1 ring-zinc-700' />
+                                        <Avatar src={r.raterAvatarUrl || null} name={r.raterName} size='sm' className='ring-1 ring-zinc-700' />
                                         <div className='leading-tight'>
                                             <div className='text-white text-sm font-medium'>{r.raterName}</div>
                                         </div>
                                     </div>
                                     <span className='text-xs text-zinc-500'>
-                                        {new Date(r.createdAt).toLocaleDateString('pl-PL')}
+                                        {parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
                                     </span>
                                 </div>
                                 <div className='mb-2'>

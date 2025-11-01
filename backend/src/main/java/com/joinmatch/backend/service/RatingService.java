@@ -50,7 +50,8 @@ public class RatingService {
                 rating.getRating(),
                 rating.getComment(),
                 rater.getName(),
-                rating.getCreatedAt()
+                rating.getCreatedAt(),
+                rater.getUrlOfPicture()
         );
     }
 
@@ -62,7 +63,8 @@ public class RatingService {
                         r.getRating(),
                         r.getComment(),
                         r.getRater().getName(),
-                        r.getCreatedAt()
+                        r.getCreatedAt(),
+                        r.getRater().getUrlOfPicture()
                 ))
                 .toList();
     }

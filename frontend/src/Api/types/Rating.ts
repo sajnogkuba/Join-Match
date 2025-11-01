@@ -18,6 +18,7 @@ export interface UserRatingRequest {
     comment: string
     createdAt: string
     raterName: string
+    raterAvatarUrl: string
   }
   
   export interface EventRatingResponse {

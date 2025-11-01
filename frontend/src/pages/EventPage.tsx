@@ -8,7 +8,7 @@ import 'dayjs/locale/pl'
 import Avatar from '../components/Avatar'
 import EventRatingForm from '../components/EventRatingForm'
 import StarRatingDisplay from '../components/StarRatingDisplay'
-import { formatEventDate, parseEventDate } from '../utils/formatDate'
+import { formatEventDate, parseEventDate, parseLocalDate } from '../utils/formatDate'
 import type { EventRatingResponse } from '../Api/types/Rating'
 import {
 	Share2,
@@ -514,7 +514,7 @@ const EventPage: React.FC = () => {
 														)
 														})()}
 														<span className='text-xs text-zinc-500'>
-															{dayjs(r.createdAt).format('DD.MM.YYYY HH:mm')}
+															{parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
 														</span>
 													</div>
 													<div className='mb-2'>

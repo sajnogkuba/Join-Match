@@ -7,5 +7,6 @@ public record UserRatingResponseDto(
         Integer rating,
         String comment,
         String raterName,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String raterAvatarUrl
 ) {}
