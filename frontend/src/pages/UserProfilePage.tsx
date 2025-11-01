@@ -5,6 +5,9 @@ import type { UsersResponse } from '../Api/types/User'
 import { UserPlus, UserMinus } from 'lucide-react'
 import Avatar from '../components/Avatar'
 import StarRatingDisplay from '../components/StarRatingDisplay'
+import StarRatingInput from '../components/StarRatingInput'
+import UserRatingForm from '../components/UserRatingForm'
+import { toast } from 'sonner'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -20,30 +23,63 @@ const UserProfilePage = () => {
 	const [friendStatus, setFriendStatus] = useState<FriendStatus>({
 		isFriend: false,
 	})
+	const [userRatings, setUserRatings] = useState<any[]>([])
+	const [isSending, setIsSending] = useState(false)
 
-  const [showAllEvents, setShowAllEvents] = useState(false)
+	const [showAllEvents, setShowAllEvents] = useState(false)
 	const EVENTS_PREVIEW = 3
 
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 
+	const fetchUserRatings = async () => {
+		try {
+			const res = await api.get(`/ratings/user/${id}`)
+			setUserRatings(res.data || [])
+		} catch {
+			setUserRatings([])
+		}
+	}
+
+	const handleAddUserRating = async (rating: number, comment: string) => {
+		if (!currentUserId || !id) return
+		setIsSending(true)
+		try {
+			await api.post(`/ratings/user`, {
+				raterId: currentUserId,
+				ratedId: parseInt(id),
+				rating,
+				comment,
+			})
+			toast.success('Dziękujemy za ocenę!')
+			fetchUserRatings()
+		} catch {
+			toast.error('Nie możesz ocenić tego użytkownika.')
+		} finally {
+			setIsSending(false)
+		}
+	}
+
+	useEffect(() => {
+		if (id) fetchUserRatings()
+	}, [id])
+
 	const levelToNumber = (level: string | number) => {
-    if (typeof level === 'number') return level
-    if (!level) return 0
-  
-    const lower = level.toString().toLowerCase()
-    switch (lower) {
-      case 'niski':
-        return 1
-      case 'średni':
-        return 3
-      case 'wysoki':
-        return 5
-      default:
-        const parsed = parseInt(lower)
-        return isNaN(parsed) ? 0 : parsed
-    }
-  }
-  
+		if (typeof level === 'number') return level
+		if (!level) return 0
+
+		const lower = level.toString().toLowerCase()
+		switch (lower) {
+			case 'niski':
+				return 1
+			case 'średni':
+				return 3
+			case 'wysoki':
+				return 5
+			default:
+				const parsed = parseInt(lower)
+				return isNaN(parsed) ? 0 : parsed
+		}
+	}
 
 	useEffect(() => {
 		const token = localStorage.getItem('accessToken')
@@ -202,36 +238,26 @@ const UserProfilePage = () => {
 
 						{/* Events history section */}
 						<section>
-							<h3 className="text-lg font-semibold text-white mb-3">Historia wydarzeń</h3>
+							<h3 className='text-lg font-semibold text-white mb-3'>Historia wydarzeń</h3>
 							{events.length ? (
 								<>
-									<ul className="space-y-3">
-										{(showAllEvents ? events : events.slice(0, EVENTS_PREVIEW)).map((e) => (
-											<li
-												key={e.eventId}
-												className="flex items-center gap-4 bg-zinc-800/50 px-4 py-2 rounded-lg"
-											>
+									<ul className='space-y-3'>
+										{(showAllEvents ? events : events.slice(0, EVENTS_PREVIEW)).map(e => (
+											<li key={e.eventId} className='flex items-center gap-4 bg-zinc-800/50 px-4 py-2 rounded-lg'>
 												{e.imageUrl ? (
-													<img
-														src={e.imageUrl}
-														alt=""
-														className="h-12 w-12 rounded-full object-cover"
-													/>
+													<img src={e.imageUrl} alt='' className='h-12 w-12 rounded-full object-cover' />
 												) : (
-													<div className="h-12 w-12 rounded-full bg-zinc-700 grid place-items-center text-xs text-zinc-400">
+													<div className='h-12 w-12 rounded-full bg-zinc-700 grid place-items-center text-xs text-zinc-400'>
 														img
 													</div>
 												)}
-												<div className="flex-1 min-w-0">
-													<p className="text-white font-medium truncate">{e.eventName}</p>
-													<p className="text-xs text-zinc-400 truncate">
-														Status: {e.attendanceStatusName}
-													</p>
+												<div className='flex-1 min-w-0'>
+													<p className='text-white font-medium truncate'>{e.eventName}</p>
+													<p className='text-xs text-zinc-400 truncate'>Status: {e.attendanceStatusName}</p>
 												</div>
 												<a
 													href={`/event/${e.eventId}`}
-													className="text-violet-400 hover:text-violet-300 text-sm font-medium"
-												>
+													className='text-violet-400 hover:text-violet-300 text-sm font-medium'>
 													Zobacz →
 												</a>
 											</li>
@@ -248,7 +274,36 @@ const UserProfilePage = () => {
 									)}
 								</>
 							) : (
-								<p className="text-zinc-500 text-sm italic">Brak historii wydarzeń.</p>
+								<p className='text-zinc-500 text-sm italic'>Brak historii wydarzeń.</p>
+							)}
+						</section>
+
+						{/* --- Oceny użytkownika --- */}
+						<section className='mt-8'>
+							<h3 className='text-lg font-semibold text-white mb-3'>Oceny użytkownika</h3>
+
+							{/* Formularz oceny */}
+							{currentUserId && currentUserId !== parseInt(id ?? '0') && (
+								<UserRatingForm onSubmit={handleAddUserRating} disabled={isSending} />
+							)}
+
+							{/* Lista ocen */}
+							{userRatings.length ? (
+								<ul className='space-y-3 mt-6'>
+									{userRatings.map(r => (
+										<li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
+											<div className='flex items-center justify-between mb-1'>
+												<StarRatingInput value={r.rating} onChange={() => {}} readOnly size={20} />
+												<span className='text-xs text-zinc-500'>
+													{new Date(r.createdAt).toLocaleDateString('pl-PL')}
+												</span>
+											</div>
+											{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
+										</li>
+									))}
+								</ul>
+							) : (
+								<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego użytkownika.</p>
 							)}
 						</section>
 					</div>

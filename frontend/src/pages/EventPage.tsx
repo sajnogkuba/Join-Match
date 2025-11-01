@@ -6,6 +6,8 @@ import axiosInstance from '../Api/axios'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import Avatar from '../components/Avatar'
+import EventRatingForm from '../components/EventRatingForm'
+import StarRatingInput from '../components/StarRatingInput'
 import {
 	Share2,
 	Shield,
@@ -19,6 +21,7 @@ import {
 	MessageCircle,
 	CalendarDays,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 dayjs.locale('pl')
 
@@ -42,6 +45,15 @@ const EventPage: React.FC = () => {
 	const [showDetailsAccordion, setShowDetailsAccordion] = useState(false)
 	const [showParticipants, setShowParticipants] = useState(false)
 
+	const [eventRatings, setEventRatings] = useState<any[]>([])
+	const [isSending, setIsSending] = useState(false)
+	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+	const isEventPast = event && dayjs(event.eventDate).isBefore(dayjs())
+
+	const averageRating = eventRatings.length
+		? eventRatings.reduce((acc: number, r: any) => acc + r.rating, 0) / eventRatings.length
+		: null
+
 	// fetch user email from backend based on stored access token (similar to ProfilePage)
 	useEffect(() => {
 		const fetchUserEmail = async () => {
@@ -62,6 +74,21 @@ const EventPage: React.FC = () => {
 		fetchUserEmail()
 	}, [])
 
+	useEffect(() => {
+		const fetchUser = async () => {
+			const token = localStorage.getItem('accessToken')
+			if (!token) return
+			try {
+				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
+				setCurrentUserId(data.id)
+				setUserEmail(data.email)
+			} catch (err) {
+				console.error('❌ Błąd pobierania usera:', err)
+			}
+		}
+		fetchUser()
+	}, [])
+
 	const fetchParticipants = async (eventId: number) => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
@@ -73,6 +100,39 @@ const EventPage: React.FC = () => {
 			setParticipants([])
 		}
 	}
+
+	const fetchEventRatings = async () => {
+		try {
+			const res = await axiosInstance.get(`/ratings/event/${id}`)
+			setEventRatings(res.data || [])
+		} catch (e) {
+			console.error('❌ Błąd pobierania ocen wydarzenia:', e)
+			setEventRatings([])
+		}
+	}
+
+	const handleAddEventRating = async (rating: number, comment: string) => {
+		if (!userEmail || !id) return
+		setIsSending(true)
+		try {
+			await axiosInstance.post(`/ratings/event`, {
+				userId: currentUserId,
+				eventId: parseInt(id),
+				rating,
+				comment,
+			})
+			toast.success('Dziękujemy za ocenę wydarzenia!')
+			fetchEventRatings()
+		} catch {
+			toast.error('Nie możesz ocenić tego wydarzenia.')
+		} finally {
+			setIsSending(false)
+		}
+	}
+
+	useEffect(() => {
+		if (id) fetchEventRatings()
+	}, [id])
 
 	// ---------------- FETCH EVENT + PARTICIPANTS ----------------
 	useEffect(() => {
@@ -251,6 +311,12 @@ const EventPage: React.FC = () => {
 							{/* Tytuł i szczegóły */}
 							<div>
 								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
+								{averageRating && (
+									<div className='flex items-center gap-1 text-yellow-400 mt-2'>
+										<StarRatingInput value={averageRating} onChange={() => {}} readOnly size={16} />
+										<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
+									</div>
+								)}
 								<p className='text-sm text-zinc-400 mt-1'>
 									{dayjs(event.eventDate).format('dddd, DD.MM.YYYY • HH:mm')}
 								</p>
@@ -404,6 +470,38 @@ const EventPage: React.FC = () => {
 											zasady, wymagania oraz inne istotne detale.
 										</p>
 									</div>
+								)}
+							</div>
+							{/* --- Oceny wydarzenia --- */}
+							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-8'>
+								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
+
+								{/* Formularz oceny tylko jeśli użytkownik brał udział */}
+								{joined && isEventPast && <EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />}
+
+								{joined && !isEventPast && (
+									<p className='text-sm text-zinc-400 italic mt-3'>
+										Możesz ocenić wydarzenie dopiero po jego zakończeniu.
+									</p>
+								)}
+
+								{/* Lista ocen */}
+								{eventRatings.length ? (
+									<ul className='space-y-3 mt-6'>
+										{eventRatings.map(r => (
+											<li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
+												<div className='flex items-center justify-between mb-1'>
+													<StarRatingInput value={r.rating} onChange={() => {}} readOnly size={20} />
+													<span className='text-xs text-zinc-500'>
+														{new Date(r.createdAt).toLocaleDateString('pl-PL')}
+													</span>
+												</div>
+												{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
+											</li>
+										))}
+									</ul>
+								) : (
+									<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego wydarzenia.</p>
 								)}
 							</div>
 						</section>

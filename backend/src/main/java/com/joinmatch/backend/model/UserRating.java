@@ -1,0 +1,41 @@
+package com.joinmatch.backend.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "user_rating")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class UserRating {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer userRateId;
+
+    @ManyToOne
+    @JoinColumn(name = "rater_ID", nullable = false)
+    private User rater;
+
+    @ManyToOne
+    @JoinColumn(name = "rated_ID", nullable = false)
+    private User rated;
+
+    @Column(nullable = false)
+    @Min(1)
+    @Max(5)
+    private int rating;
+
+    @Column(length = 500)
+    private String comment;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+}
