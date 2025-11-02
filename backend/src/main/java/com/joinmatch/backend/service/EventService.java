@@ -39,7 +39,7 @@ public class EventService {
                 .eventId(e.getEventId())
                 .eventName(e.getEventName())
                 .numberOfParticipants(e.getNumberOfParticipants())
-                // .bookedParticipants(0) // TODO
+                .bookedParticipants(e.getNumberOfParticipants())
 
                 .cost(e.getCost())
                 .currency("PLN")
@@ -62,6 +62,7 @@ public class EventService {
 
                 .ownerId(e.getOwner().getId())
                 .ownerName(e.getOwner().getName())
+                .ownerAvatarUrl(e.getOwner().getUrlOfPicture())
 
                 .skillLevel("Amator")
                 .paymentMethod("Gotówka")

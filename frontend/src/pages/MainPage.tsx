@@ -4,8 +4,10 @@ import dayjs from 'dayjs'
 import { motion } from 'framer-motion'
 import { MapPin, CalendarDays, Bookmark, Users } from 'lucide-react'
 import BackgroundImage from '../assets/Background.jpg'
+import AlertModal from '../components/AlertModal'
 import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
+import type { UserSportsResponse } from '../Api/types/Sports'
 
 const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Running', 'Yoga', 'Swimming']
 
@@ -18,6 +20,12 @@ const MainPage: React.FC = () => {
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
+	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
+	const [alertModal, setAlertModal] = useState<{
+		isOpen: boolean;
+		title: string;
+		message: string;
+	}>({ isOpen: false, title: "", message: "" })
 	const navigate = useNavigate()
 
 	useEffect(() => setUserEmail(localStorage.getItem('email')), [])
@@ -46,6 +54,20 @@ const MainPage: React.FC = () => {
 		api.get('/user-saved-event/by-user-email', { params: { userEmail } })
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(() => {})
+		
+		// Fetch user's sports
+		const token = localStorage.getItem('accessToken')
+		if (token) {
+			api.get<UserSportsResponse>('/sport-type/user', { params: { token } })
+				.then(({ data }) => {
+					const sportsMap = new Map<string, number>()
+					data.sports?.forEach((s: UserSportsResponse['sports'][number]) => {
+						sportsMap.set(s.name, s.rating)
+					})
+					setUserSports(sportsMap)
+				})
+				.catch(() => {})
+		}
 	}, [userEmail])
 
 	const handleSignUp = async (eventId: number) => {
@@ -69,6 +91,38 @@ const MainPage: React.FC = () => {
 						: ev
 				))
 			} else {
+				// Check if event has available places
+				const event = events.find(ev => ev.eventId === eventId)
+				const bookedParticipants = (event as any)?.bookedParticipants || 0
+				const numberOfParticipants = event?.numberOfParticipants || 0
+				
+				if (bookedParticipants >= numberOfParticipants) {
+					setAlertModal({
+						isOpen: true,
+						title: "Wydarzenie pełne",
+						message: "Przepraszamy, to wydarzenie jest już pełne."
+					})
+					return
+				}
+				
+				// Check if user has required skill level
+				if (event?.minLevel) {
+					const userLevel = userSports.get(event.sportTypeName)
+					const requiredLevel = event.minLevel
+					
+					if (userLevel === undefined || userLevel < requiredLevel) {
+						const modalMessage = userLevel === undefined 
+							? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+							: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
+						setAlertModal({
+							isOpen: true,
+							title: "Niewystarczający poziom",
+							message: modalMessage
+						})
+						return
+					}
+				}
+				
 				// Join the event
 				await api.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
 				setJoinedEventIds(prev => new Set([...prev, eventId]))
@@ -242,15 +296,25 @@ const MainPage: React.FC = () => {
 											>
 												<Bookmark size={14} /> {savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}
 											</button>
-											<button
-												onClick={() => handleSignUp(event.eventId)}
-												className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${joinedEventIds.has(event.eventId)
-													? 'bg-red-600 hover:bg-red-500'
-													: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
-													}`}
-											>
-												{joinedEventIds.has(event.eventId) ? 'Opuść' : 'Dołącz'}
-											</button>
+											{(() => {
+												const isJoined = joinedEventIds.has(event.eventId)
+												const isFull = ((event as any).bookedParticipants || 0) >= event.numberOfParticipants && !isJoined
+												return (
+													<button
+														onClick={() => handleSignUp(event.eventId)}
+														disabled={isFull}
+														className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+															isJoined
+																? 'bg-red-600 hover:bg-red-500'
+																: isFull
+																? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
+														}`}
+													>
+														{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+													</button>
+												)
+											})()}
 										</div>
 									</div>
 								</motion.div>
@@ -305,6 +369,13 @@ const MainPage: React.FC = () => {
 					</div>
 				</div>
 			</section>
+			<AlertModal
+				isOpen={alertModal.isOpen}
+				onClose={() => setAlertModal({ isOpen: false, title: "", message: "" })}
+				title={alertModal.title}
+				message={alertModal.message}
+				variant="warning"
+			/>
 		</div>
 	)
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../Context/authContext'
 import { useNavigate } from 'react-router-dom'
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin } from '@react-oauth/google'
 import axiosInstance from '../Api/axios';
 
 const LoginPage = () => {
@@ -30,21 +30,21 @@ const LoginPage = () => {
 
 	const handleGoogleSuccess = async (credentialResponse: any) => {
 		try {
-		  const idToken = credentialResponse.credential;
+			const idToken = credentialResponse.credential;
 	
-		  const res = await axiosInstance.post("/auth/google", {
-			idToken,
-		  });
+			const res = await axiosInstance.post("/auth/google", {
+				idToken,
+			});
 	
-		  const { token, refreshToken, email } = res.data;
+			const { token, refreshToken, email } = res.data;
 	
-		  loginWithGoogle(token, refreshToken, email);
+			loginWithGoogle(token, refreshToken, email);
 	
-		  navigate("/");
+			navigate("/");
 		} catch (err) {
-		  console.error("Google login error:", err);
+			console.error("Google login error:", err);
 		}
-	  };
+	};
 
 	return (
 		<div className='min-h-screen bg-gray-900 flex items-center justify-center p-4'>
@@ -165,10 +165,25 @@ const LoginPage = () => {
 							</div>
 						</div>
 						<div className='flex justify-center'>
-							<GoogleLogin
-								onSuccess={handleGoogleSuccess}
-								onError={() => console.log("Google login failed")}
-							/>
+							<div className='w-full'>
+								<GoogleLogin
+									onSuccess={handleGoogleSuccess}
+									onError={() => console.log("Google login failed")}
+									theme='outline'
+									size='large'
+									width='100%'
+									text='signin_with'
+									shape='rectangular'
+									logo_alignment='left'
+									useOneTap={false}
+									containerProps={{
+										style: {
+											width: '100%',
+											height: '48px'
+										}
+									}}
+								/>
+							</div>
 						</div>
 					</form>
 					<div className='mt-8 text-center'>

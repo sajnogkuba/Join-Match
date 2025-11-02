@@ -9,7 +9,7 @@ const CreateEventPage = () => {
   }
 
   return (
-    <div className="bg-gray-800 px-10 py-10">
+    <div className="bg-gray-800 pt-10">
       <CreateEventForm />
     </div>
   );

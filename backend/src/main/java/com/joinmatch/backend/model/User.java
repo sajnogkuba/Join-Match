@@ -53,6 +53,22 @@ public class User {
     @EqualsAndHashCode.Exclude
     private Set<SportUser> sportUsers = new HashSet<>();
 
+    @OneToMany(mappedBy = "rated", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<UserRating> receivedRatings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "rater", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<UserRating> givenRatings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<EventRating> eventRatings = new ArrayList<>();
+
+
 
     public List<JoinMatchToken> getTokens() {
         return Collections.unmodifiableList(tokens);

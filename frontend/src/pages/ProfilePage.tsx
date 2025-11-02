@@ -6,20 +6,66 @@ import PasswordSection from "../components/PasswordSection";
 import ProfileCard from "../components/ProfileCard";
 import ProfileImageModal from "../components/ProfileImageModal";
 import ProfileSidebar from "../components/ProfileSidebar";
+import RatingsSection from "../components/RatingsSection";
 import type { SimpleUser, SidebarItemKey } from "../Api/types/Profile";
+import type { UserRatingResponse } from "../Api/types/Rating";
+import type { UserSportsResponse } from "../Api/types/Sports";
+import type { User } from "../Api/types/User";
 
 
 
 const ProfilePage = () => {
     const [user, setUser] = useState<SimpleUser | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<SidebarItemKey>("Ogólne");
+    const [mainSportName, setMainSportName] = useState<string>("");
+    const [friendsCount, setFriendsCount] = useState<number>(0);
+    const [userRatings, setUserRatings] = useState<UserRatingResponse[]>([]);
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
         setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
     };
+
+    const refreshMainSport = () => {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+        
+        api
+            .get<UserSportsResponse>("/sport-type/user", { params: { token } })
+            .then(({ data }) => {
+                const mainSport = data.sports?.find((s) => s.isMain);
+                setMainSportName(mainSport?.name || "");
+            })
+            .catch(() => setMainSportName(""));
+    };
+
+    const fetchFriendsCount = () => {
+        const token = localStorage.getItem("accessToken");
+        if (!token || !currentUser?.id) return;
+        
+        api
+            .get(`/friends/${currentUser.id}`)
+            .then(({ data }) => {
+                setFriendsCount(data.length);
+            })
+            .catch(() => {
+                setFriendsCount(0);
+            });
+    };
+
+    const fetchUserRatings = async () => {
+        if (!currentUser?.id) return;
+        try {
+            const res = await api.get(`/ratings/user/${currentUser.id}`);
+            setUserRatings(res.data || []);
+        } catch {
+            setUserRatings([]);
+        }
+    };
+
 
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
@@ -28,11 +74,53 @@ const ProfilePage = () => {
             setLoading(false);
             return;
         }
+
         api
-            .get<SimpleUser>("/auth/user/details", { params: { token } })
-            .then(({ data }) => setUser(data))
+            .get<User>("/auth/user", { params: { token } })
+            .then(({ data: userData }) => {
+                setCurrentUser(userData);
+                
+                return api.get<SimpleUser>("/auth/user/details", { params: { token } });
+            })
+            .then(({ data: userDetails }) => {
+                setUser(userDetails);
+            })
             .catch(() => setErrorMsg("Nie udało się pobrać profilu."))
             .finally(() => setLoading(false));
+    }, []);
+
+    useEffect(() => {
+        refreshMainSport();
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (currentUser?.id) {
+            fetchFriendsCount();
+            fetchUserRatings();
+        }
+    }, [currentUser]);
+
+    const averageRating = userRatings.length
+        ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length
+        : null;
+
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash;
+            if (hash === '#pending-requests') {
+                setActiveTab('Znajomi');
+            } else if (hash === '#friends') {
+                setActiveTab('Znajomi');
+            }
+        };
+        
+        handleHashChange();
+
+        window.addEventListener('hashchange', handleHashChange);
+
+        return () => {
+            window.removeEventListener('hashchange', handleHashChange);
+        };
     }, []);
 
     return (
@@ -60,7 +148,9 @@ const ProfilePage = () => {
                         user={user}
                         loading={loading}
                         onImageClick={() => setIsImageModalOpen(true)}
-                        mainSportName=""
+                        mainSportName={mainSportName}
+                        friendsCount={friendsCount}
+                        averageRating={averageRating}
                     />
                     {errorMsg && (
                         <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
@@ -71,7 +161,10 @@ const ProfilePage = () => {
                     <div className="flex flex-col gap-8 lg:flex-row">
                         <ProfileSidebar active={activeTab} onSelect={(t) => setActiveTab(t)} />
                         {activeTab === "Ogólne" && (
-                            <GeneralSection userEmail={user?.email} />
+                            <GeneralSection 
+                                userEmail={user?.email} 
+                                onMainSportChanged={refreshMainSport}
+                            />
                         )}
                         {activeTab === "Znajomi" && (
                             <div className="flex-1">
@@ -81,6 +174,11 @@ const ProfilePage = () => {
                         {activeTab === "Hasło" && (
                             <div className="flex-1">
                                 <PasswordSection />
+                            </div>
+                        )}
+                        {activeTab === "Oceny" && (
+                            <div className="flex-1">
+                                <RatingsSection userId={currentUser?.id ?? null} />
                             </div>
                         )}
                     </div>

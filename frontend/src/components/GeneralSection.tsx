@@ -7,16 +7,17 @@ import type { SavedEventRef, EventDetails } from "../Api/types/Events";
 import {
     ChevronRight,
     Plus,
-    Check
+    Check,
+    X
 } from "lucide-react";
 
 const ClickableSavedEvent = ({
-    title,
-    place,
-    tag,
-    cover,
-    eventId
-}: {
+                                 title,
+                                 place,
+                                 tag,
+                                 cover,
+                                 eventId
+                             }: {
     title: string;
     place: string;
     tag: string;
@@ -84,7 +85,7 @@ const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
             {loading && <p className="text-sm text-zinc-400">Ładowanie…</p>}
             {error && <p className="text-sm text-red-400">{error}</p>}
             {!loading && !error && (
-                <ul className="space-y-3">
+                <ul className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
                     {items.map((e) => {
                         const place = [e.city, e.street, e.number].filter(Boolean).join(", ");
                         return (
@@ -108,10 +109,10 @@ const SavedEvents = ({ userEmail }: { userEmail?: string }) => {
 };
 
 const AddSportModal = ({
-    open,
-    onClose,
-    onAdded
-}: {
+                           open,
+                           onClose,
+                           onAdded
+                       }: {
     open: boolean;
     onClose: () => void;
     onAdded: (s: UserSport) => void;
@@ -244,58 +245,95 @@ const AddSportModal = ({
     );
 };
 
+// --- NOWE: lista sportów + usuwanie ---
+
 const SportsList = ({
-    items,
-    onOpenAdd,
-    onSetMain,
-    settingIndex
-}: {
+                        items,
+                        onOpenAdd,
+                        onSetMain,
+                        onRemove,
+                        settingIndex,
+                        removingIndex,
+                        errorMsg
+                    }: {
     items: UserSport[];
     onOpenAdd: () => void;
     onSetMain: (index: number) => void;
+    onRemove: (index: number) => void;
     settingIndex: number | null;
+    removingIndex: number | null;
+    errorMsg: string | null;
 }) => (
     <section className="space-y-4">
         <h3 className="text-white text-xl font-semibold">Sporty</h3>
+
+        {errorMsg && (
+            <p className="rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
+                {errorMsg}
+            </p>
+        )}
+
         <ul className="space-y-3">
             {items.map((s, index) => {
                 const isMain = !!s.isMain;
-                const isLoading = settingIndex === index;
+                const isSettingLoading = settingIndex === index;
+                const isRemovingLoading = removingIndex === index;
+
                 return (
                     <li
                         key={`${index}-${s.id}-${s.name}`}
                         className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3"
                     >
-                        <div className="flex items-center gap-3">
+                        {/* left: avatar + info */}
+                        <div className="flex items-center gap-3 min-w-0">
                             <img
                                 src={s.url}
                                 alt={s.name}
-                                className="h-10 w-10 rounded-full object-cover border border-zinc-700"
+                                className="h-10 w-10 rounded-full object-cover border border-zinc-700 flex-shrink-0"
                             />
-                            <div>
-                                <p className="text-white font-medium leading-tight">{s.name}</p>
+                            <div className="min-w-0">
+                                <p className="text-white font-medium leading-tight truncate">{s.name}</p>
                                 <p className="text-xs text-zinc-400">Poziom: {s.level}</p>
                             </div>
                         </div>
-                        <button
-                            onClick={() => onSetMain(index)}
-                            disabled={isMain || isLoading}
-                            className={`rounded-xl px-3 py-1.5 text-sm ${
-                                isMain
-                                    ? "bg-violet-600 text-white"
-                                    : "border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-                            } disabled:opacity-60`}
-                        >
-                            {isMain ? (
-                                <span className="inline-flex items-center gap-1">
-                                    <Check size={16} /> Główny
-                                </span>
-                            ) : isLoading ? (
-                                "Ustawianie…"
-                            ) : (
-                                "Ustaw jako główny"
-                            )}
-                        </button>
+
+                        {/* right: actions */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                                onClick={() => onSetMain(index)}
+                                disabled={isMain || isSettingLoading || isRemovingLoading}
+                                className={`rounded-xl px-3 py-1.5 text-sm ${
+                                    isMain
+                                        ? "bg-violet-500 text-white"
+                                        : "border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                                } disabled:opacity-100`}
+                            >
+                                {isMain ? (
+                                    <span className="inline-flex items-center gap-1">
+                                        <Check size={16} /> Główny
+                                    </span>
+                                ) : isSettingLoading ? (
+                                    "Ustawianie…"
+                                ) : (
+                                    "Ustaw jako główny"
+                                )}
+                            </button>
+
+                            {/* usuwanie */}
+                            <button
+                                onClick={() => onRemove(index)}
+                                disabled={isSettingLoading || isRemovingLoading}
+                                className="p-2 rounded-xl border border-red-600/40 text-red-400 hover:bg-red-900/20 hover:text-red-300 text-xs flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={
+                                    isMain
+                                        ? "Najpierw zmień główny sport, a potem usuń."
+                                        : "Usuń ten sport z profilu"
+                                }
+                            >
+                                <X size={16} />
+                                {isRemovingLoading ? "Usuwanie…" : ""}
+                            </button>
+                        </div>
                     </li>
                 );
             })}
@@ -303,6 +341,7 @@ const SportsList = ({
                 <p className="text-zinc-400 text-sm">Brak sportów — dodaj pierwszy!</p>
             )}
         </ul>
+
         <button
             onClick={onOpenAdd}
             className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
@@ -313,10 +352,18 @@ const SportsList = ({
     </section>
 );
 
-const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
+const GeneralSection = ({
+                            userEmail,
+                            onMainSportChanged
+                        }: {
+    userEmail?: string;
+    onMainSportChanged?: () => void;
+}) => {
     const [sports, setSports] = useState<UserSport[]>([]);
     const [settingMainIndex, setSettingMainIndex] = useState<number | null>(null);
+    const [removingIndex, setRemovingIndex] = useState<number | null>(null);
     const [openAdd, setOpenAdd] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
@@ -340,20 +387,64 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
         const item = sports[index];
         if (!item || item.isMain) return;
         if (!userEmail) return;
+
+        setErrorMessage(null);
         setSettingMainIndex(index);
+
         const prevSports = sports;
+
+        // optycznie przełącz
         setSports((prev) => prev.map((s, i) => ({ ...s, isMain: i === index })));
+
         try {
             await api.patch("/sport-type/mainSport", {
                 email: userEmail,
                 idSport: item.id
             });
+            onMainSportChanged?.();
         } catch {
+            // rollback
             setSports(prevSports);
+            setErrorMessage("Nie udało się ustawić głównego sportu.");
         } finally {
             setSettingMainIndex(null);
         }
     };
+
+    const handleRemoveSport = async (index: number) => {
+        const item = sports[index];
+        if (!item) return;
+
+        if (item.isMain) {
+            setErrorMessage("Najpierw zmień główny sport, a potem usuń.");
+            return;
+        }
+
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+
+        setErrorMessage(null);
+        setRemovingIndex(index);
+
+        const prevSports = sports;
+
+        setSports((prev) => prev.filter((_, i) => i !== index));
+
+        try {
+            await api.delete("/sport-type/user/sport", {
+                data: {
+                    token: token,
+                    idSport: item.id,
+                },
+            });
+        } catch {
+            setSports(prevSports);
+            setErrorMessage("Nie udało się usunąć sportu.");
+        } finally {
+            setRemovingIndex(null);
+        }
+    };
+
 
     return (
         <>
@@ -362,7 +453,10 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
                     items={sports}
                     onOpenAdd={() => setOpenAdd(true)}
                     onSetMain={handleSetMain}
+                    onRemove={handleRemoveSport}
                     settingIndex={settingMainIndex}
+                    removingIndex={removingIndex}
+                    errorMsg={errorMessage}
                 />
                 <SavedEvents userEmail={userEmail} />
             </div>
@@ -370,9 +464,9 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
             <AddSportModal
                 open={openAdd}
                 onClose={() => setOpenAdd(false)}
-                onAdded={(s) => {
+                onAdded={async (s) => {
+                    const wasEmpty = sports.length === 0;
                     setSports((prev) => {
-                        const wasEmpty = prev.length === 0;
                         const next = [...prev, s];
                         if (wasEmpty) {
                             return next.map((item, i) => ({
@@ -382,6 +476,19 @@ const GeneralSection = ({ userEmail }: { userEmail?: string }) => {
                         }
                         return next;
                     });
+
+                    if (wasEmpty && userEmail) {
+                        try {
+                            await api.patch("/sport-type/mainSport", {
+                                email: userEmail,
+                                idSport: s.id
+                            });
+                            onMainSportChanged?.();
+                        } catch (error) {
+                            console.error("Failed to set main sport:", error);
+                            setErrorMessage("Nie udało się ustawić głównego sportu dla pierwszego sportu.");
+                        }
+                    }
                 }}
             />
         </>

@@ -186,5 +186,67 @@ public class UserService {
         return searchResults;
     }
 
+    public UsersResponseDto getUserById(Integer id, Integer viewerId) {
+        User targetUser = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<UsersResponseDto.SportInfo> sports = targetUser.getSportUsers()
+                .stream()
+                .map(su -> new UsersResponseDto.SportInfo(
+                        su.getSport().getId(),
+                        su.getSport().getName(),
+                        su.getRating().toString()
+                ))
+                .toList();
+
+        var friendships = friendshipRepository.findByUserOneOrUserTwo(targetUser, targetUser);
+
+        List<UsersResponseDto.FriendInfo> friends = friendships.stream()
+                .map(f -> {
+                    User friend = f.getUserOne().equals(targetUser) ? f.getUserTwo() : f.getUserOne();
+                    return new UsersResponseDto.FriendInfo(
+                            friend.getId(),
+                            friend.getName(),
+                            friend.getEmail(),
+                            friend.getUrlOfPicture()
+                    );
+                })
+                .toList();
+
+        String relationStatus = "NONE";
+
+        if (viewerId != null && !viewerId.equals(id)) {
+            var viewer = userRepository.findById(viewerId).orElse(null);
+
+            if (viewer != null) {
+                boolean areFriends = friendshipRepository.existsByUserOneAndUserTwo(viewer, targetUser)
+                        || friendshipRepository.existsByUserOneAndUserTwo(targetUser, viewer);
+
+                if (areFriends) relationStatus = "FRIEND";
+                else {
+                    boolean pending = friendRequestRepository.findBySenderAndReceiver(viewer, targetUser)
+                            .filter(fr -> fr.getStatus() == FriendRequestStatus.PENDING)
+                            .isPresent()
+                            || friendRequestRepository.findBySenderAndReceiver(targetUser, viewer)
+                            .filter(fr -> fr.getStatus() == FriendRequestStatus.PENDING)
+                            .isPresent();
+
+                    if (pending) relationStatus = "PENDING";
+                }
+            }
+        }
+
+
+        return new UsersResponseDto(
+                targetUser.getId(),
+                targetUser.getName(),
+                targetUser.getEmail(),
+                targetUser.getDateOfBirth(),
+                targetUser.getUrlOfPicture(),
+                sports,
+                friends,
+                relationStatus
+        );
+    }
 
 }

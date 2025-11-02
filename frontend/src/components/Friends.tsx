@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, UserMinus, X, UserPlus, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios";
 import type { User } from "../Api/types/User";
 import type { Friend, SearchResult, PendingRequest } from "../Api/types/Friends";
@@ -10,7 +11,10 @@ const FriendCard = ({ friend, onRemove }: {
     onRemove: (friend: Friend) => void;
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center gap-3">
+        <Link 
+            to={`/profile/${friend.id}`}
+            className="flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors"
+        >
             <Avatar 
                 src={friend.urlOfPicture} 
                 name={friend.name}
@@ -20,15 +24,16 @@ const FriendCard = ({ friend, onRemove }: {
                 <p className="text-white font-medium">{friend.name}</p>
                 <p className="text-sm text-zinc-400">{friend.email}</p>
             </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
             <button
                 onClick={() => onRemove(friend)}
-                className="p-2 rounded-xl bg-zinc-800 hover:bg-red-600/20 transition-colors"
+                className="p-1.5 sm:p-2 rounded-xl bg-zinc-800 hover:bg-red-600/20 transition-colors"
                 title="Usuń znajomego"
             >
-                <span className="flex items-center gap-2">
-                    <UserMinus size={16} /> Usuń znajomego
+                <span className="flex items-center gap-1 sm:gap-2">
+                    <UserMinus size={14} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline text-xs sm:text-sm">Usuń znajomego</span>
                 </span>
             </button>
         </div>
@@ -43,7 +48,10 @@ const SearchResultCard = ({ user, onAddFriend }: {
     
     return (
         <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center gap-3">
+        <Link 
+            to={`/profile/${user.id}`}
+            className="flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors"
+        >
             <Avatar 
                 src={user.urlOfPicture} 
                 name={user.name}
@@ -53,25 +61,27 @@ const SearchResultCard = ({ user, onAddFriend }: {
                     <p className="text-white font-medium">{user.name}</p>
                     <p className="text-sm text-zinc-400">{user.email}</p>
                 </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-2">
                 {isPending ? (
                     <button
                         disabled
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-sm font-medium"
+                        className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-xs sm:text-sm font-medium"
                         title="Zaproszenie oczekuje na odpowiedź"
                     >
-                        <UserPlus size={16} />
-                        Oczekuje na odpowiedź
+                        <UserPlus size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Oczekuje na odpowiedź</span>
+                        <span className="sm:hidden">Oczekuje</span>
                     </button>
                 ) : (
                     <button
                         onClick={() => onAddFriend(user.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white"
+                        className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white"
                         title="Wyślij zaproszenie"
                     >
-                        <UserPlus size={16} />
-                        Wyślij zaproszenie
+                        <UserPlus size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Wyślij zaproszenie</span>
+                        <span className="sm:hidden">Wyślij</span>
                     </button>
                 )}
             </div>
@@ -85,7 +95,10 @@ const PendingRequestCard = ({ request, onAccept, onReject }: {
     onReject: (id: number) => void;
 }) => (
     <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <div className="flex items-center gap-3">
+        <Link 
+            to={`/profile/${request.senderId}`}
+            className="flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors"
+        >
             <Avatar 
                 src={request.senderUrlOfPicture} 
                 name={request.senderName}
@@ -95,21 +108,23 @@ const PendingRequestCard = ({ request, onAccept, onReject }: {
                 <p className="text-white font-medium">{request.senderName}</p>
                 <p className="text-sm text-zinc-400">{request.senderEmail}</p>
             </div>
-        </div>
-        <div className="flex items-center gap-2">
+        </Link>
+        <div className="flex items-center gap-1 sm:gap-2">
             <button
                 onClick={() => onAccept(request.requestId)}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white"
+                className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white"
                 title="Zaakceptuj zaproszenie"
             >
-                ✓ Zaakceptuj
+                <span>✓</span>
+                <span className="hidden sm:inline">Zaakceptuj</span>
             </button>
             <button
                 onClick={() => onReject(request.requestId)}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-sm font-medium text-white"
+                className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-xs sm:text-sm font-medium text-white"
                 title="Odrzuć zaproszenie"
             >
-                ✗ Odrzuć
+                <span>✗</span>
+                <span className="hidden sm:inline">Odrzuć</span>
             </button>
         </div>
     </div>
@@ -125,7 +140,7 @@ const Friends = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [activeTab, setActiveTab] = useState<"friends" | "pending">("friends");
     const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
-    const [pendingLoading, setPendingLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [friendToDelete, setFriendToDelete] = useState<Friend | null>(null);
 
@@ -140,36 +155,40 @@ const Friends = () => {
     useEffect(() => {
         if (!currentUser?.id) return;
         
-        setLoading(true);
-        axiosInstance.get(`/friends/${currentUser.id}`)
-            .then(response => {
-                setFriends(response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching friends:', error);
-                setFriends([]);
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+        setIsInitialLoading(true);
+        
+        Promise.all([
+            axiosInstance.get(`/friends/${currentUser.id}`),
+            axiosInstance.get(`/friends/requests/${currentUser.id}`)
+        ])
+        .then(([friendsResponse, pendingResponse]) => {
+            setFriends(friendsResponse.data);
+            setPendingRequests(pendingResponse.data);
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            setFriends([]);
+            setPendingRequests([]);
+        })
+        .finally(() => {
+            setIsInitialLoading(false);
+        });
     }, [currentUser]);
 
     useEffect(() => {
-        if (!currentUser?.id) return;
-        
-        setPendingLoading(true);
-        axiosInstance.get(`/friends/requests/${currentUser.id}`)
-            .then(response => {
-                setPendingRequests(response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching pending requests:', error);
-                setPendingRequests([]);
-            })
-            .finally(() => {
-                setPendingLoading(false);
-            });
-    }, [currentUser]);
+        const hash = window.location.hash;
+        if (hash === '#pending-requests') {
+            setActiveTab('pending');
+            setTimeout(() => {
+                window.history.replaceState(null, '', window.location.pathname);
+            }, 100);
+        } else if (hash === '#friends') {
+            setActiveTab('friends');
+            setTimeout(() => {
+                window.history.replaceState(null, '', window.location.pathname);
+            }, 100);
+        }
+    }, []);
 
 
     const handleRemoveFriend = (friend: Friend) => {
@@ -350,14 +369,14 @@ const Friends = () => {
                 </div>
 
                 <div className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
-                    {activeTab === "friends" ? (
-                        loading ? (
-                            <div className="grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10">
-                                <div className="flex items-center gap-2 text-zinc-300">
-                                    <Loader2 className="animate-spin" /> Ładowanie…
-                                </div>
+                    {isInitialLoading ? (
+                        <div className="grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10">
+                            <div className="flex items-center gap-2 text-zinc-300">
+                                <Loader2 className="animate-spin" /> Ładowanie…
                             </div>
-                        ) : filteredFriends.length === 0 ? (
+                        </div>
+                    ) : activeTab === "friends" ? (
+                        filteredFriends.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">
@@ -379,12 +398,7 @@ const Friends = () => {
                             ))
                         )
                     ) : (
-                        pendingLoading ? (
-                            <div className="text-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4"></div>
-                                <p className="text-zinc-400">Ładowanie zaproszeń...</p>
-                            </div>
-                        ) : pendingRequests.length === 0 ? (
+                        pendingRequests.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">Brak oczekujących zaproszeń</p>
@@ -487,16 +501,16 @@ const Friends = () => {
                                 Czy na pewno chcesz usunąć <span className="text-white font-medium">{friendToDelete.name}</span> ze znajomych?
                             </p>
                             
-                            <div className="flex gap-3">
+                            <div className="flex gap-2 sm:gap-3">
                                 <button
                                     onClick={cancelDeleteFriend}
-                                    className="flex-1 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                    className="flex-1 rounded-xl border border-zinc-700 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
                                 >
                                     Anuluj
                                 </button>
                                 <button
                                     onClick={confirmDeleteFriend}
-                                    className="flex-1 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition-colors"
+                                    className="flex-1 rounded-xl bg-red-600 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-red-500 transition-colors"
                                 >
                                     Usuń znajomego
                                 </button>

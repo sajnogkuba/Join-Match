@@ -30,6 +30,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/sport-object/**").permitAll()
                         .requestMatchers("/api/user-event/**").permitAll()
                         .requestMatchers("/api/user-saved-event/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/ws/**").permitAll()
                         .anyRequest().permitAll()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -50,6 +52,7 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/ws/**", configuration);
         return source;
     }
 

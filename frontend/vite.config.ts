@@ -13,4 +13,10 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['sockjs-client', '@stomp/stompjs']
+  }
 })
