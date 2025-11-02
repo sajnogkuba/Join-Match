@@ -19,7 +19,11 @@ type TeamsPageResponse = {
 type SortOption = 'name' | 'city'
 type SortDirection = 'ASC' | 'DESC'
 
-const TeamsList: React.FC = () => {
+interface TeamsListProps {
+	leaderId?: number
+}
+
+const TeamsList: React.FC<TeamsListProps> = ({ leaderId }) => {
 	const [teams, setTeams] = useState<Team[]>([])
 	const [loading, setLoading] = useState(true)
 	const [loadingMore, setLoadingMore] = useState(false)
@@ -38,9 +42,17 @@ const TeamsList: React.FC = () => {
 			} else {
 				setLoading(true)
 			}
-			const response = await api.get<TeamsPageResponse>('/team', {
-				params: { page: pageNum, size: pageSize, sort: sortBy, direction: sortDirection },
-			})
+			const endpoint = leaderId !== undefined ? '/team/by-leader' : '/team'
+			const params: Record<string, any> = {
+				page: pageNum,
+				size: pageSize,
+				sort: sortBy,
+				direction: sortDirection,
+			}
+			if (leaderId !== undefined) {
+				params.leaderId = leaderId
+			}
+			const response = await api.get<TeamsPageResponse>(endpoint, { params })
 			const data = response.data
 			if (append) {
 				setTeams(prev => [...prev, ...(data.content || [])])
@@ -54,13 +66,13 @@ const TeamsList: React.FC = () => {
 			setLoading(false)
 			setLoadingMore(false)
 		}
-	}, [pageSize, sortBy, sortDirection])
+	}, [pageSize, sortBy, sortDirection, leaderId])
 
 	useEffect(() => {
 		currentPageRef.current = 0
 		setTeams([])
 		fetchTeams(0, false)
-	}, [sortBy, sortDirection, fetchTeams])
+	}, [sortBy, sortDirection, leaderId, fetchTeams])
 
 	useEffect(() => {
 		const observer = new IntersectionObserver(

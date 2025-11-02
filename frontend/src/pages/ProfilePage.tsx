@@ -6,7 +6,9 @@ import PasswordSection from "../components/PasswordSection";
 import ProfileCard from "../components/ProfileCard";
 import ProfileImageModal from "../components/ProfileImageModal";
 import ProfileSidebar from "../components/ProfileSidebar";
+import RatingsSection from "../components/RatingsSection";
 import type { SimpleUser, SidebarItemKey } from "../Api/types/Profile";
+import type { UserRatingResponse } from "../Api/types/Rating";
 import type { UserSportsResponse } from "../Api/types/Sports";
 import type { User } from "../Api/types/User";
 
@@ -21,6 +23,7 @@ const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState<SidebarItemKey>("Ogólne");
     const [mainSportName, setMainSportName] = useState<string>("");
     const [friendsCount, setFriendsCount] = useState<number>(0);
+    const [userRatings, setUserRatings] = useState<UserRatingResponse[]>([]);
 
     const handlePhotoUpdated = (newPhotoUrl: string) => {
         setUser((prev) => (prev ? { ...prev, urlOfPicture: newPhotoUrl } : null));
@@ -53,6 +56,17 @@ const ProfilePage = () => {
             });
     };
 
+    const fetchUserRatings = async () => {
+        if (!currentUser?.id) return;
+        try {
+            const res = await api.get(`/ratings/user/${currentUser.id}`);
+            setUserRatings(res.data || []);
+        } catch {
+            setUserRatings([]);
+        }
+    };
+
+
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
@@ -60,14 +74,12 @@ const ProfilePage = () => {
             setLoading(false);
             return;
         }
-        
-        // Pobierz pełny obiekt User dla ID
+
         api
             .get<User>("/auth/user", { params: { token } })
             .then(({ data: userData }) => {
                 setCurrentUser(userData);
                 
-                // Pobierz szczegóły użytkownika dla wyświetlania
                 return api.get<SimpleUser>("/auth/user/details", { params: { token } });
             })
             .then(({ data: userDetails }) => {
@@ -84,10 +96,14 @@ const ProfilePage = () => {
     useEffect(() => {
         if (currentUser?.id) {
             fetchFriendsCount();
+            fetchUserRatings();
         }
     }, [currentUser]);
 
-    // Obsługa hash w URL dla przekierowań z powiadomień
+    const averageRating = userRatings.length
+        ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length
+        : null;
+
     useEffect(() => {
         const handleHashChange = () => {
             const hash = window.location.hash;
@@ -97,11 +113,9 @@ const ProfilePage = () => {
                 setActiveTab('Znajomi');
             }
         };
-
-        // Sprawdź hash przy załadowaniu
+        
         handleHashChange();
 
-        // Dodaj listener na zmiany hash
         window.addEventListener('hashchange', handleHashChange);
 
         return () => {
@@ -136,6 +150,7 @@ const ProfilePage = () => {
                         onImageClick={() => setIsImageModalOpen(true)}
                         mainSportName={mainSportName}
                         friendsCount={friendsCount}
+                        averageRating={averageRating}
                     />
                     {errorMsg && (
                         <p className="mt-4 rounded-lg bg-red-500/10 text-red-300 px-3 py-2 text-sm">
@@ -159,6 +174,11 @@ const ProfilePage = () => {
                         {activeTab === "Hasło" && (
                             <div className="flex-1">
                                 <PasswordSection />
+                            </div>
+                        )}
+                        {activeTab === "Oceny" && (
+                            <div className="flex-1">
+                                <RatingsSection userId={currentUser?.id ?? null} />
                             </div>
                         )}
                     </div>

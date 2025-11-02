@@ -20,6 +20,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage.tsx'
 import TermsOfServicePage from './pages/TermsOfServicePage.tsx'
 import UserProfilePage from './pages/UserProfilePage.tsx'
 import TeamsPage from './pages/TeamsPage.tsx'
+import TeamPage from './pages/TeamPage.tsx'
 import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
 
@@ -41,6 +42,7 @@ const App: React.FC = () => (
 							<Route path='rankingi' element={<RankingsPage />} />
 							<Route path='about' element={<AboutUsPage />} />
 							<Route path='teams' element={<TeamsPage />} />
+							<Route path='team/:id' element={<TeamPage />} />
 							<Route path='stworz-druzyne' element={<CreateTeamPage />} />
 							<Route path='kontakt' element={<ContactPage />} />
 							<Route path='faq' element={<FAQPage />} />

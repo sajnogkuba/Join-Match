@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "team")
 @Data
@@ -36,5 +38,8 @@ public class Team {
 
     @Column(name = "photo_url", columnDefinition = "text")
     private String photoUrl;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
 
 }

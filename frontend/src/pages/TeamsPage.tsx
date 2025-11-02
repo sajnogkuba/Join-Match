@@ -1,13 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Crown, CheckCircle, Plus } from 'lucide-react'
+import { Users, Crown, CheckCircle, Plus, Loader2 } from 'lucide-react'
 import { useAuth } from '../Context/authContext'
 import TeamsList from '../components/TeamsList'
+import api from '../Api/axios'
+import type { User } from '../Api/types/User'
 
 type TeamsTab = 'all-teams' | 'owned-teams' | 'joined-teams'
 
 const TeamsPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<TeamsTab>('all-teams')
+	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+	const [loadingUserId, setLoadingUserId] = useState(false)
 	const { isAuthenticated } = useAuth()
 	const navigate = useNavigate()
 
@@ -26,6 +30,23 @@ const TeamsPage: React.FC = () => {
 		}
 		navigate('/stworz-druzyne')
 	}
+
+	useEffect(() => {
+		if (activeTab === 'owned-teams' && isAuthenticated) {
+			const token = localStorage.getItem('accessToken')
+			if (!token) {
+				setCurrentUserId(null)
+				return
+			}
+			setLoadingUserId(true)
+			api.get<User>('/auth/user', { params: { token } })
+				.then(({ data }) => setCurrentUserId(data.id))
+				.catch(() => setCurrentUserId(null))
+				.finally(() => setLoadingUserId(false))
+		} else if (activeTab !== 'owned-teams') {
+			setCurrentUserId(null)
+		}
+	}, [activeTab, isAuthenticated])
 
 	const sidebarItems = [
 		{ key: 'all-teams' as TeamsTab, label: 'Wszystkie', icon: Users },
@@ -82,15 +103,27 @@ const TeamsPage: React.FC = () => {
 								{activeTab === 'all-teams' && <TeamsList />}
 
 								{activeTab === 'owned-teams' && (
-									<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
-										<div>
-											<Crown className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-											<h2 className='text-white text-xl font-semibold mb-2'>Utworzone drużyny</h2>
-											<p className='text-zinc-400 text-sm'>
-												Tutaj znajdziesz drużyny, które utworzyłeś.
-											</p>
-										</div>
-									</div>
+									<>
+										{loadingUserId ? (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
+												<div className='flex items-center gap-2 text-zinc-300'>
+													<Loader2 className='animate-spin' /> Ładowanie…
+												</div>
+											</div>
+										) : currentUserId !== null ? (
+											<TeamsList leaderId={currentUserId} />
+										) : (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+												<div>
+													<Crown className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+													<h2 className='text-white text-xl font-semibold mb-2'>Utworzone drużyny</h2>
+													<p className='text-zinc-400 text-sm'>
+														Tutaj znajdziesz drużyny, które utworzyłeś.
+													</p>
+												</div>
+											</div>
+										)}
+									</>
 								)}
 
 								{activeTab === 'joined-teams' && (

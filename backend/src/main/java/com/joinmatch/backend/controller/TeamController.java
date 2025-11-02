@@ -1,5 +1,6 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.TeamDetailsDto;
 import com.joinmatch.backend.dto.TeamRequestDto;
 import com.joinmatch.backend.dto.TeamResponseDto;
 import com.joinmatch.backend.service.TeamService;
@@ -34,6 +35,29 @@ public class TeamController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(teams);
+    }
+
+
+    @GetMapping("/by-leader")
+    public ResponseEntity<Page<TeamResponseDto>> getTeamsByLeaderId(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "12") Integer size,
+            @RequestParam(required = false, defaultValue = "name") String sort,
+            @RequestParam(required = false, defaultValue = "ASC") String direction,
+            @RequestParam(required = true) Integer leaderId
+    ) {
+        Pageable pageable = Pageable.ofSize(size).withPage(page);
+        Page<TeamResponseDto> teams = teamService.findAllByLeaderId(pageable, sort, direction, leaderId);
+        if (teams.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(teams);
+    }
+
+    @GetMapping("{id}")
+    public ResponseEntity<TeamDetailsDto> getTeamById(@PathVariable Integer id) {
+        TeamDetailsDto teamDetailsDto = teamService.getTeamDetails(id);
+        return ResponseEntity.ok(teamDetailsDto);
     }
 
 }

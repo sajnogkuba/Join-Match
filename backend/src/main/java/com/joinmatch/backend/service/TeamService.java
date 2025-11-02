@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.dto.TeamDetailsDto;
 import com.joinmatch.backend.dto.TeamRequestDto;
 import com.joinmatch.backend.dto.TeamResponseDto;
 import com.joinmatch.backend.model.Sport;
@@ -45,6 +46,27 @@ public class TeamService {
         return teams.map(TeamResponseDto::fromTeam);
     }
 
+    public Page<TeamResponseDto> findAllByLeaderId(Pageable pageable, String sortBy, String direction, Integer leaderId) {
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        User leader = userRepository.findById(leaderId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + leaderId));
+
+        Page<Team> teams = teamRepository.findByLeader(leader, sortedPageable);
+        return teams.map(TeamResponseDto::fromTeam);
+    }
+
+    public TeamDetailsDto getTeamDetails(Integer teamId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
+        return TeamDetailsDto.fromTeam(team);
+    }
+
 
     private TeamResponseDto getTeamResponseDto(TeamRequestDto teamRequestDto, Team team) {
         Sport sport = sportRepository.findById(teamRequestDto.sportTypeId())
@@ -60,4 +82,6 @@ public class TeamService {
         Team savedTeam = teamRepository.save(team);
         return TeamResponseDto.fromTeam(savedTeam);
     }
+
+
 }
