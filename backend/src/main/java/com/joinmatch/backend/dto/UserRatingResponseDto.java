@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 public record UserRatingResponseDto(
         Integer id,
+
+        String userEmail,
         Integer rating,
         String comment,
         String raterName,

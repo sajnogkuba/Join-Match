@@ -15,6 +15,7 @@ export interface UserRatingRequest {
   export interface UserRatingResponse {
     id: number
     rating: number
+    userEmail: string
     comment: string
     createdAt: string
     raterName: string
