@@ -47,6 +47,7 @@ public class RatingService {
 
         return new UserRatingResponseDto(
                 rating.getUserRateId(),
+                rater.getEmail(),
                 rating.getRating(),
                 rating.getComment(),
                 rater.getName(),
@@ -60,6 +61,7 @@ public class RatingService {
                 .stream()
                 .map(r -> new UserRatingResponseDto(
                         r.getUserRateId(),
+                        r.getRater().getEmail(),
                         r.getRating(),
                         r.getComment(),
                         r.getRater().getName(),
@@ -120,4 +122,77 @@ public class RatingService {
                 ))
                 .toList();
     }
+
+    @Transactional
+    public UserRatingResponseDto updateUserRating(Integer ratingId, UserRatingRequestDto request, Integer currentUserId) {
+        UserRating existingRating = userRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new RuntimeException("Rating not found"));
+
+        if (!existingRating.getRater().getId().equals(currentUserId)) {
+            throw new RuntimeException("You can only edit your own ratings");
+        }
+
+        existingRating.setRating(request.rating());
+        existingRating.setComment(request.comment());
+
+        userRatingRepository.save(existingRating);
+
+        return new UserRatingResponseDto(
+                existingRating.getUserRateId(),
+                existingRating.getRater().getEmail(),
+                existingRating.getRating(),
+                existingRating.getComment(),
+                existingRating.getRater().getName(),
+                existingRating.getCreatedAt(),
+                existingRating.getRater().getUrlOfPicture()
+        );
+    }
+
+    @Transactional
+    public void deleteUserRating(Integer ratingId, Integer currentUserId) {
+        UserRating rating = userRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new RuntimeException("Rating not found"));
+
+        if (!rating.getRater().getId().equals(currentUserId)) {
+            throw new RuntimeException("You can only delete your own ratings");
+        }
+
+        userRatingRepository.delete(rating);
+    }
+
+    @Transactional
+    public EventRatingResponseDto updateEventRating(Integer ratingId, EventRatingRequestDto request, Integer currentUserId) {
+        EventRating existingRating = eventRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new RuntimeException("Rating not found"));
+
+        if (!existingRating.getUser().getId().equals(currentUserId)) {
+            throw new RuntimeException("You can only edit your own ratings");
+        }
+
+        existingRating.setRating(request.rating());
+        existingRating.setComment(request.comment());
+
+        eventRatingRepository.save(existingRating);
+
+        return new EventRatingResponseDto(
+                existingRating.getEventRatingId(),
+                existingRating.getRating(),
+                existingRating.getComment(),
+                existingRating.getUser().getName(),
+                existingRating.getCreatedAt()
+        );
+    }
+
+    @Transactional
+    public void deleteEventRating(Integer ratingId, Integer currentUserId) {
+        EventRating rating = eventRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new RuntimeException("Rating not found"));
+
+        if (!rating.getUser().getId().equals(currentUserId)) {
+            throw new RuntimeException("You can only delete your own ratings");
+        }
+
+        eventRatingRepository.delete(rating);
+    }
+
 }

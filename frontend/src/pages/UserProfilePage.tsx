@@ -3,13 +3,14 @@ import { useParams } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
 import StarRatingDisplay from '../components/StarRatingDisplay'
+import StarRatingInput from '../components/StarRatingInput'
 import UserProfileSidebar from '../components/UserProfileSidebar'
 import UserRatingForm from '../components/UserRatingForm'
-import { parseLocalDate } from '../utils/formatDate'
 import type { UsersResponse } from '../Api/types/User'
 import type { UserRatingResponse } from '../Api/types/Rating'
 import { toast } from 'sonner'
 import { UserPlus, UserMinus, Users, Trophy, Star } from 'lucide-react'
+import RatingCard from '../components/RatingCard'
 
 interface FriendStatus {
   isFriend: boolean
@@ -32,6 +33,9 @@ const UserProfilePage = () => {
   const [isSending, setIsSending] = useState(false)
   const [friendsCount, setFriendsCount] = useState<number>(0)
   const [mainSportName, setMainSportName] = useState<string>("")
+  const [editingRatingId, setEditingRatingId] = useState<number | null>(null)
+  const [editRatingValue, setEditRatingValue] = useState<number>(0)
+  const [editRatingComment, setEditRatingComment] = useState<string>('')
   
   // Map level string/number to numeric scale (supports 'niski/średni/wysoki' or 1..10)
   const levelToNumber = (lvl: any): number => {
@@ -83,6 +87,58 @@ const UserProfilePage = () => {
       toast.error('Nie możesz ocenić tego użytkownika.')
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const startEditUserRating = (r: UserRatingResponse) => {
+    setEditingRatingId(r.id)
+    setEditRatingValue(r.rating)
+    setEditRatingComment(r.comment || '')
+  }
+
+  const cancelEditUserRating = () => {
+    setEditingRatingId(null)
+    setEditRatingValue(0)
+    setEditRatingComment('')
+  }
+
+  const saveEditUserRating = async (ratingId: number) => {
+    if (!currentUserId || !id) return
+    try {
+      const token = localStorage.getItem('accessToken')
+      await api.put(
+        `/ratings/user/${ratingId}`,
+        {
+          raterId: currentUserId,
+          ratedId: parseInt(id),
+          rating: editRatingValue,
+          comment: editRatingComment,
+        },
+        {
+          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+          params: { userId: currentUserId },
+        }
+      )
+      toast.success('Zaktualizowano opinię')
+      cancelEditUserRating()
+      fetchUserRatings()
+    } catch (e) {
+      toast.error('Nie udało się zaktualizować opinii')
+    }
+  }
+
+  const deleteUserRating = async (ratingId: number) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      await api.delete(`/ratings/user/${ratingId}`, {
+        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+        params: { userId: currentUserId ?? undefined },
+      })
+      toast.success('Usunięto opinię')
+      if (editingRatingId === ratingId) cancelEditUserRating()
+      fetchUserRatings()
+    } catch (e) {
+      toast.error('Nie udało się usunąć opinii')
     }
   }
 
@@ -301,31 +357,55 @@ const UserProfilePage = () => {
                 </section>
               )}
 
-              {activeTab === 'Oceny' && (
+{activeTab === 'Oceny' && (
                 <section>
-                  <h3 className='text-lg font-semibold text-white mb-3'>Oceny użytkownika</h3>
+                  <h3 className="text-lg font-semibold text-white mb-3">Oceny użytkownika</h3>
                   {currentUserId && currentUserId !== parseInt(id ?? '0') && !hasRated && hasCommonEvent && (
                     <UserRatingForm onSubmit={handleAddUserRating} disabled={isSending} />
                   )}
-
+                  {hasRated && (
+                    <p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego użytkownika.</p>
+                  )}
+                  {!hasRated && currentUserId && currentUserId !== parseInt(id ?? '0') && !hasCommonEvent && (
+                    <p className='text-sm text-zinc-400 italic mt-3'>Możesz ocenić użytkownika tylko, jeśli uczestniczyliście w tym samym wydarzeniu.</p>
+                  )}
                   {userRatings.length ? (
-                    <ul className='space-y-3 mt-6'>
-                      {userRatings.map(r => (
-                        <li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
-                          <div className='flex items-center justify-between mb-1'>
-                            <div className='flex items-center gap-3'>
-                              <Avatar src={r.raterAvatarUrl || null} name={r.raterName} size='sm' className='ring-1 ring-zinc-700' />
-                              <div className='text-white text-sm font-medium'>{r.raterName}</div>
-                            </div>
-                            <span className='text-xs text-zinc-500'>{parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}</span>
-                          </div>
-                          <StarRatingDisplay value={r.rating} size={18} />
-                          {r.comment && <p className='text-sm text-zinc-300 mt-2'>{r.comment}</p>}
-                        </li>
-                      ))}
+                    <ul className="space-y-3 mt-6">
+                      {userRatings.map(r => {
+                        const isEditing = editingRatingId === r.id
+                        if (isEditing) {
+                          return (
+                            <li key={r.id} className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-700">
+                              <div className='mt-2 space-y-2'>
+                                <StarRatingInput value={editRatingValue} onChange={setEditRatingValue} />
+                                <textarea className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200' value={editRatingComment} onChange={e => setEditRatingComment(e.target.value)} placeholder='Komentarz (opcjonalnie)' />
+                                <div className='flex gap-2'>
+                                  <button className='px-3 py-1 rounded-md bg-violet-600 text-white text-sm hover:bg-violet-500' onClick={() => saveEditUserRating(r.id)}>Zapisz</button>
+                                  <button className='px-3 py-1 rounded-md bg-zinc-700 text-zinc-200 text-sm hover:bg-zinc-600' onClick={cancelEditUserRating}>Anuluj</button>
+                                </div>
+                              </div>
+                            </li>
+                          )
+                        }
+                        return (
+                          <li key={r.id}>
+                            <RatingCard
+                              rating={r.rating}
+                              raterEmail={r.userEmail}
+                              comment={r.comment}
+                              raterName={r.raterName}
+                              raterAvatarUrl={r.raterAvatarUrl}
+                              createdAt={r.createdAt}
+                              isMine={r.raterName === currentUserName}
+                              onEdit={() => startEditUserRating(r)}
+                              onDelete={() => deleteUserRating(r.id)}
+                            />
+                          </li>
+                        )
+                      })}
                     </ul>
                   ) : (
-                    <p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego użytkownika.</p>
+                    <p className="text-zinc-500 text-sm italic mt-4">Brak ocen dla tego użytkownika.</p>
                   )}
                 </section>
               )}

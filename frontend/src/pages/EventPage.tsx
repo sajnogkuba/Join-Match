@@ -8,7 +8,9 @@ import 'dayjs/locale/pl'
 import Avatar from '../components/Avatar'
 import EventRatingForm from '../components/EventRatingForm'
 import StarRatingDisplay from '../components/StarRatingDisplay'
-import { formatEventDate, parseEventDate, parseLocalDate } from '../utils/formatDate'
+import RatingCard from '../components/RatingCard'
+import StarRatingInput from '../components/StarRatingInput'
+import { formatEventDate, parseEventDate } from '../utils/formatDate'
 import type { EventRatingResponse } from '../Api/types/Rating'
 import {
 	Share2,
@@ -52,6 +54,9 @@ const EventPage: React.FC = () => {
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
 	const isEventPast = event && parseEventDate(event.eventDate).isBefore(dayjs())
+	const [editingRatingId, setEditingRatingId] = useState<number | null>(null)
+	const [editRatingValue, setEditRatingValue] = useState<number>(0)
+	const [editRatingComment, setEditRatingComment] = useState<string>('')
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
@@ -133,6 +138,58 @@ const EventPage: React.FC = () => {
 			toast.error('Nie możesz ocenić tego wydarzenia.')
 		} finally {
 			setIsSending(false)
+		}
+	}
+
+	const startEditEventRating = (r: EventRatingResponse) => {
+		setEditingRatingId(r.id)
+		setEditRatingValue(r.rating)
+		setEditRatingComment(r.comment || '')
+	}
+
+	const cancelEditEventRating = () => {
+		setEditingRatingId(null)
+		setEditRatingValue(0)
+		setEditRatingComment('')
+	}
+
+	const saveEditEventRating = async (ratingId: number) => {
+		if (!currentUserId || !id) return
+		try {
+			const token = localStorage.getItem('accessToken')
+			await axiosInstance.put(
+				`/ratings/event/${ratingId}`,
+				{
+					userId: currentUserId,
+					eventId: parseInt(id),
+					rating: editRatingValue,
+					comment: editRatingComment,
+				},
+				{
+					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+					params: { userId: currentUserId },
+				}
+			)
+			toast.success('Zmieniono ocenę wydarzenia')
+			cancelEditEventRating()
+			fetchEventRatings()
+		} catch (e) {
+			toast.error('Nie udało się zaktualizować oceny')
+		}
+	}
+
+	const deleteEventRating = async (ratingId: number) => {
+		try {
+			const token = localStorage.getItem('accessToken')
+			await axiosInstance.delete(`/ratings/event/${ratingId}`, {
+				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+				params: { userId: currentUserId ?? undefined },
+			})
+			toast.success('Usunięto ocenę wydarzenia')
+			if (editingRatingId === ratingId) cancelEditEventRating()
+			fetchEventRatings()
+		} catch (e) {
+			toast.error('Nie udało się usunąć oceny')
 		}
 	}
 
@@ -496,35 +553,41 @@ const EventPage: React.FC = () => {
 								)}
 
 								{/* Lista ocen */}
-								{eventRatings.length ? (
-									<ul className='space-y-3 mt-6'>
-										{eventRatings.map(r => (
-											<li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
-													<div className='flex items-center justify-between mb-1'>
-														{(() => {
-															const participant = participants.find(p => p.userName === r.userName)
-															return (
-																<div className='flex items-center gap-3'>
-																	<Avatar src={participant?.userAvatarUrl || null} name={r.userName} size='sm' className='ring-1 ring-zinc-700' />
-																	<div className='leading-tight'>
-																		<div className='text-white text-sm font-medium'>{r.userName}</div>
-																		{participant?.userEmail && <div className='text-xs text-zinc-400'>{participant.userEmail}</div>}
+									{eventRatings.length ? (
+										<ul className='space-y-3 mt-6'>
+											{eventRatings.map(r => {
+												const participant = participants.find(p => p.userName === r.userName)
+												const isMine = currentUserName && r.userName === currentUserName
+													const isEditing = editingRatingId === r.id
+													return (
+														<li key={r.id}>
+															{isEditing ? (
+																<div className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700 mt-2 space-y-2'>
+																	<StarRatingInput value={editRatingValue} onChange={setEditRatingValue} />
+																	<textarea className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200' value={editRatingComment} onChange={e => setEditRatingComment(e.target.value)} placeholder='Komentarz (opcjonalnie)' />
+																	<div className='flex gap-2'>
+																		<button className='px-3 py-1 rounded-md bg-violet-600 text-white text-sm hover:bg-violet-500' onClick={() => saveEditEventRating(r.id)}>Zapisz</button>
+																		<button className='px-3 py-1 rounded-md bg-zinc-700 text-zinc-200 text-sm hover:bg-zinc-600' onClick={cancelEditEventRating}>Anuluj</button>
 																	</div>
 																</div>
-														)
-														})()}
-														<span className='text-xs text-zinc-500'>
-															{parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
-														</span>
-													</div>
-													<div className='mb-2'>
-														<StarRatingDisplay value={r.rating} size={18} />
-													</div>
-													{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
-											</li>
-										))}
-									</ul>
-								) : (
+															) : (
+																<RatingCard
+																	rating={r.rating}
+																	comment={r.comment}
+																	raterName={r.userName}
+																	raterAvatarUrl={participant?.userAvatarUrl || undefined}
+																	raterEmail={participant?.userEmail}
+																	createdAt={r.createdAt}
+																	isMine={!!isMine}
+																	onEdit={() => startEditEventRating(r)}
+																	onDelete={() => deleteEventRating(r.id)}
+																/>
+															)}
+														</li>
+													)
+											})}
+										</ul>
+									) : (
 									<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego wydarzenia.</p>
 								)}
 							</div>
