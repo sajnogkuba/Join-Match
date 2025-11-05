@@ -1,10 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.EventDetailsResponseDto;
-import com.joinmatch.backend.dto.EventRequestDto;
-import com.joinmatch.backend.dto.EventResponseDto;
-import com.joinmatch.backend.dto.SportObjectRequestDto;
-import com.joinmatch.backend.dto.SportObjectResponseDto;
+import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,5 +36,12 @@ public class EventController {
     public ResponseEntity<EventResponseDto> createEvent(@RequestBody @Valid EventRequestDto eventRequestDto) {
         EventResponseDto createdEvent = eventService.create(eventRequestDto);
         return ResponseEntity.status(201).body(createdEvent);
+    }
+    @GetMapping("/page")
+    public ResponseEntity<PagedEventsDto> getPage(
+            @RequestParam(defaultValue = "12") int limit,
+            @RequestParam(defaultValue = "0") int offset
+    ) {
+        return ResponseEntity.ok(eventService.getEventsPage(limit, offset));
     }
 }
