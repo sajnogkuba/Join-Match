@@ -116,4 +116,11 @@ public class EventService {
 
         return new PagedEventsDto(items, hasMore, nextOffset);
     }
+
+    public List<EventResponseDto> getEventsForUser(String token){
+        return eventRepository.findAllOwnedByUserToken(token)
+                .stream()
+                .map(EventResponseDto::fromEvent)
+                .toList();
+    }
 }

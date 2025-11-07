@@ -44,4 +44,9 @@ public class EventController {
     ) {
         return ResponseEntity.ok(eventService.getEventsPage(limit, offset));
     }
+    @GetMapping("/byUser")
+    public ResponseEntity<List<EventResponseDto>> getEventsForUser(@RequestParam String token)
+    {
+        return ResponseEntity.ok(eventService.getEventsForUser(token));
+    }
 }
