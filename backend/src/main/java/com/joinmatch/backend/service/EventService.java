@@ -3,13 +3,20 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
+import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -21,11 +28,38 @@ public class EventService {
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
 
-    public List<EventResponseDto> getAllEvents() {
-        return eventRepository.findAll()
-                .stream()
-                .map(EventResponseDto::fromEvent)
-                .toList();
+    public Page<EventResponseDto> getAll(
+            Pageable pageable,
+            String sortBy,
+            String direction,
+            String name,
+            Integer sportTypeId,
+            String city,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Boolean free,
+            Boolean available
+    ) {
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        Specification<Event> spec = EventSpecificationBuilder.build(
+                name,
+                sportTypeId,
+                city,
+                dateFrom,
+                dateTo,
+                free,
+                available
+        );
+
+        Page<Event> events = eventRepository.findAll(spec, sortedPageable);
+
+        return events.map(EventResponseDto::fromEvent);
     }
 
     @Transactional(readOnly = true)
@@ -99,22 +133,6 @@ public class EventService {
 
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);
-    }
-
-    public PagedEventsDto getEventsPage(int limit, int offset) {
-        int safeLimit  = (limit  < 1) ? 12 : limit;
-        int safeOffset = Math.max(0, offset);
-
-        var events = eventRepository.findPage(safeLimit, safeOffset);
-
-        var items = events.stream()
-                .map(EventResponseDto::fromEvent)
-                .toList();
-
-        boolean hasMore = items.size() == safeLimit;
-        int nextOffset  = safeOffset + items.size();
-
-        return new PagedEventsDto(items, hasMore, nextOffset);
     }
 
     public List<EventResponseDto> getEventsForUser(String token){
