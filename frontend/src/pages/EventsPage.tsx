@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -9,6 +9,7 @@ import MapView from '../components/MapView'
 import PlaceAutocomplete from '../components/PlaceAutocomplete'
 import type { UserSportsResponse } from '../Api/types/Sports'
 import AlertModal from '../components/AlertModal'
+import SportTypeFilter from '../components/SportTypeFilter'
 import { parseEventDate } from '../utils/formatDate'
 import {
 	Map as MapIcon,
@@ -30,13 +31,21 @@ import {
 dayjs.locale('pl')
 
 type SortKey = 'date_asc' | 'date_desc' | 'price_asc' | 'price_desc' | 'popularity'
+type SortBy = 'eventDate' | 'cost' | 'eventName' | 'bookedParticipants'
+type SortDirection = 'ASC' | 'DESC'
 const PAGE_SIZE = 12
 
-// --- NOWE: typ odpowiedzi z backendu /api/event/page ---
-type EventsPageDto = {
-	items: Event[]
-	hasMore: boolean
-	nextOffset: number
+// --- NOWE: typ odpowiedzi z backendu /api/event (Spring Page) ---
+type EventsPageResponse = {
+	content: Event[]
+	totalElements: number
+	totalPages: number
+	number: number
+	size: number
+	first: boolean
+	last: boolean
+	numberOfElements: number
+	empty: boolean
 }
 
 const EventsPage = () => {
@@ -60,7 +69,7 @@ const EventsPage = () => {
 
 	const [view, setView] = useState<'grid' | 'map'>('grid')
 	const [search, setSearch] = useState('')
-	const [sportFilters, setSportFilters] = useState<string[]>([])
+	const [sportTypeId, setSportTypeId] = useState<number | null>(null)
 	const [city, setCity] = useState('')
 	const [onlyFree, setOnlyFree] = useState(false)
 	const [onlyAvailable, setOnlyAvailable] = useState(false)
@@ -71,59 +80,29 @@ const EventsPage = () => {
 	const [sort, setSort] = useState<SortKey>('date_asc')
 
 	// --- NOWE: stan paginacji z backendu ---
-	const [offset, setOffset] = useState(0)
-	const [hasMore, setHasMore] = useState(true)
+	const [hasNext, setHasNext] = useState(false)
+	const observerTarget = useRef<HTMLDivElement>(null)
+	const currentPageRef = useRef(0)
 
 	useEffect(() => {
 		setUserEmail(localStorage.getItem('email'))
 	}, [])
 
-	// --- ZMIANA: pierwsze pobranie = 1. strona eventów + sport obiekty równolegle ---
+	// --- Pobieranie sport objects przy starcie ---
 	useEffect(() => {
 		let cancelled = false
-		setLoading(true)
-
 		const loadInitial = async () => {
 			try {
-				const [pageRes, soRes] = await Promise.all([
-					axiosInstance.get<EventsPageDto>('/event/page', { params: { limit: PAGE_SIZE, offset: 0 } }),
-					axiosInstance.get<SportObject[]>('/sport-object'),
-				])
+				const soRes = await axiosInstance.get<SportObject[]>('/sport-object')
 				if (cancelled) return
-				setEvents(pageRes.data.items || [])
-				setOffset(pageRes.data.nextOffset ?? (pageRes.data.items?.length || 0))
-				setHasMore(Boolean(pageRes.data.hasMore))
 				setSportObjects(soRes.data || [])
 			} catch (e) {
 				console.error('Błąd pobierania danych:', e)
-				if (!cancelled) setError('Nie udało się pobrać wydarzeń.')
-			} finally {
-				if (!cancelled) setLoading(false)
 			}
 		}
 		loadInitial()
-
 		return () => { cancelled = true }
 	}, [])
-
-	// --- NOWE: funkcja doładowująca kolejną porcję 12 rekordów ---
-	const loadMore = async () => {
-		if (!hasMore || loadingMore) return
-		setLoadingMore(true)
-		try {
-			const { data } = await axiosInstance.get<EventsPageDto>('/event/page', {
-				params: { limit: PAGE_SIZE, offset }
-			})
-			setEvents(prev => [...prev, ...(data.items || [])])
-			setOffset(data.nextOffset ?? (offset + (data.items?.length || 0)))
-			setHasMore(Boolean(data.hasMore))
-		} catch (e) {
-			console.error('Błąd doładowywania wydarzeń:', e)
-			// nie wywalamy error screen — po prostu zostaw przycisk
-		} finally {
-			setLoadingMore(false)
-		}
-	}
 
 	// --- reszta Twoich efektów bez zmian ---
 	useEffect(() => {
@@ -155,10 +134,113 @@ const EventsPage = () => {
 		}
 	}, [userEmail])
 
-	const sports = useMemo(() => {
-		const set = new Set(events.map(e => e.sportTypeName).filter(Boolean))
-		return Array.from(set).sort()
-	}, [events])
+	// Mapowanie SortKey na sortBy + direction
+	const getSortParams = (sortKey: SortKey): { sortBy: SortBy; direction: SortDirection } => {
+		switch (sortKey) {
+			case 'date_asc':
+				return { sortBy: 'eventDate', direction: 'ASC' }
+			case 'date_desc':
+				return { sortBy: 'eventDate', direction: 'DESC' }
+			case 'price_asc':
+				return { sortBy: 'cost', direction: 'ASC' }
+			case 'price_desc':
+				return { sortBy: 'cost', direction: 'DESC' }
+			case 'popularity':
+				return { sortBy: 'bookedParticipants', direction: 'DESC' }
+			default:
+				return { sortBy: 'eventDate', direction: 'ASC' }
+		}
+	}
+
+	// Funkcja pobierająca eventy z backendu
+	const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
+		try {
+			if (append) {
+				setLoadingMore(true)
+			} else {
+				setLoading(true)
+			}
+
+			const { sortBy: currentSortBy, direction: currentDirection } = getSortParams(sort)
+			const params: Record<string, any> = {
+				page: pageNum,
+				size: PAGE_SIZE,
+				sortBy: currentSortBy,
+				direction: currentDirection,
+			}
+
+			// Dodaj filtry
+			if (search.trim() !== '') {
+				params.name = search.trim()
+			}
+			if (sportTypeId !== null) {
+				params.sportTypeId = sportTypeId
+			}
+			if (city.trim() !== '') {
+				params.city = city.trim()
+			}
+			if (dateFrom) {
+				params.dateFrom = dateFrom
+			}
+			if (dateTo) {
+				params.dateTo = dateTo
+			}
+			if (onlyFree) {
+				params.free = true
+			}
+			if (onlyAvailable) {
+				params.available = true
+			}
+
+			const response = await axiosInstance.get<EventsPageResponse>('/event', { params })
+			const data = response.data
+
+			if (append) {
+				setEvents(prev => [...prev, ...(data.content || [])])
+			} else {
+				setEvents(data.content || [])
+			}
+			setHasNext(!data.last)
+		} catch (err) {
+			console.error('Błąd pobierania wydarzeń:', err)
+			setError('Nie udało się pobrać wydarzeń.')
+		} finally {
+			setLoading(false)
+			setLoadingMore(false)
+		}
+	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable])
+
+	// Reset page i pobieranie eventów przy zmianie filtrów/sortowania
+	useEffect(() => {
+		currentPageRef.current = 0
+		setEvents([])
+		fetchEvents(0, false)
+	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable, fetchEvents])
+
+	// Infinite scroll z IntersectionObserver
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			entries => {
+				if (entries[0].isIntersecting && hasNext && !loading && !loadingMore) {
+			const nextPage = currentPageRef.current + 1
+			currentPageRef.current = nextPage
+			fetchEvents(nextPage, true)
+				}
+			},
+			{ threshold: 0.1 }
+		)
+
+		const currentTarget = observerTarget.current
+		if (currentTarget) {
+			observer.observe(currentTarget)
+		}
+
+		return () => {
+			if (currentTarget) {
+				observer.unobserve(currentTarget)
+			}
+		}
+	}, [hasNext, loading, loadingMore, fetchEvents])
 
 	const eventsWithCoords = useMemo(() => {
 		const levelMap: Record<number, string> = {
@@ -190,45 +272,6 @@ const EventsPage = () => {
 			.filter(Boolean) as any[]
 	}, [events, sportObjects])
 
-	// 🔍 Filtrowanie/sortowanie zostawiamy — działa na tym, co już pobrane (lazy).
-	const filteredSorted = useMemo(() => {
-		let list = [...events]
-
-		if (search.trim()) {
-			const q = search.toLowerCase()
-			list = list.filter(e => e.eventName.toLowerCase().includes(q) || e.sportObjectName.toLowerCase().includes(q))
-		}
-		if (sportFilters.length > 0) list = list.filter(e => sportFilters.includes(e.sportTypeName))
-		if (city) list = list.filter((e: any) => (e.city || '').toLowerCase() === city.toLowerCase())
-		if (onlyFree) list = list.filter((e: any) => Number(e.cost) === 0)
-		if (onlyAvailable) list = list.filter(e => e.numberOfParticipants - (e as any).bookedParticipants > 0)
-
-		if (dateFrom)
-			list = list.filter(e => {
-				const eventDate = parseEventDate(e.eventDate)
-				return eventDate.isAfter(dayjs(dateFrom).startOf('day')) || eventDate.isSame(dayjs(dateFrom), 'day')
-			})
-		if (dateTo)
-			list = list.filter(e => {
-				const eventDate = parseEventDate(e.eventDate)
-				return eventDate.isBefore(dayjs(dateTo).endOf('day')) || eventDate.isSame(dayjs(dateTo), 'day')
-			})
-
-		if (priceMin) list = list.filter((e: any) => Number(e.cost) >= Number(priceMin))
-		if (priceMax) list = list.filter((e: any) => Number(e.cost) <= Number(priceMax))
-
-		list.sort((a, b) => {
-			switch (sort) {
-				case 'date_asc': return parseEventDate(a.eventDate).valueOf() - parseEventDate(b.eventDate).valueOf()
-				case 'date_desc': return parseEventDate(b.eventDate).valueOf() - parseEventDate(a.eventDate).valueOf()
-				case 'price_asc': return (a as any).cost - (b as any).cost
-				case 'price_desc': return (b as any).cost - (a as any).cost
-				case 'popularity': return ((b as any).bookedParticipants || 0) - ((a as any).bookedParticipants || 0)
-				default: return 0
-			}
-		})
-		return list
-	}, [events, search, sportFilters, city, onlyFree, onlyAvailable, dateFrom, dateTo, priceMin, priceMax, sort])
 
 	const handleSave = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
@@ -308,7 +351,7 @@ const EventsPage = () => {
 
 	const clearFilters = () => {
 		setSearch('')
-		setSportFilters([])
+		setSportTypeId(null)
 		setCity('')
 		setOnlyFree(false)
 		setOnlyAvailable(false)
@@ -317,6 +360,7 @@ const EventsPage = () => {
 		setPriceMin('')
 		setPriceMax('')
 		setSort('date_asc')
+		// Reset page zostanie wykonany przez useEffect przy zmianie filtrów
 	}
 
 	return (
@@ -345,38 +389,40 @@ const EventsPage = () => {
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
 					{/* Pasek wyszukiwania i sortowania */}
-					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-						<div className='flex flex-1 items-stretch gap-3'>
-							<div className='relative flex-1'>
-								<Search className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' size={18} />
-								<input
-									value={search}
-									onChange={e => setSearch(e.target.value)}
-									placeholder='Szukaj po nazwie lub obiekcie…'
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-600'
-								/>
-							</div>
+					<div className='flex flex-col gap-4'>
+						{/* Wyszukiwanie */}
+						<div className='relative flex-1'>
+							<Search className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' size={18} />
+							<input
+								value={search}
+								onChange={e => setSearch(e.target.value)}
+								placeholder='Szukaj po nazwie lub obiekcie…'
+								className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-600'
+							/>
+						</div>
 
-							<div className='hidden md:flex items-center gap-2'>
+						{/* Przyciski widoku, sortowania i akcji */}
+						<div className='flex flex-wrap items-center gap-3'>
+							{/* Przyciski widoku - Lista/Mapa */}
+							<div className='flex items-center gap-2'>
 								<button
 									onClick={() => setView('grid')}
 									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'grid' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>
-									<GridIcon size={16} /> Lista
+									<GridIcon size={16} /> <span className='hidden sm:inline'>Lista</span>
 								</button>
 								<button
 									onClick={() => setView('map')}
 									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'map' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>
-									<MapIcon size={16} /> Mapa
+									<MapIcon size={16} /> <span className='hidden sm:inline'>Mapa</span>
 								</button>
 							</div>
-						</div>
 
-						<div className='flex items-center gap-3'>
-							<div className='relative'>
+							{/* Sortowanie */}
+							<div className='relative flex-1 min-w-[140px]'>
 								<select
 									value={sort}
 									onChange={e => setSort(e.target.value as SortKey)}
-									className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'>
+									className='w-full appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'>
 									<option value='date_asc'>Data rosnąco</option>
 									<option value='date_desc'>Data malejąco</option>
 									<option value='price_asc'>Cena rosnąco</option>
@@ -385,10 +431,12 @@ const EventsPage = () => {
 								</select>
 								<ArrowUpDown className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60' size={16} />
 							</div>
+
+							{/* Przycisk wyczyść */}
 							<button
 								onClick={clearFilters}
-								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800'>
-								<FilterX size={16} /> Wyczyść
+								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 whitespace-nowrap'>
+								<FilterX size={16} /> <span className='hidden sm:inline'>Wyczyść</span>
 							</button>
 						</div>
 					</div>
@@ -397,24 +445,7 @@ const EventsPage = () => {
 					<div className='mt-4 grid grid-cols-1 gap-3 md:grid-cols-4'>
 						<div>
 							<label className='mb-1 block text-xs text-zinc-400'>Sport</label>
-							<div className='flex flex-wrap gap-2'>
-								{useMemo(() => {
-									return sports.map(s => {
-										const active = sportFilters.includes(s)
-										return (
-											<button
-												key={s}
-												onClick={() => setSportFilters(prev => (active ? prev.filter(x => x !== s) : [...prev, s]))}
-												className={`rounded-full px-3 py-1 text-xs ring-1 ${active
-													? 'bg-violet-600 text-white ring-violet-700'
-													: 'bg-zinc-900/60 text-zinc-200 ring-zinc-700 hover:bg-zinc-800'
-												}`}>
-												{s}
-											</button>
-										)
-									})
-								}, [sports, sportFilters])}
-							</div>
+							<SportTypeFilter value={sportTypeId} onChange={setSportTypeId} />
 						</div>
 
 						<div>
@@ -471,7 +502,7 @@ const EventsPage = () => {
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-rose-500/10 p-10 text-rose-200'>
 								{error}
 							</div>
-						) : filteredSorted.length === 0 ? (
+						) : events.length === 0 ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center'>
 								<div className='text-5xl mb-2'>🔍</div>
 								<div className='text-white text-lg font-semibold'>Brak wyników</div>
@@ -480,7 +511,7 @@ const EventsPage = () => {
 						) : (
 							<>
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-									{filteredSorted.map(ev => (
+									{events.map(ev => (
 										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
 											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
 												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
@@ -568,15 +599,15 @@ const EventsPage = () => {
 									))}
 								</div>
 
-								{/* --- ZMIANA: przycisk „Załaduj więcej” czyta hasMore z backendu --- */}
-								{hasMore && (
-									<div className='mt-8 grid place-items-center'>
-										<button
-											onClick={loadMore}
-											disabled={loadingMore}
-											className='rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-60 disabled:cursor-not-allowed'>
-											{loadingMore ? 'Ładowanie…' : 'Załaduj więcej'}
-										</button>
+								{/* Infinite scroll trigger */}
+								{hasNext && (
+									<div ref={observerTarget} className='mt-8 grid place-items-center py-4'>
+										{loadingMore && (
+											<div className='flex items-center gap-2 text-zinc-400'>
+												<Loader2 className='animate-spin' size={20} />
+												<span className='text-sm'>Ładowanie kolejnych wydarzeń...</span>
+											</div>
+										)}
 									</div>
 								)}
 							</>
