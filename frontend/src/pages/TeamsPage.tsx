@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Users, Crown, CheckCircle, Plus, Loader2 } from 'lucide-react'
 import { useAuth } from '../Context/authContext'
 import TeamsList from '../components/TeamsList'
+import TeamFilters, { type TeamFilters as TeamFiltersType } from '../components/TeamFilters'
 import api from '../Api/axios'
 import type { User } from '../Api/types/User'
 
@@ -12,6 +13,11 @@ const TeamsPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<TeamsTab>('all-teams')
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [loadingUserId, setLoadingUserId] = useState(false)
+	const [filters, setFilters] = useState<Record<TeamsTab, TeamFiltersType>>({
+		'all-teams': { name: '', sportTypeId: null, leaderName: '' },
+		'owned-teams': { name: '', sportTypeId: null, leaderName: '' },
+		'joined-teams': { name: '', sportTypeId: null, leaderName: '' },
+	})
 	const { isAuthenticated } = useAuth()
 	const navigate = useNavigate()
 
@@ -21,6 +27,10 @@ const TeamsPage: React.FC = () => {
 			return
 		}
 		setActiveTab(tab)
+	}
+
+	const handleFiltersChange = (newFilters: TeamFiltersType) => {
+		setFilters(prev => ({ ...prev, [activeTab]: newFilters }))
 	}
 
 	const handleCreateTeam = () => {
@@ -100,7 +110,15 @@ const TeamsPage: React.FC = () => {
 
 						<div className='flex-1 min-w-0 lg:pl-8'>
 							<div className='max-h-[calc(100vh-280px)] overflow-y-auto pr-2 rounded-xl bg-zinc-900/30 p-4 border border-zinc-800/50 dark-scrollbar'>
-								{activeTab === 'all-teams' && <TeamsList />}
+								{activeTab === 'all-teams' && (
+									<>
+										<TeamFilters
+											filters={filters['all-teams']}
+											onFiltersChange={handleFiltersChange}
+										/>
+										<TeamsList filters={filters['all-teams']} />
+									</>
+								)}
 
 								{activeTab === 'owned-teams' && (
 									<>
@@ -111,7 +129,13 @@ const TeamsPage: React.FC = () => {
 												</div>
 											</div>
 										) : currentUserId !== null ? (
-											<TeamsList leaderId={currentUserId} />
+											<>
+												<TeamFilters
+													filters={filters['owned-teams']}
+													onFiltersChange={handleFiltersChange}
+												/>
+												<TeamsList leaderId={currentUserId} filters={filters['owned-teams']} />
+											</>
 										) : (
 											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
 												<div>
