@@ -11,6 +11,7 @@ import type { SimpleUser, SidebarItemKey } from "../Api/types/Profile";
 import type { UserRatingResponse } from "../Api/types/Rating";
 import type { UserSportsResponse } from "../Api/types/Sports";
 import type { User } from "../Api/types/User";
+import MyEventsSection from "../components/MyEventsSection.tsx";
 
 
 
@@ -179,6 +180,11 @@ const ProfilePage = () => {
                         {activeTab === "Oceny" && (
                             <div className="flex-1">
                                 <RatingsSection userId={currentUser?.id ?? null} />
+                            </div>
+                        )}
+                        {activeTab === "Moje wydarzenia" && (
+                            <div className="flex-1">
+                                <MyEventsSection />
                             </div>
                         )}
                     </div>

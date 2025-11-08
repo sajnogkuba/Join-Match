@@ -1,8 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.EventDetailsResponseDto;
-import com.joinmatch.backend.dto.EventRequestDto;
-import com.joinmatch.backend.dto.EventResponseDto;
+import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -103,4 +101,26 @@ public class EventService {
         return EventResponseDto.fromEvent(saved);
     }
 
+    public PagedEventsDto getEventsPage(int limit, int offset) {
+        int safeLimit  = (limit  < 1) ? 12 : limit;
+        int safeOffset = Math.max(0, offset);
+
+        var events = eventRepository.findPage(safeLimit, safeOffset);
+
+        var items = events.stream()
+                .map(EventResponseDto::fromEvent)
+                .toList();
+
+        boolean hasMore = items.size() == safeLimit;
+        int nextOffset  = safeOffset + items.size();
+
+        return new PagedEventsDto(items, hasMore, nextOffset);
+    }
+
+    public List<EventResponseDto> getEventsForUser(String token){
+        return eventRepository.findAllOwnedByUserToken(token)
+                .stream()
+                .map(EventResponseDto::fromEvent)
+                .toList();
+    }
 }
