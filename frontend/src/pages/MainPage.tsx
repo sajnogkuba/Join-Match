@@ -1,19 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { motion } from 'framer-motion'
 import { MapPin, CalendarDays, Bookmark, Users } from 'lucide-react'
 import BackgroundImage from '../assets/Background.jpg'
 import AlertModal from '../components/AlertModal'
+import SportTypeFilter from '../components/SportTypeFilter'
 import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
 import type { UserSportsResponse } from '../Api/types/Sports'
 
-const CATEGORIES = ['All', 'Basketball', 'Football', 'Tennis', 'Volleyball', 'Running', 'Yoga', 'Swimming']
+// Typ odpowiedzi z backendu (Spring Page)
+type EventsPageResponse = {
+	content: Event[]
+	totalElements: number
+	totalPages: number
+	number: number
+	size: number
+	first: boolean
+	last: boolean
+	numberOfElements: number
+	empty: boolean
+}
 
 const MainPage: React.FC = () => {
 	const [searchQuery, setSearchQuery] = useState('')
-	const [selectedCategory, setSelectedCategory] = useState('All')
+	const [sportTypeId, setSportTypeId] = useState<number | null>(null)
 	const [events, setEvents] = useState<Event[]>([])
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -30,19 +42,40 @@ const MainPage: React.FC = () => {
 
 	useEffect(() => setUserEmail(localStorage.getItem('email')), [])
 
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const { data } = await api.get('/event')
-				setEvents(data)
-			} catch {
-				setError('Nie udało się pobrać wydarzeń.')
-			} finally {
-				setLoading(false)
+	// Funkcja pobierająca eventy z backendu
+	const fetchEvents = useCallback(async () => {
+		try {
+			setLoading(true)
+			const params: Record<string, any> = {
+				page: 0,
+				size: 6, // MainPage pokazuje tylko 6 eventów
+				sortBy: 'eventDate',
+				direction: 'ASC',
 			}
+
+			// Dodaj filtry
+			if (searchQuery.trim() !== '') {
+				params.name = searchQuery.trim()
+			}
+			if (sportTypeId !== null) {
+				params.sportTypeId = sportTypeId
+			}
+
+			const response = await api.get<EventsPageResponse>('/event', { params })
+			const data = response.data
+			setEvents(data.content || [])
+		} catch (err) {
+			console.error('Błąd pobierania wydarzeń:', err)
+			setError('Nie udało się pobrać wydarzeń.')
+		} finally {
+			setLoading(false)
 		}
-		fetchData()
-	}, [])
+	}, [searchQuery, sportTypeId])
+
+	// Pobieranie eventów przy zmianie filtrów
+	useEffect(() => {
+		fetchEvents()
+	}, [fetchEvents])
 
 	useEffect(() => {
 		if (!userEmail) return
@@ -153,12 +186,6 @@ const MainPage: React.FC = () => {
 		} catch {}
 	}
 
-	const filteredEvents = events.filter(e => {
-		const matchName = e.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			e.sportObjectName.toLowerCase().includes(searchQuery.toLowerCase())
-		const matchCat = selectedCategory === 'All' || e.sportTypeName === selectedCategory
-		return matchName && matchCat
-	})
 
 	return (
 		<div className="bg-[#0d0d10] text-zinc-100">
@@ -208,16 +235,9 @@ const MainPage: React.FC = () => {
 							onChange={e => setSearchQuery(e.target.value)}
 							className="flex-1 rounded-xl bg-zinc-900/70 border border-zinc-700 px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent"
 						/>
-						<select
-							value={selectedCategory}
-							onChange={e => setSelectedCategory(e.target.value)}
-							className="md:w-64 rounded-xl bg-zinc-900/70 border border-zinc-700 px-4 py-3 text-white focus:ring-2 focus:ring-violet-600"
-						>
-							{CATEGORIES.map(c => <option key={c}>{c}</option>)}
-						</select>
-						<button className="bg-gradient-to-r from-violet-600 to-violet-800 text-white font-medium py-3 px-8 rounded-xl hover:from-violet-700 hover:to-violet-900 transition-all shadow-lg shadow-violet-900/30">
-							Szukaj
-						</button>
+						<div className="md:w-64">
+							<SportTypeFilter value={sportTypeId} onChange={setSportTypeId} />
+						</div>
 					</div>
 				</div>
 			</section>
@@ -242,9 +262,9 @@ const MainPage: React.FC = () => {
 						<div className="text-center py-16 text-gray-400">Ładowanie...</div>
 					) : error ? (
 						<div className="text-center py-16 text-red-400">{error}</div>
-					) : filteredEvents.length > 0 ? (
+					) : events.length > 0 ? (
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-							{filteredEvents.slice(0, 6).map(event => (
+							{events.map(event => (
 								<motion.div
 									key={event.eventId}
 									initial={{ opacity: 0, y: 30 }}
