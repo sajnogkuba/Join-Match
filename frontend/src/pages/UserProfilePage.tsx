@@ -260,7 +260,6 @@ const UserProfilePage = () => {
                 <p className='text-white font-semibold leading-tight'>
                   {user.name} <span className='text-zinc-400'>/ Profil</span>
                 </p>
-                <p className='text-sm text-zinc-400'>Zaktualizuj swoje dane i zarządzaj kontem</p>
               </div>
             </div>
             <div className='flex items-center gap-8'>
