@@ -57,7 +57,6 @@ const TeamsList: React.FC<TeamsListProps> = ({ leaderId, filters }) => {
 			if (leaderId !== undefined) {
 				params.leaderId = leaderId
 			}
-			// Add filter parameters
 			if (activeFilters.name.trim() !== '') {
 				params.name = activeFilters.name.trim()
 			}

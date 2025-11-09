@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { TeamDetails } from '../Api/types/Team'
+import type { User } from '../Api/types/User'
+import type { SearchResult, Friend } from '../Api/types/Friends'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle } from 'lucide-react'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
+import { useAuth } from '../Context/authContext'
 
 dayjs.locale('pl')
 
@@ -15,6 +18,16 @@ const TeamPage: React.FC = () => {
 	const [team, setTeam] = useState<TeamDetails | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+	const { isAuthenticated } = useAuth()
+	const [showInvitePopup, setShowInvitePopup] = useState(false)
+	const [searchQuery, setSearchQuery] = useState('')
+	const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+	const [searchLoading, setSearchLoading] = useState(false)
+	const [inviteActiveTab, setInviteActiveTab] = useState<'search' | 'friends'>('search')
+	const [friends, setFriends] = useState<Friend[]>([])
+	const [friendsLoading, setFriendsLoading] = useState(false)
+	const [friendsSearchQuery, setFriendsSearchQuery] = useState('')
 
 	useEffect(() => {
 		if (!id) {
@@ -37,6 +50,103 @@ const TeamPage: React.FC = () => {
 
 		fetchTeam()
 	}, [id])
+
+	useEffect(() => {
+		if (isAuthenticated) {
+			const token = localStorage.getItem('accessToken')
+			if (token) {
+				api.get<User>('/auth/user', { params: { token } })
+					.then(({ data }) => setCurrentUserId(data.id))
+					.catch(() => setCurrentUserId(null))
+			}
+		} else {
+			setCurrentUserId(null)
+		}
+	}, [isAuthenticated])
+
+	const searchUsers = useCallback(async (query: string) => {
+		if (!query.trim()) {
+			setSearchResults([])
+			return
+		}
+
+		if (!currentUserId) {
+			setSearchResults([])
+			return
+		}
+
+		setSearchLoading(true)
+		try {
+			const response = await api.get<SearchResult[]>(
+				`/auth/search?query=${encodeURIComponent(query)}&senderId=${currentUserId}`
+			)
+			setSearchResults(response.data)
+		} catch (error) {
+			console.error('Error searching users:', error)
+			setSearchResults([])
+		} finally {
+			setSearchLoading(false)
+		}
+	}, [currentUserId])
+
+	useEffect(() => {
+		const timeoutId = setTimeout(() => {
+			searchUsers(searchQuery)
+		}, 300)
+
+		return () => clearTimeout(timeoutId)
+	}, [searchQuery, searchUsers])
+
+	const handleInviteUser = (userId: number) => {
+		if (!team) return
+		console.log('Zapraszanie użytkownika', userId, 'do drużyny', team.idTeam)
+		// TODO: Dodać endpoint do zapraszania użytkowników
+	}
+
+	const handleCloseInvitePopup = () => {
+		setShowInvitePopup(false)
+		setSearchQuery('')
+		setSearchResults([])
+		setFriendsSearchQuery('')
+		setInviteActiveTab('search')
+	}
+
+	// Funkcja do pobierania znajomych z filtrowaniem
+	const fetchFriends = useCallback(async (query: string = '') => {
+		if (!currentUserId) return
+
+		setFriendsLoading(true)
+		try {
+			const url = `/friends/${currentUserId}${query ? `?query=${encodeURIComponent(query)}` : ''}`
+			const { data } = await api.get<Friend[]>(url)
+			setFriends(data)
+		} catch (error) {
+			console.error('Error fetching friends:', error)
+			setFriends([])
+		} finally {
+			setFriendsLoading(false)
+		}
+	}, [currentUserId])
+
+	// Pobierz znajomych gdy modal się otwiera (bez query)
+	useEffect(() => {
+		if (showInvitePopup && currentUserId && !friendsSearchQuery.trim()) {
+			fetchFriends('')
+		}
+	}, [showInvitePopup, currentUserId, fetchFriends])
+
+	// Wyszukiwanie znajomych z debounce
+	useEffect(() => {
+		if (!showInvitePopup || !currentUserId) return
+
+		const timeoutId = setTimeout(() => {
+			fetchFriends(friendsSearchQuery)
+		}, 300)
+
+		return () => clearTimeout(timeoutId)
+	}, [friendsSearchQuery, showInvitePopup, currentUserId, fetchFriends])
+
+	const isLeader = currentUserId !== null && team && currentUserId === team.leaderId
 
 	if (loading) {
 		return (
@@ -69,10 +179,8 @@ const TeamPage: React.FC = () => {
 	return (
 		<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
 			<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-				{/* Header z miniaturą zdjęcia */}
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-6'>
 					<div className='flex flex-col sm:flex-row sm:items-center gap-5'>
-						{/* Miniaturka drużyny */}
 						{team.photoUrl && team.photoUrl.trim() !== '' ? (
 							<img
 								src={team.photoUrl}
@@ -86,7 +194,6 @@ const TeamPage: React.FC = () => {
 							</div>
 						)}
 
-						{/* Tytuł i szczegóły */}
 						<div>
 							<h1 className='text-3xl font-semibold text-white'>{team.name}</h1>
 							<div className='mt-2 flex items-center gap-4 text-sm text-zinc-400'>
@@ -104,9 +211,7 @@ const TeamPage: React.FC = () => {
 				<hr className='my-6 border-zinc-800' />
 
 				<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
-					{/* Main content */}
 					<section className='lg:col-span-2 space-y-6'>
-						{/* Opis drużyny */}
 						{team.description && (
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold mb-3'>Opis drużyny</h3>
@@ -114,7 +219,6 @@ const TeamPage: React.FC = () => {
 							</div>
 						)}
 
-						{/* Informacja o członkach - placeholder */}
 						<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 							<div className='mb-4 flex items-center justify-between'>
 								<h3 className='text-white text-lg font-semibold'>Członkowie drużyny</h3>
@@ -122,25 +226,43 @@ const TeamPage: React.FC = () => {
 									<span className='text-violet-300 font-semibold'>{team.memberCount} członków</span>
 								)}
 							</div>
+							{isLeader && (
+								<div className='mb-4'>
+									<button
+										onClick={() => setShowInvitePopup(true)}
+										className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors'
+									>
+										<UserPlus size={16} />
+										Zaproś użytkowników
+									</button>
+								</div>
+							)}
 							<div className='rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200 text-sm inline-flex items-center gap-2'>
 								<AlertTriangle size={16} /> Funkcjonalność dołączania do drużyny wkrótce
 							</div>
 						</div>
 					</section>
 
-					{/* Sidebar */}
 					<aside className='space-y-6 lg:sticky lg:top-6'>
-						{/* Lider */}
-						<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+						<div className={`rounded-2xl border p-5 ${
+							isLeader 
+								? 'border-violet-500/50 bg-zinc-900/80' 
+								: 'border-zinc-800 bg-zinc-900/60'
+						}`}>
 							<h3 className='text-white text-lg font-semibold flex items-center gap-2 mb-4'>
 								<Crown size={20} className='text-violet-400' /> Lider
 							</h3>
+							{isLeader && (
+								<div className='mb-4 rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-violet-200 text-sm'>
+									Jesteś liderem tej drużyny
+								</div>
+							)}
 							<div className='mt-4 flex items-center gap-3'>
 								<Avatar
 									src={team.leaderAvatarUrl || null}
 									name={team.leaderName}
 									size='sm'
-									className='ring-2 ring-zinc-700 shadow-md'
+									className={`shadow-md ${isLeader ? 'ring-2 ring-violet-500' : 'ring-2 ring-zinc-700'}`}
 								/>
 								<div>
 									<div className='font-medium text-white'>{team.leaderName}</div>
@@ -157,7 +279,6 @@ const TeamPage: React.FC = () => {
 							</div>
 						</div>
 
-						{/* Informacje dodatkowe */}
 						<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 							<h3 className='text-white text-lg font-semibold mb-4'>Informacje</h3>
 							<div className='space-y-3 text-sm'>
@@ -179,6 +300,185 @@ const TeamPage: React.FC = () => {
 					</aside>
 				</div>
 			</div>
+
+			{showInvitePopup && (
+				<div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
+					<div 
+						className='absolute inset-0 bg-black/60 backdrop-blur-sm'
+						onClick={handleCloseInvitePopup}
+					/>
+					
+					<div className='relative w-full max-w-5xl bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200'>
+						<div className='flex items-center justify-between p-6 border-b border-zinc-800'>
+							<h3 className='text-white text-xl font-semibold'>Zaproś użytkowników do drużyny</h3>
+							<button
+								onClick={handleCloseInvitePopup}
+								className='p-2 rounded-xl hover:bg-zinc-800 transition-colors'
+							>
+								<X size={20} className='text-zinc-400 hover:text-white' />
+							</button>
+						</div>
+
+						<div className='p-6 space-y-4'>
+							{/* Zakładki */}
+							<div className='flex space-x-1 rounded-xl bg-zinc-800/60 p-1'>
+								<button
+									onClick={() => setInviteActiveTab('search')}
+									className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+										inviteActiveTab === 'search'
+											? 'bg-violet-600 text-white'
+											: 'text-zinc-400 hover:text-white hover:bg-zinc-700/50'
+									}`}
+								>
+									Wyszukaj
+								</button>
+								<button
+									onClick={() => setInviteActiveTab('friends')}
+									className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+										inviteActiveTab === 'friends'
+											? 'bg-violet-600 text-white'
+											: 'text-zinc-400 hover:text-white hover:bg-zinc-700/50'
+									}`}
+								>
+									Znajomi
+								</button>
+							</div>
+
+							{/* Zakładka Wyszukaj */}
+							{inviteActiveTab === 'search' && (
+								<>
+									<div className='relative'>
+										<Search size={16} className='absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400' />
+										<input
+											type='text'
+											placeholder='Szukaj użytkowników...'
+											value={searchQuery}
+											onChange={(e) => setSearchQuery(e.target.value)}
+											className='w-full rounded-xl border border-zinc-700 bg-zinc-800/60 px-10 py-3 text-white placeholder-zinc-400 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+										/>
+									</div>
+
+									<div className='max-h-80 overflow-y-auto space-y-3 dark-scrollbar'>
+										{searchLoading ? (
+											<div className='text-center py-8'>
+												<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4'></div>
+												<p className='text-zinc-400'>Szukanie...</p>
+											</div>
+										) : searchResults.length === 0 ? (
+											<div className='text-center py-8'>
+												<Search size={48} className='mx-auto text-zinc-600 mb-4' />
+												<p className='text-zinc-400'>
+													{searchQuery ? 'Nie znaleziono użytkowników' : 'Wpisz nazwę lub email użytkownika'}
+												</p>
+											</div>
+										) : (
+											searchResults.map(user => (
+												<div key={user.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+													<Link 
+														to={`/profile/${user.id}`}
+														className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
+													>
+														<Avatar 
+															src={user.urlOfPicture} 
+															name={user.name}
+															size='sm'
+														/>
+														<div>
+															<p className='text-white font-medium'>{user.name}</p>
+															<p className='text-sm text-zinc-400'>{user.email}</p>
+														</div>
+													</Link>
+													<div className='flex items-center gap-2'>
+														<button
+															onClick={() => handleInviteUser(user.id)}
+															className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
+															title='Zaproś do drużyny'
+														>
+															<UserPlus size={14} className='sm:w-4 sm:h-4' />
+															<span className='hidden sm:inline'>Zaproś do drużyny</span>
+															<span className='sm:hidden'>Zaproś</span>
+														</button>
+													</div>
+												</div>
+											))
+										)}
+									</div>
+								</>
+							)}
+
+							{/* Zakładka Znajomi */}
+							{inviteActiveTab === 'friends' && (
+								<>
+									<div className='relative'>
+										<Search size={16} className='absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400' />
+										<input
+											type='text'
+											placeholder='Szukaj znajomych...'
+											value={friendsSearchQuery}
+											onChange={(e) => setFriendsSearchQuery(e.target.value)}
+											className='w-full rounded-xl border border-zinc-700 bg-zinc-800/60 px-10 py-3 text-white placeholder-zinc-400 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+										/>
+									</div>
+
+									<div className='max-h-80 overflow-y-auto space-y-3 dark-scrollbar'>
+										{friendsLoading ? (
+											<div className='text-center py-8'>
+												<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500 mx-auto mb-4'></div>
+												<p className='text-zinc-400'>
+													{friendsSearchQuery.trim() ? 'Szukanie...' : 'Ładowanie znajomych...'}
+												</p>
+											</div>
+										) : friends.length === 0 ? (
+											<div className='text-center py-8'>
+												<Users size={48} className='mx-auto text-zinc-600 mb-4' />
+												<p className='text-zinc-400'>
+													{friendsSearchQuery.trim() ? 'Nie znaleziono znajomych' : 'Brak znajomych'}
+												</p>
+												<p className='text-sm text-zinc-500 mt-1'>
+													{friendsSearchQuery.trim() 
+														? 'Spróbuj innej frazy wyszukiwania'
+														: 'Dodaj znajomych, aby móc ich zaprosić do drużyny'
+													}
+												</p>
+											</div>
+										) : (
+											friends.map(friend => (
+												<div key={friend.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+													<Link 
+														to={`/profile/${friend.id}`}
+														className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
+													>
+														<Avatar 
+															src={friend.urlOfPicture} 
+															name={friend.name}
+															size='sm'
+														/>
+														<div>
+															<p className='text-white font-medium'>{friend.name}</p>
+															<p className='text-sm text-zinc-400'>{friend.email}</p>
+														</div>
+													</Link>
+													<div className='flex items-center gap-2'>
+														<button
+															onClick={() => handleInviteUser(friend.id)}
+															className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
+															title='Zaproś do drużyny'
+														>
+															<UserPlus size={14} className='sm:w-4 sm:h-4' />
+															<span className='hidden sm:inline'>Zaproś do drużyny</span>
+															<span className='sm:hidden'>Zaproś</span>
+														</button>
+													</div>
+												</div>
+											))
+										)}
+									</div>
+								</>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 		</main>
 	)
 }
