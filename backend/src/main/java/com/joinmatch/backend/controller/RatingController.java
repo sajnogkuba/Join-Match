@@ -4,11 +4,9 @@ import com.joinmatch.backend.dto.EventRatingRequestDto;
 import com.joinmatch.backend.dto.EventRatingResponseDto;
 import com.joinmatch.backend.dto.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRatingResponseDto;
-import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.service.RatingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

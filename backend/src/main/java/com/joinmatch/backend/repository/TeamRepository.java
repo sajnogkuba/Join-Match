@@ -14,17 +14,6 @@ public interface TeamRepository extends JpaRepository<Team, Integer>, JpaSpecifi
 
     @Query("""
     SELECT t FROM Team t
-    ORDER BY 
-      CASE WHEN :sortBy = 'city' THEN LOWER(t.city)
-           WHEN :sortBy = 'name' THEN LOWER(t.name)
-           ELSE LOWER(t.name)
-      END
-      ASC
-""")
-    Page<Team> findAllCaseInsensitive(Pageable pageable, @Param("sortBy") String sortBy);
-
-    @Query("""
-    SELECT t FROM Team t
     WHERE t.leader = :leader
     ORDER BY 
       CASE WHEN :sortBy = 'city' THEN LOWER(t.city)
@@ -33,5 +22,5 @@ public interface TeamRepository extends JpaRepository<Team, Integer>, JpaSpecifi
       END
       ASC
 """)
-    Page<Team> findByLeader(User leader, Pageable sortedPageable);
+    Page<Team> findByLeader(@Param("leader") User leader, Pageable sortedPageable, @Param("sortBy") String sortBy);
 }

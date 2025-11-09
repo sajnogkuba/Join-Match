@@ -9,14 +9,12 @@ import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
-import com.joinmatch.backend.specification.TeamSpecificationBuilder;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,14 +34,7 @@ public class TeamService {
         return getTeamResponseDto(teamRequestDto, team);
     }
 
-    public Page<TeamResponseDto> findAll(
-            Pageable pageable,
-            String sortBy,
-            String direction,
-            String name,
-            Integer sportTypeId,
-            String leaderName
-    ) {
+    public Page<TeamResponseDto> findAll(Pageable pageable, String sortBy, String direction) {
         Sort sort = Sort.by(new Sort.Order(
                 Sort.Direction.fromString(direction),
                 sortBy
@@ -51,23 +42,11 @@ public class TeamService {
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
 
-        Specification<Team> spec = TeamSpecificationBuilder.build(name, sportTypeId, leaderName);
-
-        Page<Team> teams = teamRepository.findAll(spec, sortedPageable);
-
+        Page<Team> teams = teamRepository.findAll(sortedPageable);
         return teams.map(TeamResponseDto::fromTeam);
     }
 
-
-    public Page<TeamResponseDto> findAllByLeaderId(
-            Pageable pageable,
-            String sortBy,
-            String direction,
-            Integer leaderId,
-            String name,
-            Integer sportTypeId,
-            String leaderName
-    ) {
+    public Page<TeamResponseDto> findAllByLeaderId(Pageable pageable, String sortBy, String direction, Integer leaderId) {
         Sort sort = Sort.by(new Sort.Order(
                 Sort.Direction.fromString(direction),
                 sortBy
@@ -78,13 +57,9 @@ public class TeamService {
         User leader = userRepository.findById(leaderId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + leaderId));
 
-        Specification<Team> spec = TeamSpecificationBuilder.build(name, sportTypeId, leaderName)
-                .and((root, query, cb) -> cb.equal(root.get("leader"), leader));
-
-        Page<Team> teams = teamRepository.findAll(spec, sortedPageable);
+        Page<Team> teams = teamRepository.findByLeader(leader, sortedPageable, sortBy);
         return teams.map(TeamResponseDto::fromTeam);
     }
-
 
     public TeamDetailsDto getTeamDetails(Integer teamId) {
         Team team = teamRepository.findById(teamId)
