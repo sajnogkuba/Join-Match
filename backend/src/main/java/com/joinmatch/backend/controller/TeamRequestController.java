@@ -1,6 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.TeamRequestResponseDto;
+import com.joinmatch.backend.dto.TeamRequestRequest.TeamRequestResponseDto;
 import com.joinmatch.backend.service.TeamRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

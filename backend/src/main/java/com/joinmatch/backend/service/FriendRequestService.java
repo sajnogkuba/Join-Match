@@ -1,7 +1,7 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.FriendRequestDto;
-import com.joinmatch.backend.dto.FriendRequestResponseDto;
+import com.joinmatch.backend.dto.FriendRequest.FriendRequestResponseDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.FriendRequest;
 import com.joinmatch.backend.model.Friendship;

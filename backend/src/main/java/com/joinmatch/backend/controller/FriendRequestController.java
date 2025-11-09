@@ -1,8 +1,7 @@
 package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.FriendRequestDto;
-import com.joinmatch.backend.dto.FriendRequestResponseDto;
-import com.joinmatch.backend.model.FriendRequest;
+import com.joinmatch.backend.dto.FriendRequest.FriendRequestResponseDto;
 import com.joinmatch.backend.service.FriendRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,8 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
+import com.joinmatch.backend.dto.Event.EventRequestDto;
+import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;

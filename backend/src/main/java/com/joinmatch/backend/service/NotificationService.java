@@ -2,8 +2,8 @@ package com.joinmatch.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.joinmatch.backend.dto.NotificationDataDto;
-import com.joinmatch.backend.dto.NotificationResponseDto;
+import com.joinmatch.backend.dto.Notification.NotificationDataDto;
+import com.joinmatch.backend.dto.Notification.NotificationResponseDto;
 import com.joinmatch.backend.enums.NotificationType;
 import com.joinmatch.backend.model.Notification;
 import com.joinmatch.backend.model.User;

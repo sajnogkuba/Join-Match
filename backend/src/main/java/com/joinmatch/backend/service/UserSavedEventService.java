@@ -1,7 +1,7 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.UserSavedEventRequestDto;
-import com.joinmatch.backend.dto.UserSavedEventResponseDto;
+import com.joinmatch.backend.dto.UserSavedEvent.UserSavedEventRequestDto;
+import com.joinmatch.backend.dto.UserSavedEvent.UserSavedEventResponseDto;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.model.UserSavedEvent;

@@ -1,8 +1,8 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.TeamDetailsDto;
-import com.joinmatch.backend.dto.TeamRequestDto;
-import com.joinmatch.backend.dto.TeamResponseDto;
+import com.joinmatch.backend.dto.Team.TeamDetailsDto;
+import com.joinmatch.backend.dto.Team.TeamRequestDto;
+import com.joinmatch.backend.dto.Team.TeamResponseDto;
 import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.Team;
 import com.joinmatch.backend.model.User;

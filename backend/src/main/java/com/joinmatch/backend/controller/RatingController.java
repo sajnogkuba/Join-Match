@@ -1,9 +1,9 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.EventRatingRequestDto;
-import com.joinmatch.backend.dto.EventRatingResponseDto;
-import com.joinmatch.backend.dto.UserRatingRequestDto;
-import com.joinmatch.backend.dto.UserRatingResponseDto;
+import com.joinmatch.backend.dto.EventRating.EventRatingRequestDto;
+import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
+import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
+import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.service.RatingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -1,6 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.NotificationResponseDto;
+import com.joinmatch.backend.dto.Notification.NotificationResponseDto;
 import com.joinmatch.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

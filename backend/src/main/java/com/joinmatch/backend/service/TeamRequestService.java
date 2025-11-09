@@ -1,6 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.TeamRequestResponseDto;
+import com.joinmatch.backend.dto.TeamRequestRequest.TeamRequestResponseDto;
 import com.joinmatch.backend.model.Team;
 import com.joinmatch.backend.model.TeamRequest;
 import com.joinmatch.backend.repository.TeamRepository;
