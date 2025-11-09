@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import type { TeamDetails } from '../Api/types/Team'
 import type { User } from '../Api/types/User'
 import type { SearchResult, Friend } from '../Api/types/Friends'
@@ -7,16 +7,18 @@ import type { TeamRequestResponseDto } from '../Api/types/TeamRequest'
 import type { TeamMember } from '../Api/types/TeamMember'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown } from 'lucide-react'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
 import { useAuth } from '../Context/authContext'
+import AlertModal from '../components/AlertModal'
 
 dayjs.locale('pl')
 
 const TeamPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
+	const navigate = useNavigate()
 	const [team, setTeam] = useState<TeamDetails | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -36,6 +38,8 @@ const TeamPage: React.FC = () => {
 	const [membersLoading, setMembersLoading] = useState(false)
 	const [showAllMembers, setShowAllMembers] = useState(false)
 	const [userEmail, setUserEmail] = useState<string | null>(null)
+	const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false)
+	const [leavingTeam, setLeavingTeam] = useState(false)
 
 	useEffect(() => {
 		if (!id) {
@@ -302,6 +306,25 @@ const TeamPage: React.FC = () => {
 		setUserTeamRequest(null)
 	}
 
+	const handleLeaveTeam = async () => {
+		if (!team || !currentUserId) return
+
+		setLeavingTeam(true)
+		try {
+			await api.delete(`/user-team/${team.idTeam}/members/${currentUserId}`)
+			// Po sukcesie przekieruj do strony drużyn
+			navigate('/teams')
+		} catch (error: any) {
+			console.error('Error leaving team:', error)
+			setLeavingTeam(false)
+			if (error.response?.status === 403 || error.response?.status === 400) {
+				alert('Nie możesz opuścić drużyny. Możliwe, że jesteś liderem lub nie jesteś członkiem tej drużyny.')
+			} else {
+				alert('Nie udało się opuścić drużyny. Spróbuj ponownie.')
+			}
+		}
+	}
+
 	if (loading) {
 		return (
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
@@ -531,6 +554,19 @@ const TeamPage: React.FC = () => {
 								)}
 							</div>
 						</div>
+
+						{/* Przycisk opuszczania drużyny - tylko dla zwykłych członków */}
+						{currentUserId && !isLeader && teamMembers.some(m => m.userId === currentUserId) && (
+							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+								<button
+									onClick={() => setShowLeaveTeamModal(true)}
+									className='w-full rounded-xl bg-red-600/20 border border-red-500/30 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-600/30 transition-colors inline-flex items-center justify-center gap-2'
+								>
+									<LogOut size={16} />
+									Opuść drużynę
+								</button>
+							</div>
+						)}
 					</aside>
 				</div>
 			</div>
@@ -747,6 +783,20 @@ const TeamPage: React.FC = () => {
 					</div>
 				</div>
 			)}
+
+			{/* Modal potwierdzenia opuszczania drużyny */}
+			<AlertModal
+				isOpen={showLeaveTeamModal}
+				onClose={() => setShowLeaveTeamModal(false)}
+				title="Opuść drużynę"
+				message="Czy na pewno chcesz opuścić tę drużynę? Tej akcji nie można cofnąć."
+				variant="warning"
+				showConfirm={true}
+				onConfirm={handleLeaveTeam}
+				confirmText="Opuść drużynę"
+				cancelText="Anuluj"
+				isLoading={leavingTeam}
+			/>
 		</main>
 	)
 }

@@ -29,4 +29,13 @@ public class UserTeamController {
         }
         return ResponseEntity.ok(members);
     }
+
+    @DeleteMapping("/{teamId}/members/{userId}")
+    public ResponseEntity<Void> removeUserFromTeam(
+            @PathVariable Integer teamId,
+            @PathVariable Integer userId
+    ) {
+        userTeamService.removeUserFromTeam(teamId, userId);
+        return ResponseEntity.noContent().build();
+    }
 }

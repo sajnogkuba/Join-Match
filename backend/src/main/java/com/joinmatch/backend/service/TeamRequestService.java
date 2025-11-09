@@ -79,5 +79,6 @@ public class TeamRequestService {
         userTeam.setTeam(teamRequest.getTeam());
         userTeamRepository.save(userTeam);
         notificationService.sendTeamRequestAcceptedNotification(teamRequest);
+        teamRequestRepository.delete(teamRequest);
     }
 }
