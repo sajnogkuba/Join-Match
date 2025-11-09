@@ -54,6 +54,23 @@ public class TeamController {
         return ResponseEntity.ok(teams);
     }
 
+    @GetMapping("/by-user")
+    public ResponseEntity<Page<TeamResponseDto>> getTeamsByUserId(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "12") Integer size,
+            @RequestParam(required = false, defaultValue = "name") String sort,
+            @RequestParam(required = false, defaultValue = "ASC") String direction,
+            @RequestParam Integer userId
+    ) {
+        Pageable pageable = Pageable.ofSize(size).withPage(page);
+        Page<TeamResponseDto> teams = teamService.findAllByUserId(pageable, sort, direction, userId);
+        if (teams.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(teams);
+
+    }
+
     @GetMapping("{id}")
     public ResponseEntity<TeamDetailsDto> getTeamById(@PathVariable Integer id) {
         TeamDetailsDto teamDetailsDto = teamService.getTeamDetails(id);

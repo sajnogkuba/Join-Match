@@ -6,21 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface TeamRepository extends JpaRepository<Team, Integer>, JpaSpecificationExecutor<Team> {
     boolean existsByName(String name);
 
-    @Query("""
-    SELECT t FROM Team t
-    WHERE t.leader = :leader
-    ORDER BY 
-      CASE WHEN :sortBy = 'city' THEN LOWER(t.city)
-           WHEN :sortBy = 'name' THEN LOWER(t.name)
-           ELSE LOWER(t.name)
-      END
-      ASC
-""")
-    Page<Team> findByLeader(@Param("leader") User leader, Pageable sortedPageable, @Param("sortBy") String sortBy);
+    Page<Team> findAllByUserTeams_User(User user, Pageable pageable);
+
+    Page<Team> findAllByLeader(User leader, Pageable pageable);
 }

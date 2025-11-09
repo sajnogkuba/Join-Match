@@ -68,6 +68,9 @@ public class User {
     @EqualsAndHashCode.Exclude
     private List<EventRating> eventRatings = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserTeam> userTeams = new ArrayList<>();
+
 
 
     public List<JoinMatchToken> getTokens() {

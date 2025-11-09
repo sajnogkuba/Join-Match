@@ -44,7 +44,7 @@ const TeamsPage: React.FC = () => {
 	}
 
 	useEffect(() => {
-		if ((activeTab === 'owned-teams' || activeTab === 'pending-requests') && isAuthenticated) {
+		if ((activeTab === 'owned-teams' || activeTab === 'joined-teams' || activeTab === 'pending-requests') && isAuthenticated) {
 			const token = localStorage.getItem('accessToken')
 			if (!token) {
 				setCurrentUserId(null)
@@ -55,7 +55,7 @@ const TeamsPage: React.FC = () => {
 				.then(({ data }) => setCurrentUserId(data.id))
 				.catch(() => setCurrentUserId(null))
 				.finally(() => setLoadingUserId(false))
-		} else if (activeTab !== 'owned-teams' && activeTab !== 'pending-requests') {
+		} else if (activeTab !== 'owned-teams' && activeTab !== 'joined-teams' && activeTab !== 'pending-requests') {
 			setCurrentUserId(null)
 		}
 	}, [activeTab, isAuthenticated])
@@ -154,15 +154,33 @@ const TeamsPage: React.FC = () => {
 								)}
 
 								{activeTab === 'joined-teams' && (
-									<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
-										<div>
-											<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-											<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
-											<p className='text-zinc-400 text-sm'>
-												Tutaj znajdziesz drużyny, do których należysz.
-											</p>
-										</div>
-									</div>
+									<>
+										{loadingUserId ? (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
+												<div className='flex items-center gap-2 text-zinc-300'>
+													<Loader2 className='animate-spin' /> Ładowanie…
+												</div>
+											</div>
+										) : currentUserId !== null ? (
+											<>
+												<TeamFilters
+													filters={filters['joined-teams']}
+													onFiltersChange={handleFiltersChange}
+												/>
+												<TeamsList userId={currentUserId} filters={filters['joined-teams']} />
+											</>
+										) : (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+												<div>
+													<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+													<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
+													<p className='text-zinc-400 text-sm'>
+														Tutaj znajdziesz drużyny, do których należysz.
+													</p>
+												</div>
+											</div>
+										)}
+									</>
 								)}
 
 								{activeTab === 'pending-requests' && (
