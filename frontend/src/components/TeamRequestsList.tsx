@@ -152,11 +152,15 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 		)
 	}
 
-	const handleAccept = (requestId: number) => {
-		console.log('Akceptowanie zaproszenia do drużyny:', requestId)
-		// TODO: Dodać endpoint do akceptacji zaproszenia
-		// Po akceptacji usunąć zaproszenie z listy
-		setRequests(prev => prev.filter(req => req.requestId !== requestId))
+	const handleAccept = async (requestId: number) => {
+		try {
+			await api.patch(`/team-request/${requestId}/accept`)
+			// Po akceptacji usunąć zaproszenie z listy
+			setRequests(prev => prev.filter(req => req.requestId !== requestId))
+		} catch (error: any) {
+			console.error('Error accepting team request:', error)
+			alert('Nie udało się zaakceptować zaproszenia. Spróbuj ponownie.')
+		}
 	}
 
 	const handleReject = (requestId: number) => {

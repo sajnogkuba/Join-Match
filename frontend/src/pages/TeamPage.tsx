@@ -4,9 +4,10 @@ import type { TeamDetails } from '../Api/types/Team'
 import type { User } from '../Api/types/User'
 import type { SearchResult, Friend } from '../Api/types/Friends'
 import type { TeamRequestResponseDto } from '../Api/types/TeamRequest'
+import type { TeamMember } from '../Api/types/TeamMember'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock } from 'lucide-react'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
@@ -31,6 +32,10 @@ const TeamPage: React.FC = () => {
 	const [friendsSearchQuery, setFriendsSearchQuery] = useState('')
 	const [teamRequests, setTeamRequests] = useState<Map<number, TeamRequestResponseDto>>(new Map())
 	const [userTeamRequest, setUserTeamRequest] = useState<TeamRequestResponseDto | null>(null)
+	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+	const [membersLoading, setMembersLoading] = useState(false)
+	const [showAllMembers, setShowAllMembers] = useState(false)
+	const [userEmail, setUserEmail] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (!id) {
@@ -59,11 +64,18 @@ const TeamPage: React.FC = () => {
 			const token = localStorage.getItem('accessToken')
 			if (token) {
 				api.get<User>('/auth/user', { params: { token } })
-					.then(({ data }) => setCurrentUserId(data.id))
-					.catch(() => setCurrentUserId(null))
+					.then(({ data }) => {
+						setCurrentUserId(data.id)
+						setUserEmail(data.email)
+					})
+					.catch(() => {
+						setCurrentUserId(null)
+						setUserEmail(null)
+					})
 			}
 		} else {
 			setCurrentUserId(null)
+			setUserEmail(null)
 		}
 	}, [isAuthenticated])
 
@@ -234,13 +246,53 @@ const TeamPage: React.FC = () => {
 		}
 	}, [currentUserId, team])
 
+	// Funkcja do pobierania członków drużyny
+	const fetchTeamMembers = useCallback(async () => {
+		if (!team) return
+
+		setMembersLoading(true)
+		type TeamMembersPageResponse = {
+			content: TeamMember[]
+			totalElements: number
+			totalPages: number
+			number: number
+			size: number
+			first: boolean
+			last: boolean
+			numberOfElements: number
+			empty: boolean
+		}
+		try {
+			const { data } = await api.get<TeamMembersPageResponse>(`/user-team/${team.idTeam}/members`, {
+				params: { page: 0, size: 100, sort: 'userName', direction: 'ASC' }
+			})
+			setTeamMembers(data.content || [])
+		} catch (error) {
+			console.error('Error fetching team members:', error)
+			setTeamMembers([])
+		} finally {
+			setMembersLoading(false)
+		}
+	}, [team])
+
+	// Pobierz członków drużyny
+	useEffect(() => {
+		fetchTeamMembers()
+	}, [fetchTeamMembers])
+
 	const isLeader = currentUserId !== null && team && currentUserId === team.leaderId
 
-	const handleAcceptTeamRequest = (requestId: number) => {
-		console.log('Akceptowanie zaproszenia do drużyny:', requestId)
-		// TODO: Dodać endpoint do akceptacji zaproszenia
-		// Po akceptacji usunąć zaproszenie
-		setUserTeamRequest(null)
+	const handleAcceptTeamRequest = async (requestId: number) => {
+		try {
+			await api.patch(`/team-request/${requestId}/accept`)
+			// Po akceptacji usunąć zaproszenie i odświeżyć listę członków
+			setUserTeamRequest(null)
+			// Odśwież listę członków
+			await fetchTeamMembers()
+		} catch (error: any) {
+			console.error('Error accepting team request:', error)
+			alert('Nie udało się zaakceptować zaproszenia. Spróbuj ponownie.')
+		}
 	}
 
 	const handleRejectTeamRequest = (requestId: number) => {
@@ -356,9 +408,15 @@ const TeamPage: React.FC = () => {
 
 						<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 							<div className='mb-4 flex items-center justify-between'>
-								<h3 className='text-white text-lg font-semibold'>Członkowie drużyny</h3>
-								{team.memberCount !== undefined && (
-									<span className='text-violet-300 font-semibold'>{team.memberCount} członków</span>
+								<h3 className='text-white text-lg font-semibold'>Członkowie drużyny ({teamMembers.length})</h3>
+								{teamMembers.length > 8 && (
+									<button
+										onClick={() => setShowAllMembers(s => !s)}
+										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'
+									>
+										{showAllMembers ? 'Ukryj' : 'Zobacz wszystkich'}
+										<ChevronDown size={16} className={`transition-transform ${showAllMembers ? 'rotate-180' : ''}`} />
+									</button>
 								)}
 							</div>
 							{isLeader && (
@@ -372,9 +430,50 @@ const TeamPage: React.FC = () => {
 									</button>
 								</div>
 							)}
-							<div className='rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200 text-sm inline-flex items-center gap-2'>
-								<AlertTriangle size={16} /> Funkcjonalność dołączania do drużyny wkrótce
-							</div>
+
+							{membersLoading ? (
+								<div className='flex items-center justify-center py-8'>
+									<Loader2 className='animate-spin text-violet-400' size={24} />
+									<span className='ml-2 text-zinc-400'>Ładowanie członków...</span>
+								</div>
+							) : teamMembers.length === 0 ? (
+								<div className='text-center py-8'>
+									<Users className='mx-auto mb-4 text-zinc-600' size={48} />
+									<p className='text-zinc-400'>Brak członków w drużynie</p>
+								</div>
+							) : (
+								<div className='flex flex-wrap gap-2'>
+									{teamMembers.slice(0, showAllMembers ? teamMembers.length : 8).map(member => (
+										<Link
+											key={member.id}
+											to={`/profile/${member.userId}`}
+											className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'
+										>
+											<Avatar
+												src={member.userAvatarUrl || null}
+												name={member.userName}
+												size='sm'
+												className='ring-1 ring-zinc-700 shadow-sm'
+											/>
+											<div className='text-sm'>
+												<div className='font-medium text-white leading-tight'>
+													{member.userEmail === userEmail ? `${member.userName} (Ty)` : member.userName}
+												</div>
+												{member.userId === team.leaderId && (
+													<div className='mt-0.5 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-violet-500/20 text-violet-300'>
+														<Crown size={10} />
+														Lider
+													</div>
+												)}
+											</div>
+										</Link>
+									))}
+								</div>
+							)}
+
+							{!showAllMembers && teamMembers.length > 8 && (
+								<p className='text-center text-xs text-zinc-400 mt-4'>i {teamMembers.length - 8} więcej…</p>
+							)}
 						</div>
 					</section>
 

@@ -5,14 +5,15 @@ import com.joinmatch.backend.dto.TeamRequest.TeamRequestResponseDto;
 import com.joinmatch.backend.enums.TeamRequestStatus;
 import com.joinmatch.backend.model.Team;
 import com.joinmatch.backend.model.TeamRequest;
+import com.joinmatch.backend.model.UserTeam;
 import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.TeamRequestRepository;
 import com.joinmatch.backend.repository.UserRepository;
+import com.joinmatch.backend.repository.UserTeamRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,6 +22,8 @@ public class TeamRequestService {
     private final TeamRequestRepository teamRequestRepository;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
+    private final UserTeamRepository userTeamRepository;
+    private final NotificationService notificationService;
 
     public Page<TeamRequestResponseDto> findAll(Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
@@ -64,5 +67,17 @@ public class TeamRequestService {
 
         TeamRequest savedRequest = teamRequestRepository.save(teamRequest);
         return TeamRequestResponseDto.fromTeamRequest(savedRequest);
+    }
+
+    public void acceptRequest(Integer requestId) {
+        TeamRequest teamRequest = teamRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Team request not found with id: " + requestId));
+        teamRequest.setStatus(TeamRequestStatus.ACCEPTED);
+        teamRequestRepository.save(teamRequest);
+        UserTeam userTeam = new UserTeam();
+        userTeam.setUser(teamRequest.getReceiver());
+        userTeam.setTeam(teamRequest.getTeam());
+        userTeamRepository.save(userTeam);
+        notificationService.sendTeamRequestAcceptedNotification(teamRequest);
     }
 }

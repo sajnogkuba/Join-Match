@@ -61,4 +61,10 @@ public class TeamRequestController {
         TeamRequestResponseDto createdTeamRequest = teamRequestService.create(dto);
         return ResponseEntity.status(201).body(createdTeamRequest);
     }
+
+    @PatchMapping("/{requestId}/accept")
+    public ResponseEntity<Void> acceptTeamRequest(@PathVariable Integer requestId) {
+        teamRequestService.acceptRequest(requestId);
+        return ResponseEntity.ok().build();
+    }
 }
