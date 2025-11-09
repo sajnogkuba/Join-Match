@@ -299,11 +299,15 @@ const TeamPage: React.FC = () => {
 		}
 	}
 
-	const handleRejectTeamRequest = (requestId: number) => {
-		console.log('Odrzucanie zaproszenia do drużyny:', requestId)
-		// TODO: Dodać endpoint do odrzucenia zaproszenia
-		// Po odrzuceniu usunąć zaproszenie
-		setUserTeamRequest(null)
+	const handleRejectTeamRequest = async (requestId: number) => {
+		try {
+			await api.delete(`/team-request/${requestId}`)
+			// Po odrzuceniu usunąć zaproszenie
+			setUserTeamRequest(null)
+		} catch (error: any) {
+			console.error('Error rejecting team request:', error)
+			alert('Nie udało się odrzucić zaproszenia. Spróbuj ponownie.')
+		}
 	}
 
 	const handleLeaveTeam = async () => {

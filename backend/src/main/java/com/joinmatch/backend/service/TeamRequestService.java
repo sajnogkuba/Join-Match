@@ -82,4 +82,11 @@ public class TeamRequestService {
         notificationService.sendTeamRequestAcceptedNotification(teamRequest);
         teamRequestRepository.delete(teamRequest);
     }
+
+    public void deleteRequest(Integer requestId) {
+        TeamRequest teamRequest = teamRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Team request not found with id: " + requestId));
+        teamRequestRepository.delete(teamRequest);
+        notificationService.sendTeamRejectAcceptedNotification(teamRequest);
+    }
 }

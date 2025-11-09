@@ -60,11 +60,9 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 					size: pageSize
 				}
 			})
-
-			// Obsługa pustej odpowiedzi (204 No Content)
+			
 			if (response.status === 204 || !response.data || !response.data.content) {
 				if (append) {
-					// Nie ma więcej danych do załadowania
 					setHasNext(false)
 				} else {
 					setRequests([])
@@ -75,7 +73,6 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 
 			const data = response.data
 
-			// Pobierz szczegóły drużyn dla każdego zaproszenia
 			const requestsWithTeams = await Promise.all(
 				(data.content || []).map(async (request) => {
 					const team = await fetchTeamDetails(request.teamId)
@@ -86,7 +83,6 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 				})
 			)
 
-			// Filtruj tylko PENDING zaproszenia
 			const pendingRequests = requestsWithTeams.filter(req => req.status === 'PENDING')
 
 			if (append) {
@@ -95,11 +91,9 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 				setRequests(pendingRequests)
 			}
 
-			// Sprawdź czy są więcej stron (może być więcej zaproszeń na następnych stronach)
 			setHasNext(!data.last)
 		} catch (err: any) {
 			console.error('Error fetching team requests:', err)
-			// Jeśli to 204 No Content, to nie jest błąd
 			if (err.response?.status === 204) {
 				if (append) {
 					setHasNext(false)
@@ -185,11 +179,15 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 		}
 	}
 
-	const handleReject = (requestId: number) => {
-		console.log('Odrzucanie zaproszenia do drużyny:', requestId)
-		// TODO: Dodać endpoint do odrzucenia zaproszenia
-		// Po odrzuceniu usunąć zaproszenie z listy
-		setRequests(prev => prev.filter(req => req.requestId !== requestId))
+	const handleReject = async (requestId: number) => {
+		try {
+			await api.delete(`/team-request/${requestId}`)
+			// Po odrzuceniu usunąć zaproszenie z listy
+			setRequests(prev => prev.filter(req => req.requestId !== requestId))
+		} catch (error: any) {
+			console.error('Error rejecting team request:', error)
+			alert('Nie udało się odrzucić zaproszenia. Spróbuj ponownie.')
+		}
 	}
 
 	return (

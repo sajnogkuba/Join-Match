@@ -67,4 +67,10 @@ public class TeamRequestController {
         teamRequestService.acceptRequest(requestId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{requestId}")
+    ResponseEntity<Void> deleteTeamRequest(@PathVariable Integer requestId) {
+        teamRequestService.deleteRequest(requestId);
+        return ResponseEntity.noContent().build();
+    }
 }
