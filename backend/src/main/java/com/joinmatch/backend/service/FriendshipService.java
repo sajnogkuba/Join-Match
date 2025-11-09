@@ -1,6 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.FriendResponseDto;
+import com.joinmatch.backend.dto.FriendRequest.FriendResponseDto;
 import com.joinmatch.backend.repository.FriendRequestRepository;
 import com.joinmatch.backend.repository.FriendshipRepository;
 import com.joinmatch.backend.repository.UserRepository;

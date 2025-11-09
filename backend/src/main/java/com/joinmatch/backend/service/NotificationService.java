@@ -2,11 +2,12 @@ package com.joinmatch.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.joinmatch.backend.dto.NotificationDataDto;
-import com.joinmatch.backend.dto.NotificationResponseDto;
+import com.joinmatch.backend.dto.Notification.NotificationDataDto;
+import com.joinmatch.backend.dto.Notification.NotificationResponseDto;
+import com.joinmatch.backend.dto.Notification.TeamLeftNotificationDataDto;
+import com.joinmatch.backend.dto.Notification.TeamRequestNotificationDataDto;
 import com.joinmatch.backend.enums.NotificationType;
-import com.joinmatch.backend.model.Notification;
-import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -140,5 +141,127 @@ public class NotificationService {
                     notification.setIsRead(true);
                     notificationRepository.save(notification);
                 });
+    }
+
+    public void sendTeamRequestAcceptedNotification(TeamRequest teamRequest) {
+        try {
+            TeamRequestNotificationDataDto data = new TeamRequestNotificationDataDto(
+                    teamRequest.getTeam().getLeader().getId(),
+                    teamRequest.getTeam().getId(),
+                    teamRequest.getRequestId()
+            );
+
+            String dataJson = objectMapper.writeValueAsString(data);
+
+            Notification notification = Notification.builder()
+                    .user(teamRequest.getTeam().getLeader())
+                    .type(NotificationType.TEAM_REQUEST_ACCEPTED)
+                    .title("Prośba dołączenia do drużyny zaakceptowana")
+                    .message(teamRequest.getReceiver().getName() + " zaakceptował Twoją prośbę dołączenia do drużyny " + teamRequest.getTeam().getName())
+                    .data(dataJson)
+                    .build();
+
+            Notification savedNotification = notificationRepository.save(notification);
+
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+
+            messagingTemplate.convertAndSendToUser(
+                    teamRequest.getTeam().getLeader().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
+
+    public void sendTeamLeftNotification(UserTeam userTeam) {
+        try {
+            TeamLeftNotificationDataDto data = new TeamLeftNotificationDataDto(
+                    userTeam.getTeam().getLeader().getId(),
+                    userTeam.getTeam().getId(),
+                    userTeam.getUser().getId()
+            );
+            String dataJson = objectMapper.writeValueAsString(data);
+            Notification notification = Notification.builder()
+                    .user(userTeam.getTeam().getLeader())
+                    .type(NotificationType.TEAM_LEFT)
+                    .title("Członek opuścił drużynę")
+                    .message(userTeam.getUser().getName() + " opuścił drużynę " + userTeam.getTeam().getName())
+                    .data(dataJson)
+                    .build();
+
+            Notification savedNotification = notificationRepository.save(notification);
+
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+
+            messagingTemplate.convertAndSendToUser(
+                    userTeam.getTeam().getLeader().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
+
+    public void sendTeamRequestNotification(TeamRequest teamRequest) {
+        try {
+            TeamRequestNotificationDataDto data = new TeamRequestNotificationDataDto(
+                    teamRequest.getTeam().getLeader().getId(),
+                    teamRequest.getTeam().getId(),
+                    teamRequest.getRequestId()
+            );
+
+            String dataJson = objectMapper.writeValueAsString(data);
+
+            Notification notification = Notification.builder()
+                    .user(teamRequest.getReceiver())
+                    .type(NotificationType.TEAM_REQUEST)
+                    .title("Nowa prośba dołączenia do drużyny")
+                    .message(teamRequest.getTeam().getLeader().getName() + " wysłał zaproszenie do drużyny " + teamRequest.getTeam().getName())
+                    .data(dataJson)
+                    .build();
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    teamRequest.getReceiver().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
+
+    public void sendTeamRejectAcceptedNotification(TeamRequest teamRequest) {
+        try {
+        TeamRequestNotificationDataDto data = new TeamRequestNotificationDataDto(
+                teamRequest.getTeam().getLeader().getId(),
+                teamRequest.getTeam().getId(),
+                teamRequest.getRequestId()
+        );
+
+            String dataJson = objectMapper.writeValueAsString(data);
+            Notification notification = Notification.builder()
+                    .user(teamRequest.getTeam().getLeader())
+                    .type(NotificationType.TEAM_REQUEST_REJECTED)
+                    .title("Prośba dołączenia do drużyny odrzucona")
+                    .message(teamRequest.getReceiver().getName() + " odrzucił Twoją prośbę dołączenia do drużyny " + teamRequest.getTeam().getName())
+                    .data(dataJson)
+                    .build();
+
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    teamRequest.getTeam().getLeader().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
     }
 }

@@ -1,11 +1,12 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.TeamDetailsDto;
-import com.joinmatch.backend.dto.TeamRequestDto;
-import com.joinmatch.backend.dto.TeamResponseDto;
+import com.joinmatch.backend.dto.Team.TeamDetailsDto;
+import com.joinmatch.backend.dto.Team.TeamRequestDto;
+import com.joinmatch.backend.dto.Team.TeamResponseDto;
 import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.Team;
 import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.model.UserTeam;
 import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
@@ -57,7 +58,7 @@ public class TeamService {
         User leader = userRepository.findById(leaderId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + leaderId));
 
-        Page<Team> teams = teamRepository.findByLeader(leader, sortedPageable, sortBy);
+        Page<Team> teams = teamRepository.findAllByLeader(leader, sortedPageable);
         return teams.map(TeamResponseDto::fromTeam);
     }
 
@@ -65,6 +66,19 @@ public class TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
         return TeamDetailsDto.fromTeam(team);
+    }
+
+    public Page<TeamResponseDto> findAllByUserId(Pageable pageable, String sortBy, String direction, Integer userId) {
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+        Page<Team> teams = teamRepository.findAllByUserTeams_User(user, sortedPageable);
+        return teams.map(TeamResponseDto::fromTeam);
     }
 
 
@@ -80,8 +94,11 @@ public class TeamService {
         team.setSportType(sport);
         team.setLeader(leader);
         Team savedTeam = teamRepository.save(team);
+        UserTeam userTeam = new UserTeam();
+        userTeam.setUser(leader);
+        userTeam.setTeam(savedTeam);
+        leader.getUserTeams().add(userTeam);
+        userRepository.save(leader);
         return TeamResponseDto.fromTeam(savedTeam);
     }
-
-
 }

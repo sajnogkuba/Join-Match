@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, X, UserPlus, Clock } from 'lucide-react';
+import { Bell, X, UserPlus, Clock, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../Context/NotificationContext';
 import { NotificationType } from '../Api/types/Notification';
@@ -53,8 +53,17 @@ const NotificationBell: React.FC = () => {
       } else {
         navigate('/profile#friends');
       }
+    } else if (
+      notification.type === NotificationType.TEAM_REQUEST ||
+      notification.type === NotificationType.TEAM_REQUEST_ACCEPTED ||
+      notification.type === NotificationType.TEAM_REQUEST_REJECTED ||
+      notification.type === NotificationType.TEAM_LEFT
+    ) {
+      // Nawigacja do konkretnej drużyny
+      if (notification.data?.teamId) {
+        navigate(`/team/${notification.data.teamId}`);
+      }
     }
-    // Tutaj można dodać inne typy powiadomień w przyszłości
   };
 
   const formatTime = (createdAt: string | number[]) => {
@@ -96,6 +105,14 @@ const NotificationBell: React.FC = () => {
         return <UserPlus size={16} className="text-green-400" />;
       case NotificationType.FRIEND_REQUEST_REJECTED:
         return <UserPlus size={16} className="text-red-400" />;
+      case NotificationType.TEAM_REQUEST:
+        return <Users size={16} className="text-violet-400" />;
+      case NotificationType.TEAM_REQUEST_ACCEPTED:
+        return <Users size={16} className="text-green-400" />;
+      case NotificationType.TEAM_REQUEST_REJECTED:
+        return <Users size={16} className="text-red-400" />;
+      case NotificationType.TEAM_LEFT:
+        return <Users size={16} className="text-amber-400" />;
       default:
         return <Bell size={16} className="text-zinc-400" />;
     }

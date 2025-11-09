@@ -1,7 +1,7 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.UserEventRequestDto;
-import com.joinmatch.backend.dto.UserEventResponseDto;
+import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
+import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
 import com.joinmatch.backend.service.UserEventService;
 import com.joinmatch.backend.service.UserService;
 import jakarta.validation.Valid;

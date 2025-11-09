@@ -3,8 +3,7 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.config.JwtService;
 
 import com.joinmatch.backend.dto.*;
-import com.joinmatch.backend.model.SportUser;
-import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
 import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
@@ -15,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Set;
 
 
 @RestController
