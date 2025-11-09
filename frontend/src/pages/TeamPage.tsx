@@ -3,9 +3,10 @@ import { useParams, Link } from 'react-router-dom'
 import type { TeamDetails } from '../Api/types/Team'
 import type { User } from '../Api/types/User'
 import type { SearchResult, Friend } from '../Api/types/Friends'
+import type { TeamRequestResponseDto } from '../Api/types/TeamRequest'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus } from 'lucide-react'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
@@ -28,6 +29,8 @@ const TeamPage: React.FC = () => {
 	const [friends, setFriends] = useState<Friend[]>([])
 	const [friendsLoading, setFriendsLoading] = useState(false)
 	const [friendsSearchQuery, setFriendsSearchQuery] = useState('')
+	const [teamRequests, setTeamRequests] = useState<Map<number, TeamRequestResponseDto>>(new Map())
+	const [userTeamRequest, setUserTeamRequest] = useState<TeamRequestResponseDto | null>(null)
 
 	useEffect(() => {
 		if (!id) {
@@ -97,10 +100,30 @@ const TeamPage: React.FC = () => {
 		return () => clearTimeout(timeoutId)
 	}, [searchQuery, searchUsers])
 
-	const handleInviteUser = (userId: number) => {
+	const handleInviteUser = async (userId: number) => {
 		if (!team) return
-		console.log('Zapraszanie użytkownika', userId, 'do drużyny', team.idTeam)
-		// TODO: Dodać endpoint do zapraszania użytkowników
+
+		try {
+			const response = await api.post<TeamRequestResponseDto>('/team-request', {
+				receiverId: userId,
+				teamId: team.idTeam
+			})
+
+			// Zaktualizuj mapę zaproszeń
+			setTeamRequests(prev => {
+				const updated = new Map(prev)
+				updated.set(userId, response.data)
+				return updated
+			})
+		} catch (error: any) {
+			console.error('Error sending team request:', error)
+			// Można dodać toast notification tutaj
+			if (error.response?.status === 400 || error.response?.status === 409) {
+				alert('Nie można wysłać zaproszenia. Użytkownik może już mieć zaproszenie do tej drużyny.')
+			} else {
+				alert('Nie udało się wysłać zaproszenia. Spróbuj ponownie.')
+			}
+		}
 	}
 
 	const handleCloseInvitePopup = () => {
@@ -108,6 +131,7 @@ const TeamPage: React.FC = () => {
 		setSearchQuery('')
 		setSearchResults([])
 		setFriendsSearchQuery('')
+		setTeamRequests(new Map())
 		setInviteActiveTab('search')
 	}
 
@@ -146,7 +170,85 @@ const TeamPage: React.FC = () => {
 		return () => clearTimeout(timeoutId)
 	}, [friendsSearchQuery, showInvitePopup, currentUserId, fetchFriends])
 
+	// Pobierz zaproszenia do drużyny gdy modal się otwiera
+	useEffect(() => {
+		if (showInvitePopup && team) {
+			type TeamRequestPageResponse = {
+				content: TeamRequestResponseDto[]
+				totalElements: number
+				totalPages: number
+				number: number
+				size: number
+				first: boolean
+				last: boolean
+				numberOfElements: number
+				empty: boolean
+			}
+			api.get<TeamRequestPageResponse>(`/team-request/by-team`, {
+				params: { teamId: team.idTeam, page: 0, size: 100 }
+			})
+				.then(({ data }) => {
+					const requestsMap = new Map<number, TeamRequestResponseDto>()
+					data.content.forEach(request => {
+						requestsMap.set(request.receiverId, request)
+					})
+					setTeamRequests(requestsMap)
+				})
+				.catch((error) => {
+					console.error('Error fetching team requests:', error)
+					setTeamRequests(new Map())
+				})
+		}
+	}, [showInvitePopup, team])
+
+	// Sprawdź czy użytkownik ma zaproszenie do tej drużyny
+	useEffect(() => {
+		if (currentUserId && team) {
+			type TeamRequestPageResponse = {
+				content: TeamRequestResponseDto[]
+				totalElements: number
+				totalPages: number
+				number: number
+				size: number
+				first: boolean
+				last: boolean
+				numberOfElements: number
+				empty: boolean
+			}
+			api.get<TeamRequestPageResponse>(`/team-request/by-receiver`, {
+				params: { receiverId: currentUserId, page: 0, size: 100 }
+			})
+				.then(({ data }) => {
+					// Znajdź zaproszenie dla tej drużyny ze statusem PENDING
+					const pendingRequest = data.content.find(
+						req => req.teamId === team.idTeam && req.status === 'PENDING'
+					)
+					setUserTeamRequest(pendingRequest || null)
+				})
+				.catch((error) => {
+					console.error('Error fetching user team request:', error)
+					setUserTeamRequest(null)
+				})
+		} else {
+			setUserTeamRequest(null)
+		}
+	}, [currentUserId, team])
+
 	const isLeader = currentUserId !== null && team && currentUserId === team.leaderId
+
+	const handleAcceptTeamRequest = (requestId: number) => {
+		console.log('Akceptowanie zaproszenia do drużyny:', requestId)
+		// TODO: Dodać endpoint do akceptacji zaproszenia
+		// Po akceptacji usunąć zaproszenie
+		setUserTeamRequest(null)
+	}
+
+	const handleRejectTeamRequest = (requestId: number) => {
+		console.log('Odrzucanie zaproszenia do drużyny:', requestId)
+		// TODO: Dodać endpoint do odrzucenia zaproszenia
+		// Po odrzuceniu usunąć zaproszenie
+		setUserTeamRequest(null)
+	}
 
 	if (loading) {
 		return (
@@ -207,6 +309,39 @@ const TeamPage: React.FC = () => {
 						</div>
 					</div>
 				</div>
+
+				{/* Informacja o zaproszeniu do drużyny */}
+				{userTeamRequest && (
+					<div className='mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4'>
+						<div className='flex items-center justify-between gap-4'>
+							<div className='flex items-center gap-3'>
+								<Clock className='text-amber-400' size={20} />
+								<div>
+									<p className='text-white font-medium'>Masz zaproszenie do tej drużyny</p>
+									<p className='text-sm text-zinc-400'>Możesz zaakceptować lub odrzucić zaproszenie</p>
+								</div>
+							</div>
+							<div className='flex items-center gap-2'>
+								<button
+									onClick={() => handleAcceptTeamRequest(userTeamRequest.requestId)}
+									className='inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white'
+									title='Zaakceptuj zaproszenie'
+								>
+									<span>✓</span>
+									<span className='hidden sm:inline'>Zaakceptuj</span>
+								</button>
+								<button
+									onClick={() => handleRejectTeamRequest(userTeamRequest.requestId)}
+									className='inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-sm font-medium text-white'
+									title='Odrzuć zaproszenie'
+								>
+									<span>✗</span>
+									<span className='hidden sm:inline'>Odrzuć</span>
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 
 				<hr className='my-6 border-zinc-800' />
 
@@ -372,35 +507,52 @@ const TeamPage: React.FC = () => {
 												</p>
 											</div>
 										) : (
-											searchResults.map(user => (
-												<div key={user.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
-													<Link 
-														to={`/profile/${user.id}`}
-														className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
-													>
-														<Avatar 
-															src={user.urlOfPicture} 
-															name={user.name}
-															size='sm'
-														/>
-														<div>
-															<p className='text-white font-medium'>{user.name}</p>
-															<p className='text-sm text-zinc-400'>{user.email}</p>
-														</div>
-													</Link>
-													<div className='flex items-center gap-2'>
-														<button
-															onClick={() => handleInviteUser(user.id)}
-															className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
-															title='Zaproś do drużyny'
+											searchResults.map(user => {
+												const teamRequest = teamRequests.get(user.id)
+												const isPending = teamRequest?.status === 'PENDING'
+
+												return (
+													<div key={user.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+														<Link 
+															to={`/profile/${user.id}`}
+															className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
 														>
-															<UserPlus size={14} className='sm:w-4 sm:h-4' />
-															<span className='hidden sm:inline'>Zaproś do drużyny</span>
-															<span className='sm:hidden'>Zaproś</span>
-														</button>
+															<Avatar 
+																src={user.urlOfPicture} 
+																name={user.name}
+																size='sm'
+															/>
+															<div>
+																<p className='text-white font-medium'>{user.name}</p>
+																<p className='text-sm text-zinc-400'>{user.email}</p>
+															</div>
+														</Link>
+														<div className='flex items-center gap-2'>
+															{isPending ? (
+																<button
+																	disabled
+																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-xs sm:text-sm font-medium'
+																	title='Zaproszenie oczekuje na odpowiedź'
+																>
+																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
+																	<span className='hidden sm:inline'>Oczekuje na odpowiedź</span>
+																	<span className='sm:hidden'>Oczekuje</span>
+																</button>
+															) : (
+																<button
+																	onClick={() => handleInviteUser(user.id)}
+																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
+																	title='Zaproś do drużyny'
+																>
+																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
+																	<span className='hidden sm:inline'>Zaproś do drużyny</span>
+																	<span className='sm:hidden'>Zaproś</span>
+																</button>
+															)}
+														</div>
 													</div>
-												</div>
-											))
+												)
+											})
 										)}
 									</div>
 								</>
@@ -442,35 +594,52 @@ const TeamPage: React.FC = () => {
 												</p>
 											</div>
 										) : (
-											friends.map(friend => (
-												<div key={friend.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
-													<Link 
-														to={`/profile/${friend.id}`}
-														className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
-													>
-														<Avatar 
-															src={friend.urlOfPicture} 
-															name={friend.name}
-															size='sm'
-														/>
-														<div>
-															<p className='text-white font-medium'>{friend.name}</p>
-															<p className='text-sm text-zinc-400'>{friend.email}</p>
-														</div>
-													</Link>
-													<div className='flex items-center gap-2'>
-														<button
-															onClick={() => handleInviteUser(friend.id)}
-															className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
-															title='Zaproś do drużyny'
+											friends.map(friend => {
+												const teamRequest = teamRequests.get(friend.id)
+												const isPending = teamRequest?.status === 'PENDING'
+
+												return (
+													<div key={friend.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+														<Link 
+															to={`/profile/${friend.id}`}
+															className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
 														>
-															<UserPlus size={14} className='sm:w-4 sm:h-4' />
-															<span className='hidden sm:inline'>Zaproś do drużyny</span>
-															<span className='sm:hidden'>Zaproś</span>
-														</button>
+															<Avatar 
+																src={friend.urlOfPicture} 
+																name={friend.name}
+																size='sm'
+															/>
+															<div>
+																<p className='text-white font-medium'>{friend.name}</p>
+																<p className='text-sm text-zinc-400'>{friend.email}</p>
+															</div>
+														</Link>
+														<div className='flex items-center gap-2'>
+															{isPending ? (
+																<button
+																	disabled
+																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-xs sm:text-sm font-medium'
+																	title='Zaproszenie oczekuje na odpowiedź'
+																>
+																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
+																	<span className='hidden sm:inline'>Oczekuje na odpowiedź</span>
+																	<span className='sm:hidden'>Oczekuje</span>
+																</button>
+															) : (
+																<button
+																	onClick={() => handleInviteUser(friend.id)}
+																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
+																	title='Zaproś do drużyny'
+																>
+																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
+																	<span className='hidden sm:inline'>Zaproś do drużyny</span>
+																	<span className='sm:hidden'>Zaproś</span>
+																</button>
+															)}
+														</div>
 													</div>
-												</div>
-											))
+												)
+											})
 										)}
 									</div>
 								</>

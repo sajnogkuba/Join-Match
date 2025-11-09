@@ -1,6 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.FriendRequestDto;
+import com.joinmatch.backend.dto.FriendRequest.FriendRequestRequestDto;
 import com.joinmatch.backend.dto.FriendRequest.FriendRequestResponseDto;
 import com.joinmatch.backend.service.FriendRequestService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class FriendRequestController {
 
     @PostMapping("/request")
     public ResponseEntity<FriendRequestResponseDto> sendFriendRequest(
-            @RequestBody FriendRequestDto requestDto) {
+            @RequestBody FriendRequestRequestDto requestDto) {
         FriendRequestResponseDto response = friendRequestService.sendRequest(requestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

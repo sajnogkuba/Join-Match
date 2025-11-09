@@ -1,4 +1,4 @@
-package com.joinmatch.backend.dto.TeamRequestRequest;
+package com.joinmatch.backend.dto.TeamRequest;
 
 import com.joinmatch.backend.enums.TeamRequestStatus;
 import com.joinmatch.backend.model.TeamRequest;

@@ -1,6 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.FriendRequestDto;
+import com.joinmatch.backend.dto.FriendRequest.FriendRequestRequestDto;
 import com.joinmatch.backend.dto.FriendRequest.FriendRequestResponseDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.FriendRequest;
@@ -26,7 +26,7 @@ public class FriendRequestService {
     private final NotificationService notificationService;
 
     @Transactional
-    public FriendRequestResponseDto sendRequest(FriendRequestDto requestDto) {
+    public FriendRequestResponseDto sendRequest(FriendRequestRequestDto requestDto) {
         Integer senderId = requestDto.senderId();
         Integer receiverId = requestDto.receiverId();
 

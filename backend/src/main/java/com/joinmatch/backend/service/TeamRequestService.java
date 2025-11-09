@@ -1,6 +1,8 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.TeamRequestRequest.TeamRequestResponseDto;
+import com.joinmatch.backend.dto.TeamRequest.TeamRequestRequestDto;
+import com.joinmatch.backend.dto.TeamRequest.TeamRequestResponseDto;
+import com.joinmatch.backend.enums.TeamRequestStatus;
 import com.joinmatch.backend.model.Team;
 import com.joinmatch.backend.model.TeamRequest;
 import com.joinmatch.backend.repository.TeamRepository;
@@ -20,25 +22,15 @@ public class TeamRequestService {
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
 
-    public Page<TeamRequestResponseDto> findAll(Pageable pageable, String sortBy, String direction) {
-        Sort sort = Sort.by(new Sort.Order(
-                Sort.Direction.fromString(direction),
-                sortBy
-        ).ignoreCase());
-
-        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    public Page<TeamRequestResponseDto> findAll(Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
 
         Page<TeamRequest> teamRequests = teamRequestRepository.findAll(sortedPageable);
         return teamRequests.map(TeamRequestResponseDto::fromTeamRequest);
     }
 
-    public Page<TeamRequestResponseDto> findAllByTeamId(Pageable pageable, String sortBy, String direction, Integer teamId) {
-        Sort sort = Sort.by(new Sort.Order(
-                Sort.Direction.fromString(direction),
-                sortBy
-        ).ignoreCase());
-
-        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    public Page<TeamRequestResponseDto> findAllByTeamId(Pageable pageable, Integer teamId) {
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
 
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
@@ -47,13 +39,8 @@ public class TeamRequestService {
         return teamRequests.map(TeamRequestResponseDto::fromTeamRequest);
     }
 
-    public Page<TeamRequestResponseDto> findAllByReceiverId(Pageable pageable, String sortBy, String direction, Integer receiverId) {
-        Sort sort = Sort.by(new Sort.Order(
-                Sort.Direction.fromString(direction),
-                sortBy
-        ).ignoreCase());
-
-        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    public Page<TeamRequestResponseDto> findAllByReceiverId(Pageable pageable, Integer receiverId) {
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
 
         var receiver = userRepository.findById(receiverId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + receiverId));
@@ -63,4 +50,19 @@ public class TeamRequestService {
     }
 
 
+    public TeamRequestResponseDto create(TeamRequestRequestDto dto) {
+        var team = teamRepository.findById(dto.teamId())
+                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + dto.teamId()));
+
+        var receiver = userRepository.findById(dto.receiverId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + dto.receiverId()));
+
+        TeamRequest teamRequest = new TeamRequest();
+        teamRequest.setTeam(team);
+        teamRequest.setReceiver(receiver);
+        teamRequest.setStatus(TeamRequestStatus.PENDING);
+
+        TeamRequest savedRequest = teamRequestRepository.save(teamRequest);
+        return TeamRequestResponseDto.fromTeamRequest(savedRequest);
+    }
 }
