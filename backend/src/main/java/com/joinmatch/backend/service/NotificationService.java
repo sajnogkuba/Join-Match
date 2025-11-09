@@ -205,4 +205,33 @@ public class NotificationService {
             throw new RuntimeException("Error serializing notification data", e);
         }
     }
+
+    public void sendTeamRequestNotification(TeamRequest teamRequest) {
+        try {
+            TeamRequestNotificationDataDto data = new TeamRequestNotificationDataDto(
+                    teamRequest.getTeam().getLeader().getId(),
+                    teamRequest.getTeam().getId(),
+                    teamRequest.getRequestId()
+            );
+
+            String dataJson = objectMapper.writeValueAsString(data);
+
+            Notification notification = Notification.builder()
+                    .user(teamRequest.getReceiver())
+                    .type(NotificationType.TEAM_REQUEST)
+                    .title("Nowa prośba dołączenia do drużyny")
+                    .message(teamRequest.getTeam().getLeader().getName() + " wysłał zaproszenie do drużyny " + teamRequest.getTeam().getName())
+                    .data(dataJson)
+                    .build();
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    teamRequest.getReceiver().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
 }

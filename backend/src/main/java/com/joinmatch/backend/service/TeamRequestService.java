@@ -66,6 +66,7 @@ public class TeamRequestService {
         teamRequest.setStatus(TeamRequestStatus.PENDING);
 
         TeamRequest savedRequest = teamRequestRepository.save(teamRequest);
+        notificationService.sendTeamRequestNotification(teamRequest);
         return TeamRequestResponseDto.fromTeamRequest(savedRequest);
     }
 

@@ -45,7 +45,7 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 		}
 	}
 
-	const fetchRequests = useCallback(async (pageNum: number, append: boolean = false) => {
+		const fetchRequests = useCallback(async (pageNum: number, append: boolean = false) => {
 		try {
 			if (append) {
 				setLoadingMore(true)
@@ -61,11 +61,23 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 				}
 			})
 
+			// Obsługa pustej odpowiedzi (204 No Content)
+			if (response.status === 204 || !response.data || !response.data.content) {
+				if (append) {
+					// Nie ma więcej danych do załadowania
+					setHasNext(false)
+				} else {
+					setRequests([])
+					setHasNext(false)
+				}
+				return
+			}
+
 			const data = response.data
 
 			// Pobierz szczegóły drużyn dla każdego zaproszenia
 			const requestsWithTeams = await Promise.all(
-				data.content.map(async (request) => {
+				(data.content || []).map(async (request) => {
 					const team = await fetchTeamDetails(request.teamId)
 					return {
 						...request,
@@ -85,9 +97,19 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 
 			// Sprawdź czy są więcej stron (może być więcej zaproszeń na następnych stronach)
 			setHasNext(!data.last)
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error fetching team requests:', err)
-			setError('Nie udało się pobrać zaproszeń.')
+			// Jeśli to 204 No Content, to nie jest błąd
+			if (err.response?.status === 204) {
+				if (append) {
+					setHasNext(false)
+				} else {
+					setRequests([])
+					setHasNext(false)
+				}
+			} else {
+				setError('Nie udało się pobrać zaproszeń.')
+			}
 		} finally {
 			setLoading(false)
 			setLoadingMore(false)
