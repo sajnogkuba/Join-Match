@@ -13,6 +13,8 @@ export interface TeamPostResponseDto {
 	postId: number
 	teamId: number
 	authorId: number
+	authorName: string
+	authorAvatarUrl: string | null
 	postType: string
 	content: string
 	contentHtml: string
@@ -21,5 +23,17 @@ export interface TeamPostResponseDto {
 	isDeleted: boolean
 	deletedAt: string | null
 	mentionedUserIds: number[]
+}
+
+export interface TeamPostPageResponse {
+	content: TeamPostResponseDto[]
+	totalElements: number
+	totalPages: number
+	number: number
+	size: number
+	first: boolean
+	last: boolean
+	numberOfElements: number
+	empty: boolean
 }
 

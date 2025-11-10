@@ -15,9 +15,11 @@ import EmojiPicker, { Theme } from 'emoji-picker-react'
 import api from '../Api/axios'
 import type { TeamMember } from '../Api/types/TeamMember'
 import type { Event } from '../Api/types'
-import type { TeamPostRequestDto, TeamPostResponseDto, PostType } from '../Api/types/TeamPost'
+import type { TeamPostRequestDto, TeamPostResponseDto, TeamPostPageResponse, PostType } from '../Api/types/TeamPost'
 import type { User } from '../Api/types/User'
-import { Bold, Italic, List, ListOrdered, Undo, Redo, Heading1, Heading2, Heading3, Palette, Smile, Type, Image as ImageIcon, AtSign, Link, BarChart3, Loader2, Highlighter, Plus, X } from 'lucide-react'
+import Avatar from './Avatar'
+import { Link } from 'react-router-dom'
+import { Bold, Italic, List, ListOrdered, Undo, Redo, Heading1, Heading2, Heading3, Palette, Smile, Type, Image as ImageIcon, AtSign, Link as LinkIcon, BarChart3, Loader2, Highlighter, Plus, X } from 'lucide-react'
 
 interface TeamDiscussionTabProps {
 	teamMembers: TeamMember[]
@@ -92,6 +94,11 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [pollQuestion, setPollQuestion] = useState('')
 	const [pollOptions, setPollOptions] = useState(['', ''])
 	const [uploadingImage, setUploadingImage] = useState(false)
+	const [posts, setPosts] = useState<TeamPostResponseDto[]>([])
+	const [loadingPosts, setLoadingPosts] = useState(false)
+	const [page, setPage] = useState(0)
+	const [hasNext, setHasNext] = useState(false)
+	const [totalElements, setTotalElements] = useState(0)
 	const colorPickerRef = useRef<HTMLDivElement>(null)
 	const highlightPickerRef = useRef<HTMLDivElement>(null)
 	const emojiPickerRef = useRef<HTMLDivElement>(null)
@@ -396,6 +403,45 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		setShowEventLinkModal(false)
 	}
 
+	// Pobierz posty
+	const fetchPosts = useCallback(async (pageNum: number, append: boolean = false) => {
+		try {
+			if (append) {
+				setLoadingPosts(true)
+			} else {
+				setLoadingPosts(true)
+			}
+
+			const params = {
+				page: pageNum,
+				size: 20,
+				sort: 'createdAt',
+				direction: 'DESC' as const,
+			}
+
+			const response = await api.get<TeamPostPageResponse>(`/team-post/${teamId}`, { params })
+			const data = response.data
+
+			if (append) {
+				setPosts(prev => [...prev, ...(data.content || [])])
+			} else {
+				setPosts(data.content || [])
+			}
+			setHasNext(!data.last)
+			setTotalElements(data.totalElements)
+			setPage(pageNum)
+		} catch (error) {
+			console.error('Błąd pobierania postów:', error)
+		} finally {
+			setLoadingPosts(false)
+		}
+	}, [teamId])
+
+	// Pobierz posty przy załadowaniu komponentu
+	useEffect(() => {
+		fetchPosts(0, false)
+	}, [fetchPosts])
+
 	// Wyciągnij mentionedUserIds z HTML content
 	const extractMentionedUserIds = (htmlContent: string): number[] => {
 		const parser = new DOMParser()
@@ -446,14 +492,14 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 				mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
 			}
 
-			const response = await api.post<TeamPostResponseDto>('/team-post', postData)
+			await api.post<TeamPostResponseDto>('/team-post', postData)
 			
 			// Sukces - zamknij modal i wyczyść edytor
 			setShowEditorModal(false)
 			editor.commands.clearContent()
 			
-			// Możesz tutaj dodać toast notification lub odświeżenie listy postów
-			console.log('Post utworzony:', response.data)
+			// Odśwież listę postów
+			fetchPosts(0, false)
 		} catch (error) {
 			console.error('Błąd tworzenia posta:', error)
 			alert('Nie udało się opublikować posta. Spróbuj ponownie.')
@@ -477,6 +523,84 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					<Plus size={18} />
 					Nowy post
 				</button>
+			</div>
+			
+			{/* Lista postów */}
+			<div className='space-y-4 mt-6'>
+				{loadingPosts && posts.length === 0 ? (
+					<div className='flex items-center justify-center py-8'>
+						<Loader2 className='animate-spin text-violet-400' size={24} />
+						<span className='ml-2 text-zinc-400'>Ładowanie postów...</span>
+					</div>
+				) : posts.length === 0 ? (
+					<div className='text-center py-8 rounded-lg border border-zinc-800 bg-zinc-900/40'>
+						<p className='text-zinc-400'>Brak postów w dyskusji. Bądź pierwszy!</p>
+					</div>
+				) : (
+					<>
+						{posts.map((post) => (
+							<div
+								key={post.postId}
+								className='rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:bg-zinc-900/60 transition-colors'
+							>
+								{/* Header posta */}
+								<div className='flex items-center gap-3 mb-3'>
+									<Link to={`/profile/${post.authorId}`}>
+										<Avatar
+											src={post.authorAvatarUrl || null}
+											name={post.authorName}
+											size='sm'
+											className='ring-1 ring-zinc-700'
+										/>
+									</Link>
+									<div className='flex-1'>
+										<Link
+											to={`/profile/${post.authorId}`}
+											className='text-white font-medium hover:text-violet-400 transition-colors'
+										>
+											{post.authorName}
+										</Link>
+										<p className='text-xs text-zinc-400'>
+											{new Date(post.createdAt).toLocaleDateString('pl-PL', {
+												day: 'numeric',
+												month: 'long',
+												year: 'numeric',
+												hour: '2-digit',
+												minute: '2-digit',
+											})}
+										</p>
+									</div>
+								</div>
+								
+								{/* Treść posta */}
+								<div
+									className='prose prose-invert max-w-none text-zinc-300 [&_*]:text-zinc-300 [&_strong]:text-white [&_em]:text-zinc-200 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_a]:text-violet-400 [&_a]:hover:text-violet-300 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:my-1 [&_p]:my-2 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4 [&_.mention]:bg-violet-500/20 [&_.mention]:text-violet-300 [&_.mention]:px-1 [&_.mention]:rounded [&_.mention]:font-medium'
+									dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+								/>
+							</div>
+						))}
+						
+						{/* Przycisk "Wczytaj więcej" */}
+						{hasNext && (
+							<div className='flex justify-center pt-4'>
+								<button
+									onClick={() => fetchPosts(page + 1, true)}
+									disabled={loadingPosts}
+									className='px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+								>
+									{loadingPosts ? (
+										<>
+											<Loader2 size={18} className='animate-spin' />
+											Ładowanie...
+										</>
+									) : (
+										'Wczytaj więcej'
+									)}
+								</button>
+							</div>
+						)}
+					</>
+				)}
 			</div>
 			
 			{/* Modal z edytorem */}
@@ -727,7 +851,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 									className='p-2 rounded-lg text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 									title='Link do eventu (niedostępne)'
 								>
-									<Link size={18} />
+									<LinkIcon size={18} />
 								</button>
 								<div className='h-6 w-px bg-zinc-700' />
 								

@@ -3,12 +3,17 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.TeamPost.TeamPostRequestDto;
 import com.joinmatch.backend.dto.TeamPost.TeamPostResponseDto;
 import com.joinmatch.backend.enums.PostType;
+import com.joinmatch.backend.model.Team;
 import com.joinmatch.backend.model.TeamPost;
 import com.joinmatch.backend.model.TeamPostMention;
 import com.joinmatch.backend.repository.TeamPostRepository;
 import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +29,19 @@ public class TeamPostService {
     public TeamPostResponseDto create(TeamPostRequestDto teamPostRequestDto) {
         TeamPost teamPost = new TeamPost();
         return getTeamPostResponseDto(teamPostRequestDto, teamPost);
+    }
+
+
+    public Page<TeamPostResponseDto> findAllByTeamId(Pageable pageable, String sortBy, String direction, Integer teamId) {
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team with ID " + teamId + " does not exist."));
+        Page<TeamPost> posts = teamPostRepository.findAllByTeam(team, sortedPageable);
+        return posts.map(TeamPostResponseDto::fromEntity);
     }
 
     private TeamPostResponseDto getTeamPostResponseDto(TeamPostRequestDto teamPostRequestDto, TeamPost teamPost) {
