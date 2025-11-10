@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -141,6 +142,12 @@ public class EventService {
 
     public List<EventResponseDto> getEventsForUser(String token){
         return eventRepository.findAllOwnedByUserToken(token)
+                .stream()
+                .map(EventResponseDto::fromEvent)
+                .toList();
+    }
+    public List<EventResponseDto> getMutualEvents(Integer idLoggedUser, Integer idViewedUser){
+        return eventRepository.findMutualEvents(idLoggedUser,idViewedUser)
                 .stream()
                 .map(EventResponseDto::fromEvent)
                 .toList();

@@ -19,4 +19,16 @@ public interface EventRepository extends JpaRepository<Event, Integer>, JpaSpeci
           and (t.expireDate is null or t.expireDate > current timestamp)
     """)
     List<Event> findAllOwnedByUserToken(@Param("token") String token);
+    @Query("""
+SELECT DISTINCT e
+FROM Event e
+JOIN UserEvent uv ON uv.event = e
+JOIN UserEvent ut ON ut.event = e
+WHERE
+      (uv.user.id = :viewerId AND ut.user.id = :targetId)
+   OR (e.owner.id = :viewerId AND ut.user.id = :targetId)
+   OR (e.owner.id = :targetId AND uv.user.id = :viewerId)
+""")
+    List<Event> findMutualEvents(@Param("viewerId") Integer viewerId,
+                                 @Param("targetId") Integer targetId);
 }

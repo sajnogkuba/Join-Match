@@ -1,4 +1,4 @@
-import { Info, Star, Calendar } from "lucide-react"
+import { Info, Star, Calendar, Users } from "lucide-react"
 
 interface UserProfileSidebarProps {
 	active: string
@@ -9,6 +9,7 @@ const UserProfileSidebar = ({ active, onSelect }: UserProfileSidebarProps) => {
 	const items = [
 		{ label: "Informacje", icon: Info },
 		{ label: "Historia wydarzeń", icon: Calendar },
+		{ label: "Wspólne wydarzenia", icon: Users },
 		{ label: "Oceny (uczestnik)", icon: Star },
 		{ label: "Oceny (organizator)", icon: Star },
 	]
