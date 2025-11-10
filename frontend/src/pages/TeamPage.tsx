@@ -5,10 +5,12 @@ import type { User } from '../Api/types/User'
 import type { SearchResult, Friend } from '../Api/types/Friends'
 import type { TeamRequestResponseDto } from '../Api/types/TeamRequest'
 import type { TeamMember } from '../Api/types/TeamMember'
+import type { SportType } from '../Api/types/SportType'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
 import ContextMenu from '../components/ContextMenu'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut, UserMinus, Trash2 } from 'lucide-react'
+import SportTypeFilter from '../components/SportTypeFilter'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut, UserMinus, Trash2, Pencil, Camera, Check } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
@@ -48,6 +50,19 @@ const TeamPage: React.FC = () => {
 	const [showDeleteTeamModal, setShowDeleteTeamModal] = useState(false)
 	const [deletingTeam, setDeletingTeam] = useState(false)
 	const [deleteTeamReason, setDeleteTeamReason] = useState('')
+	
+	// States for team editing
+	const [isEditing, setIsEditing] = useState(false)
+	const [editedName, setEditedName] = useState('')
+	const [editedDescription, setEditedDescription] = useState('')
+	const [editedCity, setEditedCity] = useState('')
+	const [editedSportTypeId, setEditedSportTypeId] = useState<number | null>(null)
+	const [selectedFile, setSelectedFile] = useState<File | null>(null)
+	const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null)
+	const [saving, setSaving] = useState(false)
+	const [uploadingImage, setUploadingImage] = useState(false)
+	const [saveError, setSaveError] = useState<string | null>(null)
+	const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (!id) {
@@ -392,6 +407,133 @@ const TeamPage: React.FC = () => {
 		}
 	}
 
+	// Functions for team editing
+	const handleEnterEditMode = async () => {
+		if (!team) return
+		
+		// Fetch sport types to find current sport ID
+		try {
+			const { data } = await api.get<SportType[]>('/sport-type')
+			// Find sport ID by name
+			const currentSport = data.find(s => s.name === team.sportType)
+			setEditedSportTypeId(currentSport?.id || null)
+		} catch (error) {
+			console.error('Error fetching sport types:', error)
+		}
+		
+		// Initialize edit values
+		setEditedName(team.name)
+		setEditedDescription(team.description || '')
+		setEditedCity(team.city)
+		setPreviewPhotoUrl(team.photoUrl || null)
+		setSelectedFile(null)
+		setIsEditing(true)
+	}
+
+	const handleCancelEdit = () => {
+		setIsEditing(false)
+		setEditedName('')
+		setEditedDescription('')
+		setEditedCity('')
+		setEditedSportTypeId(null)
+		setSelectedFile(null)
+		setPreviewPhotoUrl(null)
+	}
+
+	const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0]
+		if (file) {
+			setSelectedFile(file)
+			const url = URL.createObjectURL(file)
+			setPreviewPhotoUrl(url)
+		}
+	}
+
+	const handleSaveTeam = async () => {
+		if (!team) return
+
+		// Clear previous messages
+		setSaveError(null)
+		setSaveSuccess(null)
+
+		// Validation
+		if (!editedName.trim() || editedName.trim().length < 2) {
+			setSaveError('Nazwa drużyny musi mieć co najmniej 2 znaki.')
+			return
+		}
+		if (editedName.trim().length > 100) {
+			setSaveError('Nazwa drużyny nie może przekraczać 100 znaków.')
+			return
+		}
+		if (!editedCity.trim() || editedCity.trim().length < 2) {
+			setSaveError('Miasto musi mieć co najmniej 2 znaki.')
+			return
+		}
+		if (editedCity.trim().length > 100) {
+			setSaveError('Nazwa miasta nie może przekraczać 100 znaków.')
+			return
+		}
+		if (editedDescription.trim().length > 500) {
+			setSaveError('Opis nie może przekraczać 500 znaków.')
+			return
+		}
+		if (!editedSportTypeId) {
+			setSaveError('Wybierz sport.')
+			return
+		}
+
+		setSaving(true)
+		try {
+			let photoUrl = team.photoUrl
+
+			// Upload new photo if selected
+			if (selectedFile) {
+				setUploadingImage(true)
+				const formData = new FormData()
+				formData.append('file', selectedFile)
+				const uploadResponse = await api.post('/images/upload/team', formData, {
+					headers: { 'Content-Type': 'multipart/form-data' }
+				})
+				photoUrl = uploadResponse.data
+				setUploadingImage(false)
+			}
+
+			// Call PUT endpoint to update team
+			await api.put(`/team/${team.idTeam}`, {
+				name: editedName.trim(),
+				city: editedCity.trim(),
+				description: editedDescription.trim() || null,
+				sportTypeId: editedSportTypeId,
+				leaderId: team.leaderId,
+				photoUrl
+			})
+
+			// Refresh team data from server
+			const { data: teamDetails } = await api.get<TeamDetails>(`/team/${team.idTeam}`)
+			setTeam(teamDetails)
+
+			// Show success message
+			setSaveSuccess('Zmiany zostały zapisane pomyślnie!')
+
+			// Exit edit mode after a short delay
+			setTimeout(() => {
+				handleCancelEdit()
+				setSaveSuccess(null)
+			}, 1500)
+		} catch (error: any) {
+			console.error('Error saving team:', error)
+			setUploadingImage(false)
+			if (error.response?.status === 400) {
+				const errorMessage = error.response?.data?.message || error.response?.data || 'Nieprawidłowe dane.'
+				setSaveError(`Nie udało się zapisać zmian: ${errorMessage}`)
+			} else {
+				setSaveError('Nie udało się zapisać zmian. Spróbuj ponownie.')
+			}
+		} finally {
+			setSaving(false)
+		}
+	}
+
 	if (loading) {
 		return (
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
@@ -423,34 +565,183 @@ const TeamPage: React.FC = () => {
 	return (
 		<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
 			<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-6'>
-					<div className='flex flex-col sm:flex-row sm:items-center gap-5'>
-						{team.photoUrl && team.photoUrl.trim() !== '' ? (
-							<img
-								src={team.photoUrl}
-								alt={team.name}
-								className='h-36 w-36 object-cover rounded-2xl border border-zinc-700 shadow-md bg-zinc-800'
-								onError={e => (e.currentTarget.style.display = 'none')}
-							/>
-						) : (
-							<div className='h-36 w-36 flex items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-400 text-sm'>
-								Brak zdjęcia
-							</div>
-						)}
-
-						<div>
-							<h1 className='text-3xl font-semibold text-white'>{team.name}</h1>
-							<div className='mt-2 flex items-center gap-4 text-sm text-zinc-400'>
-								<div className='flex items-center gap-2'>
-									<MapPin size={16} /> {team.city}
+				{!isEditing ? (
+					<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-6'>
+						<div className='flex flex-col sm:flex-row sm:items-center gap-5'>
+							{team.photoUrl && team.photoUrl.trim() !== '' ? (
+								<img
+									src={team.photoUrl}
+									alt={team.name}
+									className='h-36 w-36 object-cover rounded-2xl border border-zinc-700 shadow-md bg-zinc-800'
+									onError={e => (e.currentTarget.style.display = 'none')}
+								/>
+							) : (
+								<div className='h-36 w-36 flex items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-400 text-sm'>
+									Brak zdjęcia
 								</div>
-								<div className='flex items-center gap-2'>
-									<Users size={16} /> {team.sportType}
+							)}
+
+							<div className='flex-1'>
+								<div className='flex items-center gap-3'>
+									<h1 className='text-3xl font-semibold text-white'>{team.name}</h1>
+									{isLeader && (
+										<button
+											onClick={handleEnterEditMode}
+											className='p-2 rounded-xl hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-violet-400'
+											title='Edytuj drużynę'
+										>
+											<Pencil size={20} />
+										</button>
+									)}
+								</div>
+								<div className='mt-2 flex items-center gap-4 text-sm text-zinc-400'>
+									<div className='flex items-center gap-2'>
+										<MapPin size={16} /> {team.city}
+									</div>
+									<div className='flex items-center gap-2'>
+										<Users size={16} /> {team.sportType}
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+				) : (
+					<div className='mb-6 space-y-6'>
+						<div className='flex flex-col sm:flex-row sm:items-start gap-5'>
+							{/* Photo upload */}
+							<div className='relative'>
+								{previewPhotoUrl ? (
+									<img
+										src={previewPhotoUrl}
+										alt={team.name}
+										className='h-36 w-36 object-cover rounded-2xl border border-zinc-700 shadow-md bg-zinc-800'
+									/>
+								) : (
+									<div className='h-36 w-36 flex items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-400 text-sm'>
+										Brak zdjęcia
+									</div>
+								)}
+								<input
+									type='file'
+									id='team-photo-upload'
+									accept='image/*'
+									onChange={handleFileSelect}
+									className='hidden'
+								/>
+								<label
+									htmlFor='team-photo-upload'
+									className='absolute bottom-2 right-2 p-2 rounded-lg bg-violet-600 hover:bg-violet-500 transition-colors cursor-pointer'
+									title='Zmień zdjęcie'
+								>
+									<Camera size={18} className='text-white' />
+								</label>
+							</div>
+
+							<div className='flex-1 space-y-4'>
+								{/* Name input */}
+								<div>
+									<label className='block text-zinc-400 text-sm mb-2'>Nazwa drużyny</label>
+									<input
+										type='text'
+										value={editedName}
+										onChange={(e) => setEditedName(e.target.value)}
+										className='w-full px-4 py-2 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
+										placeholder='np. Mistrzowie Piłki'
+										maxLength={100}
+									/>
+								</div>
+
+								{/* City input */}
+								<div>
+									<label className='block text-zinc-400 text-sm mb-2 flex items-center gap-2'>
+										<MapPin size={16} /> Miasto
+									</label>
+									<input
+										type='text'
+										value={editedCity}
+										onChange={(e) => setEditedCity(e.target.value)}
+										className='w-full px-4 py-2 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
+										placeholder='np. Warszawa'
+										maxLength={100}
+									/>
+								</div>
+
+								{/* Sport dropdown */}
+								<div>
+									<label className='block text-zinc-400 text-sm mb-2 flex items-center gap-2'>
+										<Users size={16} /> Sport
+									</label>
+									<SportTypeFilter
+										value={editedSportTypeId}
+										onChange={setEditedSportTypeId}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Description textarea */}
+						<div>
+							<label className='block text-zinc-400 text-sm mb-2'>Opis drużyny</label>
+							<textarea
+								value={editedDescription}
+								onChange={(e) => setEditedDescription(e.target.value)}
+								className='w-full px-4 py-3 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition min-h-[100px] resize-y'
+								placeholder='Opisz swoją drużynę...'
+								maxLength={500}
+							/>
+							<p className='text-zinc-500 text-xs mt-1'>
+								{editedDescription.length}/500 znaków
+							</p>
+						</div>
+
+						{/* Error/Success messages */}
+						{saveError && (
+							<div className='rounded-xl bg-red-900/40 border border-red-700 text-red-300 px-4 py-3 text-sm flex items-center gap-2'>
+								<AlertTriangle size={18} />
+								{saveError}
+							</div>
+						)}
+						{saveSuccess && (
+							<div className='rounded-xl bg-green-900/40 border border-green-700 text-green-300 px-4 py-3 text-sm flex items-center gap-2'>
+								<Check size={18} />
+								{saveSuccess}
+							</div>
+						)}
+
+						{/* Action buttons */}
+						<div className='flex items-center gap-3'>
+							<button
+								onClick={handleSaveTeam}
+								disabled={saving || uploadingImage}
+								className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-white'
+							>
+								{saving || uploadingImage ? (
+									<>
+										<Loader2 size={16} className='animate-spin' />
+										{uploadingImage ? 'Przesyłanie zdjęcia...' : 'Zapisywanie...'}
+									</>
+								) : (
+									<>
+										<Check size={16} />
+										Zapisz zmiany
+									</>
+								)}
+							</button>
+							<button
+								onClick={() => {
+									setSaveError(null)
+									setSaveSuccess(null)
+									handleCancelEdit()
+								}}
+								disabled={saving || uploadingImage}
+								className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-white'
+							>
+								<X size={16} />
+								Anuluj
+							</button>
+						</div>
+					</div>
+				)}
 
 				{/* Informacja o zaproszeniu do drużyny */}
 				{userTeamRequest && (
