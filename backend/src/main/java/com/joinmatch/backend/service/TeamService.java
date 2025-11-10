@@ -79,7 +79,7 @@ public class TeamService {
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-        Page<Team> teams = teamRepository.findAllByUserTeams_User(user, sortedPageable);
+        Page<Team> teams = teamRepository.findAllByUserTeams_UserAndLeaderIsNot(user, user,  sortedPageable);
         return teams.map(TeamResponseDto::fromTeam);
     }
 
@@ -112,5 +112,19 @@ public class TeamService {
         leader.getUserTeams().add(userTeam);
         userRepository.save(leader);
         return TeamResponseDto.fromTeam(savedTeam);
+    }
+
+    public TeamResponseDto updateTeam(Integer id, TeamRequestDto teamRequestDto) {
+        Team team = teamRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + id));
+        Sport sport = sportRepository.findById(teamRequestDto.sportTypeId())
+                .orElseThrow(() -> new IllegalArgumentException("Sport type not found with id: " + teamRequestDto.sportTypeId()));
+        team.setName(teamRequestDto.name());
+        team.setCity(teamRequestDto.city());
+        team.setSportType(sport);
+        team.setDescription(teamRequestDto.description());
+        team.setPhotoUrl(teamRequestDto.photoUrl());
+        Team updatedTeam = teamRepository.save(team);
+        return TeamResponseDto.fromTeam(updatedTeam);
     }
 }

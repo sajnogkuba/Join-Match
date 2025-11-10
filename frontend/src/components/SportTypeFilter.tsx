@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Search, X } from 'lucide-react'
 import api from '../Api/axios'
 import type { SportType } from '../Api/types/SportType'
@@ -14,7 +15,9 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 	const [searchQuery, setSearchQuery] = useState('')
 	const [isOpen, setIsOpen] = useState(false)
 	const [loading, setLoading] = useState(false)
+	const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
 	const containerRef = useRef<HTMLDivElement>(null)
+	const dropdownRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		setLoading(true)
@@ -43,17 +46,55 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 		}
 	}, [searchQuery, sportTypes])
 
+	// Calculate position when opening
+	const calculatePosition = () => {
+		if (containerRef.current) {
+			const rect = containerRef.current.getBoundingClientRect()
+			setPosition({
+				top: rect.bottom + 4,
+				left: rect.left,
+				width: rect.width
+			})
+		}
+	}
+
+	useEffect(() => {
+		if (isOpen) {
+			calculatePosition()
+		}
+	}, [isOpen])
+
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+			if (containerRef.current && !containerRef.current.contains(event.target as Node) &&
+				dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
 				setIsOpen(false)
 				setSearchQuery('')
 			}
 		}
 
+		const handleScroll = () => {
+			if (isOpen) {
+				calculatePosition()
+			}
+		}
+
+		const handleResize = () => {
+			if (isOpen) {
+				calculatePosition()
+			}
+		}
+
 		document.addEventListener('mousedown', handleClickOutside)
-		return () => document.removeEventListener('mousedown', handleClickOutside)
-	}, [])
+		window.addEventListener('scroll', handleScroll, true)
+		window.addEventListener('resize', handleResize)
+		
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside)
+			window.removeEventListener('scroll', handleScroll, true)
+			window.removeEventListener('resize', handleResize)
+		}
+	}, [isOpen])
 
 	const selectedSport = sportTypes.find(s => s.id === value)
 
@@ -70,34 +111,45 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 	}
 
 	return (
-		<div ref={containerRef} className='relative'>
-			<button
-				type='button'
-				onClick={() => setIsOpen(!isOpen)}
-				className='w-full flex items-center justify-between gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900/80 transition focus:ring-2 focus:ring-violet-600 focus:border-transparent'
-			>
-				<span className='truncate'>
-					{selectedSport ? selectedSport.name : 'Wszystkie sporty'}
-				</span>
-				<div className='flex items-center gap-1 shrink-0'>
-					{value !== null && (
-						<button
-							type='button'
-							onClick={handleClear}
-							className='p-0.5 hover:bg-zinc-700 rounded transition'
-						>
-							<X size={14} />
-						</button>
-					)}
-					<ChevronDown
-						size={16}
-						className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-					/>
-				</div>
-			</button>
+		<>
+			<div ref={containerRef} className='relative'>
+				<button
+					type='button'
+					onClick={() => setIsOpen(!isOpen)}
+					className='w-full flex items-center justify-between gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900/80 transition focus:ring-2 focus:ring-violet-600 focus:border-transparent'
+				>
+					<span className='truncate'>
+						{selectedSport ? selectedSport.name : 'Wszystkie sporty'}
+					</span>
+					<div className='flex items-center gap-1 shrink-0'>
+						{value !== null && (
+							<button
+								type='button'
+								onClick={handleClear}
+								className='p-0.5 hover:bg-zinc-700 rounded transition'
+							>
+								<X size={14} />
+							</button>
+						)}
+						<ChevronDown
+							size={16}
+							className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+						/>
+					</div>
+				</button>
+			</div>
 
-			{isOpen && (
-				<div className='absolute z-10 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden'>
+			{isOpen && typeof document !== 'undefined' && createPortal(
+				<div 
+					ref={dropdownRef}
+					className='fixed bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl overflow-hidden z-[9999]'
+					style={{
+						top: `${position.top}px`,
+						left: `${position.left}px`,
+						width: `${position.width}px`,
+						transform: 'translateZ(0)'
+					}}
+				>
 					<div className='p-2 border-b border-zinc-800'>
 						<div className='relative'>
 							<Search
@@ -154,9 +206,10 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 							</>
 						)}
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
-		</div>
+		</>
 	)
 }
 

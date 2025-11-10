@@ -87,4 +87,10 @@ public class TeamController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("{id}")
+    public ResponseEntity<TeamResponseDto> updateTeam(@PathVariable Integer id, @RequestBody TeamRequestDto teamRequestDto) {
+        TeamResponseDto updatedTeam = teamService.updateTeam(id, teamRequestDto);
+        return ResponseEntity.ok(updatedTeam);
+    }
+
 }
