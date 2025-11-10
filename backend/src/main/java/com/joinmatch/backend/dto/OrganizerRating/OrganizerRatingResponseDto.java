@@ -1,4 +1,4 @@
-package com.joinmatch.backend.dto;
+package com.joinmatch.backend.dto.OrganizerRating;
 
 import java.time.LocalDateTime;
 

@@ -40,4 +40,7 @@ public class EventDetailsResponseDto {
     private String skillLevel;
     private String paymentMethod;
     private String imageUrl;
+
+    private Double latitude;
+    private Double longitude;
 }
