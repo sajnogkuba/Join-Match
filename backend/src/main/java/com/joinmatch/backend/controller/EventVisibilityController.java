@@ -1,7 +1,7 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.EventVisibilityRequestDto;
-import com.joinmatch.backend.dto.EventVisibilityResponseDto;
+import com.joinmatch.backend.dto.EventVisibility.EventVisibilityRequestDto;
+import com.joinmatch.backend.dto.EventVisibility.EventVisibilityResponseDto;
 import com.joinmatch.backend.service.EventVisibilityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

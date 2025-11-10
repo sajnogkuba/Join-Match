@@ -2,6 +2,7 @@ package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.config.JwtService;
 import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;

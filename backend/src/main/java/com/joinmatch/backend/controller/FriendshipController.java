@@ -1,6 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.FriendResponseDto;
+import com.joinmatch.backend.dto.FriendRequest.FriendResponseDto;
 import com.joinmatch.backend.service.FriendshipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +16,8 @@ public class FriendshipController {
     private final FriendshipService friendshipService;
 
     @GetMapping("/{userId}")
-    public ResponseEntity<List<FriendResponseDto>> getFriendsByUserId(@PathVariable Integer userId) {
-        List<FriendResponseDto> friends = friendshipService.getFriendsByUserId(userId);
+    public ResponseEntity<List<FriendResponseDto>> getFriendsByUserId(@PathVariable Integer userId, @RequestParam(required = false) String query) {
+        List<FriendResponseDto> friends = friendshipService.getFriendsByUserId(userId, query);
         return ResponseEntity.ok(friends);
     }
 

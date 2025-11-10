@@ -21,3 +21,9 @@ export type { SportType } from "./SportType";
 
 // Sport Object types
 export type { SportObject } from "./SportObject";
+
+// TeamRequest types
+export type { TeamRequestResponseDto, TeamRequestRequestDto, TeamRequestStatus } from "./TeamRequest";
+
+// TeamMember types
+export type { TeamMember } from "./TeamMember";

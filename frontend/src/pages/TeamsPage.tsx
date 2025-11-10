@@ -1,26 +1,38 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Crown, CheckCircle, Plus, Loader2 } from 'lucide-react'
+import { Users, Crown, CheckCircle, Plus, Loader2, Clock } from 'lucide-react'
 import { useAuth } from '../Context/authContext'
 import TeamsList from '../components/TeamsList'
+import TeamRequestsList from '../components/TeamRequestsList'
+import TeamFilters, { type TeamFilters as TeamFiltersType } from '../components/TeamFilters'
 import api from '../Api/axios'
 import type { User } from '../Api/types/User'
 
-type TeamsTab = 'all-teams' | 'owned-teams' | 'joined-teams'
+type TeamsTab = 'all-teams' | 'owned-teams' | 'joined-teams' | 'pending-requests'
 
 const TeamsPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<TeamsTab>('all-teams')
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [loadingUserId, setLoadingUserId] = useState(false)
+	const [filters, setFilters] = useState<Record<TeamsTab, TeamFiltersType>>({
+		'all-teams': { name: '', sportTypeId: null, leaderName: '' },
+		'owned-teams': { name: '', sportTypeId: null, leaderName: '' },
+		'joined-teams': { name: '', sportTypeId: null, leaderName: '' },
+		'pending-requests': { name: '', sportTypeId: null, leaderName: '' },
+	})
 	const { isAuthenticated } = useAuth()
 	const navigate = useNavigate()
 
 	const handleTabSelect = (tab: TeamsTab) => {
-		if ((tab === 'owned-teams' || tab === 'joined-teams') && !isAuthenticated) {
+		if ((tab === 'owned-teams' || tab === 'joined-teams' || tab === 'pending-requests') && !isAuthenticated) {
 			navigate('/login')
 			return
 		}
 		setActiveTab(tab)
+	}
+
+	const handleFiltersChange = (newFilters: TeamFiltersType) => {
+		setFilters(prev => ({ ...prev, [activeTab]: newFilters }))
 	}
 
 	const handleCreateTeam = () => {
@@ -32,7 +44,7 @@ const TeamsPage: React.FC = () => {
 	}
 
 	useEffect(() => {
-		if (activeTab === 'owned-teams' && isAuthenticated) {
+		if ((activeTab === 'owned-teams' || activeTab === 'joined-teams' || activeTab === 'pending-requests') && isAuthenticated) {
 			const token = localStorage.getItem('accessToken')
 			if (!token) {
 				setCurrentUserId(null)
@@ -43,7 +55,7 @@ const TeamsPage: React.FC = () => {
 				.then(({ data }) => setCurrentUserId(data.id))
 				.catch(() => setCurrentUserId(null))
 				.finally(() => setLoadingUserId(false))
-		} else if (activeTab !== 'owned-teams') {
+		} else if (activeTab !== 'owned-teams' && activeTab !== 'joined-teams' && activeTab !== 'pending-requests') {
 			setCurrentUserId(null)
 		}
 	}, [activeTab, isAuthenticated])
@@ -52,6 +64,7 @@ const TeamsPage: React.FC = () => {
 		{ key: 'all-teams' as TeamsTab, label: 'Wszystkie', icon: Users },
 		{ key: 'owned-teams' as TeamsTab, label: 'Utworzone', icon: Crown },
 		{ key: 'joined-teams' as TeamsTab, label: 'Dołączyłem', icon: CheckCircle },
+		{ key: 'pending-requests' as TeamsTab, label: 'Oczekujące', icon: Clock },
 	]
 
 	return (
@@ -100,7 +113,15 @@ const TeamsPage: React.FC = () => {
 
 						<div className='flex-1 min-w-0 lg:pl-8'>
 							<div className='max-h-[calc(100vh-280px)] overflow-y-auto pr-2 rounded-xl bg-zinc-900/30 p-4 border border-zinc-800/50 dark-scrollbar'>
-								{activeTab === 'all-teams' && <TeamsList />}
+								{activeTab === 'all-teams' && (
+									<>
+										<TeamFilters
+											filters={filters['all-teams']}
+											onFiltersChange={handleFiltersChange}
+										/>
+										<TeamsList filters={filters['all-teams']} />
+									</>
+								)}
 
 								{activeTab === 'owned-teams' && (
 									<>
@@ -111,7 +132,13 @@ const TeamsPage: React.FC = () => {
 												</div>
 											</div>
 										) : currentUserId !== null ? (
-											<TeamsList leaderId={currentUserId} />
+											<>
+												<TeamFilters
+													filters={filters['owned-teams']}
+													onFiltersChange={handleFiltersChange}
+												/>
+												<TeamsList leaderId={currentUserId} filters={filters['owned-teams']} />
+											</>
 										) : (
 											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
 												<div>
@@ -127,15 +154,57 @@ const TeamsPage: React.FC = () => {
 								)}
 
 								{activeTab === 'joined-teams' && (
-									<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
-										<div>
-											<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
-											<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
-											<p className='text-zinc-400 text-sm'>
-												Tutaj znajdziesz drużyny, do których należysz.
-											</p>
-										</div>
-									</div>
+									<>
+										{loadingUserId ? (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
+												<div className='flex items-center gap-2 text-zinc-300'>
+													<Loader2 className='animate-spin' /> Ładowanie…
+												</div>
+											</div>
+										) : currentUserId !== null ? (
+											<>
+												<TeamFilters
+													filters={filters['joined-teams']}
+													onFiltersChange={handleFiltersChange}
+												/>
+												<TeamsList userId={currentUserId} filters={filters['joined-teams']} />
+											</>
+										) : (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+												<div>
+													<CheckCircle className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+													<h2 className='text-white text-xl font-semibold mb-2'>Drużyny, do których dołączyłem</h2>
+													<p className='text-zinc-400 text-sm'>
+														Tutaj znajdziesz drużyny, do których należysz.
+													</p>
+												</div>
+											</div>
+										)}
+									</>
+								)}
+
+								{activeTab === 'pending-requests' && (
+									<>
+										{loadingUserId ? (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
+												<div className='flex items-center gap-2 text-zinc-300'>
+													<Loader2 className='animate-spin' /> Ładowanie…
+												</div>
+											</div>
+										) : currentUserId !== null ? (
+											<TeamRequestsList receiverId={currentUserId} />
+										) : (
+											<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-20 text-center'>
+												<div>
+													<Clock className='mx-auto mb-4 text-5xl text-violet-400' size={64} />
+													<h2 className='text-white text-xl font-semibold mb-2'>Oczekujące zaproszenia</h2>
+													<p className='text-zinc-400 text-sm'>
+														Tutaj znajdziesz zaproszenia, które oczekują na akceptację.
+													</p>
+												</div>
+											</div>
+										)}
+									</>
 								)}
 							</div>
 						</div>

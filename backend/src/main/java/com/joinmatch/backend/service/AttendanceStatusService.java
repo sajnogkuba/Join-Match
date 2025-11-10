@@ -1,6 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.AttendanceStatusResponseDto;
+import com.joinmatch.backend.dto.AttendanceStatus.AttendanceStatusResponseDto;
 import com.joinmatch.backend.repository.AttendanceStatusRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
