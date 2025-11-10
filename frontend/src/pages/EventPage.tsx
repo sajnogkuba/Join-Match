@@ -197,6 +197,29 @@ const EventPage: React.FC = () => {
 		setEditRatingComment('')
 	}
 
+	const handleSystemShare = async () => {
+		if (!event) return
+		const shareData = {
+			title: event.eventName,
+			text: `Dołącz do mojego wydarzenia "${event.eventName}"!\n📅 ${formatEventDate(
+				event.eventDate
+			)}\n\nSprawdź szczegóły:`,
+			url: window.location.href,
+		}
+
+		try {
+			if (navigator.share) {
+				await navigator.share(shareData)
+			} else {
+				await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
+				toast.info('Link do wydarzenia został skopiowany 📋')
+			}
+		} catch (err) {
+			console.error('❌ Nie udało się udostępnić wydarzenia:', err)
+			toast.error('Nie udało się udostępnić wydarzenia')
+		}
+	}
+
 	const saveEditEventRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
@@ -808,18 +831,15 @@ const EventPage: React.FC = () => {
 								href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
 								target='_blank'
 								rel='noreferrer'
-								className='grid place-items-center rounded-xl bg-[#1877F2] px-4 py-2 text-sm font-medium text-white hover:opacity-90'>
+								className='grid place-items-center rounded-xl bg-[#1877F2] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition'>
 								Facebook
 							</a>
-							<a
-								href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-									window.location.href
-								)}&text=${encodeURIComponent(event.eventName)}`}
-								target='_blank'
-								rel='noreferrer'
-								className='grid place-items-center rounded-xl bg-[#1DA1F2] px-4 py-2 text-sm font-medium text-white hover:opacity-90'>
-								Twitter
-							</a>
+
+							<button
+								onClick={handleSystemShare}
+								className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition'>
+								<Share2 size={16} /> Udostępnij wydarzenie
+							</button>
 						</div>
 					</div>
 				</div>
