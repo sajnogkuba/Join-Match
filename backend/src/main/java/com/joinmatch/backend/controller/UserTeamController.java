@@ -41,4 +41,15 @@ public class UserTeamController {
         userTeamService.removeUserFromTeam(teamId, userId, reason);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{teamId}/members/{userId}/quit")
+    public ResponseEntity<Void> quitFromTeam(
+            @PathVariable Integer teamId,
+            @PathVariable Integer userId,
+            @RequestBody(required = false) RemoveMemberRequestDto requestDto
+    ) {
+        String reason = requestDto != null ? requestDto.reason() : null;
+        userTeamService.quitFromTeam(teamId, userId, reason);
+        return ResponseEntity.noContent().build();
+    }
 }

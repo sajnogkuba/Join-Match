@@ -1,5 +1,6 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
 import com.joinmatch.backend.dto.Team.TeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamResponseDto;
@@ -75,6 +76,15 @@ public class TeamController {
     public ResponseEntity<TeamDetailsDto> getTeamById(@PathVariable Integer id) {
         TeamDetailsDto teamDetailsDto = teamService.getTeamDetails(id);
         return ResponseEntity.ok(teamDetailsDto);
+    }
+
+    @DeleteMapping("{id}")
+    public ResponseEntity<Void> deleteTeam(
+            @PathVariable("id") Integer teamId,
+            @RequestBody(required = false) CancelTeamRequestDto requestDto
+            ) {
+        teamService.deleteTeam(teamId, requestDto);
+        return ResponseEntity.noContent().build();
     }
 
 }

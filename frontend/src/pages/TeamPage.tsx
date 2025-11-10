@@ -8,7 +8,7 @@ import type { TeamMember } from '../Api/types/TeamMember'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
 import ContextMenu from '../components/ContextMenu'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut, UserMinus } from 'lucide-react'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut, UserMinus, Trash2 } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
@@ -45,6 +45,9 @@ const TeamPage: React.FC = () => {
 	const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
 	const [removingMember, setRemovingMember] = useState(false)
 	const [removeMemberReason, setRemoveMemberReason] = useState('')
+	const [showDeleteTeamModal, setShowDeleteTeamModal] = useState(false)
+	const [deletingTeam, setDeletingTeam] = useState(false)
+	const [deleteTeamReason, setDeleteTeamReason] = useState('')
 
 	useEffect(() => {
 		if (!id) {
@@ -324,7 +327,7 @@ const TeamPage: React.FC = () => {
 
 		setLeavingTeam(true)
 		try {
-			await api.delete(`/user-team/${team.idTeam}/members/${currentUserId}`)
+			await api.delete(`/user-team/${team.idTeam}/members/${currentUserId}/quit`)
 			// Po sukcesie przekieruj do strony drużyn
 			navigate('/teams')
 		} catch (error: any) {
@@ -360,6 +363,31 @@ const TeamPage: React.FC = () => {
 				alert('Nie można usunąć członka. Możliwe, że jest liderem lub nie jest członkiem tej drużyny.')
 			} else {
 				alert('Nie udało się usunąć członka. Spróbuj ponownie.')
+			}
+		}
+	}
+
+	const handleDeleteTeam = async () => {
+		if (!team) return
+
+		setDeletingTeam(true)
+		try {
+			await api.delete(`/team/${team.idTeam}`, {
+				data: {
+					teamId: team.idTeam,
+					reason: deleteTeamReason.trim() || null
+				}
+			})
+			
+			// Po sukcesie przekieruj do strony drużyn
+			navigate('/teams')
+		} catch (error: any) {
+			console.error('Error deleting team:', error)
+			setDeletingTeam(false)
+			if (error.response?.status === 403 || error.response?.status === 400) {
+				alert('Nie można usunąć drużyny. Sprawdź czy masz odpowiednie uprawnienia.')
+			} else {
+				alert('Nie udało się usunąć drużyny. Spróbuj ponownie.')
 			}
 		}
 	}
@@ -625,6 +653,19 @@ const TeamPage: React.FC = () => {
 								</button>
 							</div>
 						)}
+
+						{/* Przycisk usuwania drużyny - tylko dla lidera */}
+						{isLeader && (
+							<div className='rounded-2xl border border-red-500/30 bg-red-500/10 p-5'>
+								<button
+									onClick={() => setShowDeleteTeamModal(true)}
+									className='w-full rounded-xl bg-red-600/20 border border-red-500/30 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-600/30 transition-colors inline-flex items-center justify-center gap-2'
+								>
+									<Trash2 size={16} />
+									Usuń drużynę
+								</button>
+							</div>
+						)}
 					</aside>
 				</div>
 			</div>
@@ -877,6 +918,29 @@ const TeamPage: React.FC = () => {
 				textInputPlaceholder="Podaj powód usunięcia członka z drużyny..."
 				textInputValue={removeMemberReason}
 				onTextInputChange={setRemoveMemberReason}
+				textInputRequired={false}
+			/>
+
+			{/* Modal potwierdzenia usunięcia drużyny */}
+			<AlertModal
+				isOpen={showDeleteTeamModal}
+				onClose={() => {
+					setShowDeleteTeamModal(false)
+					setDeleteTeamReason('')
+				}}
+				title="Usuń drużynę"
+				message={team ? `Czy na pewno chcesz usunąć drużynę "${team.name}"? Ta akcja jest nieodwracalna i spowoduje usunięcie wszystkich danych związanych z drużyną.` : ''}
+				variant="error"
+				showConfirm={true}
+				onConfirm={handleDeleteTeam}
+				confirmText="Usuń drużynę"
+				cancelText="Anuluj"
+				isLoading={deletingTeam}
+				showTextInput={true}
+				textInputLabel="Powód usunięcia (opcjonalnie)"
+				textInputPlaceholder="Podaj powód usunięcia drużyny..."
+				textInputValue={deleteTeamReason}
+				onTextInputChange={setDeleteTeamReason}
 				textInputRequired={false}
 			/>
 		</main>

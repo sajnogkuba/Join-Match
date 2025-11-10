@@ -2,10 +2,7 @@ package com.joinmatch.backend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.joinmatch.backend.dto.Notification.NotificationDataDto;
-import com.joinmatch.backend.dto.Notification.NotificationResponseDto;
-import com.joinmatch.backend.dto.Notification.TeamLeftNotificationDataDto;
-import com.joinmatch.backend.dto.Notification.TeamRequestNotificationDataDto;
+import com.joinmatch.backend.dto.Notification.*;
 import com.joinmatch.backend.enums.NotificationType;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.NotificationRepository;
@@ -300,4 +297,47 @@ public class NotificationService {
             throw new RuntimeException("Error serializing notification data", e);
         }
     }
+
+    public void notifyTeamCancellation(Team team, String reason) {
+        team.getUserTeams().forEach(userTeam -> {
+            try {
+                var user = userTeam.getUser();
+                if(user == team.getLeader()) {
+                    return;
+                }
+
+                TeamCancelNotificationDto data = new TeamCancelNotificationDto(
+                        user.getId(),
+                        team.getId(),
+                        reason
+                );
+
+                String dataJson = objectMapper.writeValueAsString(data);
+                String message = "Drużyna " + team.getName() + " została rozwiązana";
+                if (reason != null && !reason.trim().isEmpty()) {
+                    message += ". Powód: " + reason;
+                }
+                
+                Notification notification = Notification.builder()
+                        .user(user)
+                        .type(NotificationType.TEAM_CANCELED)
+                        .title("Drużyna została rozwiązana")
+                        .message(message)
+                        .data(dataJson)
+                        .build();
+
+                Notification savedNotification = notificationRepository.save(notification);
+                NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+                messagingTemplate.convertAndSendToUser(
+                        user.getId().toString(),
+                        "/queue/notifications",
+                        responseDto
+                );
+
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Error serializing notification data", e);
+            }
+        });
+    }
+
 }
