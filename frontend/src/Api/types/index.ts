@@ -4,6 +4,9 @@ export type { SimpleUser, SidebarItemKey } from "./Profile";
 // Sports types
 export type { SportTypeOption, UserSport, UserSportsResponse } from "./Sports";
 
+// TeamPost types
+export type { TeamPostRequestDto, TeamPostResponseDto, PostType } from "./TeamPost";
+
 // Events types
 export type { SavedEventRef, EventDetails } from "./Events";
 
