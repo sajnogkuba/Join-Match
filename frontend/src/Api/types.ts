@@ -62,5 +62,8 @@ export type EventDetails = {
 	skillLevel: string
 	paymentMethod: string
 	imageUrl?: string
+
+	latitude: number
+	longitude: number
 }
 

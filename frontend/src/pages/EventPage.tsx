@@ -168,6 +168,23 @@ const EventPage: React.FC = () => {
 		}
 	}
 
+	const handleOpenInMaps = () => {
+		if (!event) return
+
+		const { latitude, longitude, street, number, city } = event
+
+		if (street && city) {
+			const address = encodeURIComponent(`${street} ${number ?? ''}, ${city}`)
+			const url = `https://www.google.com/maps/search/?api=1&query=${address}`
+			window.open(url, '_blank')
+		} else if (latitude && longitude) {
+			const url = `https://www.google.com/maps?q=${latitude},${longitude}`
+			window.open(url, '_blank')
+		} else {
+			toast.error('Brak danych lokalizacji dla tego obiektu')
+		}
+	}
+
 	const startEditEventRating = (r: EventRatingResponse) => {
 		setEditingRatingId(r.id)
 		setEditRatingValue(r.rating)
@@ -538,8 +555,10 @@ const EventPage: React.FC = () => {
 										<span>{formatAddress(event.street, event.number, event.secondNumber, event.city)}</span>
 									</div>
 								</div>
-								<button className='mt-4 w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
-									Pokaż na mapie
+								<button
+									onClick={handleOpenInMaps}
+									className='mt-4 w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
+									Wyznacz trasę
 								</button>
 							</div>
 

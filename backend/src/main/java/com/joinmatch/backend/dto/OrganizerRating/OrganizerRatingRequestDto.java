@@ -1,4 +1,4 @@
-package com.joinmatch.backend.dto;
+package com.joinmatch.backend.dto.OrganizerRating;
 
 public record OrganizerRatingRequestDto(
         Integer raterId,

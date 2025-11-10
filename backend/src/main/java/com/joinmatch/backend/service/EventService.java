@@ -101,6 +101,8 @@ public class EventService {
                 .skillLevel("Amator")
                 .paymentMethod("Gotówka")
                 .imageUrl(e.getImageUrl())
+                .latitude(e.getSportObject().getLatitude())
+                .longitude(e.getSportObject().getLongitude())
                 .build();
     }
 
