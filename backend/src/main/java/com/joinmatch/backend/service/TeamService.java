@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
 import com.joinmatch.backend.dto.Team.TeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamResponseDto;
@@ -24,6 +25,7 @@ public class TeamService {
     private final TeamRepository teamRepository;
     private final SportRepository sportRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public TeamResponseDto create(TeamRequestDto teamRequestDto) {
@@ -79,6 +81,16 @@ public class TeamService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
         Page<Team> teams = teamRepository.findAllByUserTeams_User(user, sortedPageable);
         return teams.map(TeamResponseDto::fromTeam);
+    }
+
+    public void deleteTeam(Integer teamId, CancelTeamRequestDto requestDto) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
+
+        String reason = requestDto != null ? requestDto.reason() : null;
+        notificationService.notifyTeamCancellation(team, reason);
+
+        teamRepository.delete(team);
     }
 
 

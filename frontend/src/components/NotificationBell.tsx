@@ -55,8 +55,9 @@ const NotificationBell: React.FC = () => {
     // Zamknij dropdown
     setIsOpen(false);
 
-    // Dla TEAM_MEMBER_REMOVED otwórz modal zamiast przekierowania
-    if (notification.type === NotificationType.TEAM_MEMBER_REMOVED) {
+    // Dla TEAM_MEMBER_REMOVED i TEAM_CANCELED otwórz modal zamiast przekierowania
+    if (notification.type === NotificationType.TEAM_MEMBER_REMOVED || 
+        notification.type === NotificationType.TEAM_CANCELED) {
       setSelectedNotification(notification);
       setShowDetailModal(true);
       return;
@@ -140,6 +141,8 @@ const NotificationBell: React.FC = () => {
         return <Users size={16} className="text-amber-400" />;
       case NotificationType.TEAM_MEMBER_REMOVED:
         return <UserMinus size={16} className="text-red-400" />;
+      case NotificationType.TEAM_CANCELED:
+        return <Users size={16} className="text-red-400" />;
       default:
         return <Bell size={16} className="text-zinc-400" />;
     }
@@ -279,7 +282,11 @@ const NotificationBell: React.FC = () => {
             <div className="flex items-start justify-between mb-4 gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="p-2 rounded-xl bg-red-500/20 flex-shrink-0">
-                  <UserMinus size={24} className="text-red-400" />
+                  {selectedNotification.type === NotificationType.TEAM_CANCELED ? (
+                    <Users size={24} className="text-red-400" />
+                  ) : (
+                    <UserMinus size={24} className="text-red-400" />
+                  )}
                 </div>
                 <h3 className="text-white text-lg font-semibold break-words">
                   {selectedNotification.title}
@@ -305,7 +312,11 @@ const NotificationBell: React.FC = () => {
 
               {extractReasonFromMessage(selectedNotification.message) && (
                 <div className="rounded-xl border border-zinc-800 bg-zinc-800/60 p-4">
-                  <h4 className="text-white font-medium text-sm mb-2">Powód usunięcia:</h4>
+                  <h4 className="text-white font-medium text-sm mb-2">
+                    {selectedNotification.type === NotificationType.TEAM_CANCELED 
+                      ? "Powód rozwiązania:" 
+                      : "Powód usunięcia:"}
+                  </h4>
                   <p className="text-zinc-300 text-sm break-words whitespace-pre-wrap">
                     {extractReasonFromMessage(selectedNotification.message)}
                   </p>

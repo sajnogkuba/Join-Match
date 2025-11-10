@@ -36,10 +36,6 @@ public class UserTeamService {
         return userTeams.map(UserTeamResponseDto::fromUserTeam);
     }
 
-    public void removeUserFromTeam(Integer teamId, Integer userId) {
-        removeUserFromTeam(teamId, userId, null);
-    }
-
     public void removeUserFromTeam(Integer teamId, Integer userId, String reason) {
         var team = teamRepository.findById(teamId).orElseThrow(
                 () -> new IllegalArgumentException("Team with id " + teamId + " not found")
@@ -59,5 +55,28 @@ public class UserTeamService {
         }
         userTeamRepository.delete(userTeam);
         notificationService.sendTeamMemberRemovedNotification(userTeam, reason);
+    }
+
+    public void quitFromTeam(Integer teamId, Integer userId, String reason) {
+        var team = teamRepository.findById(teamId).orElseThrow(
+                () -> new IllegalArgumentException("Team with id " + teamId + " not found")
+        );
+
+        var user = userRepository.findById(userId).orElseThrow(
+                () -> new IllegalArgumentException("User with id " + userId + " not found")
+        );
+
+        var userTeam = userTeamRepository.findByUserAndTeam(user, team).orElseThrow(
+                () -> new IllegalArgumentException("User with id " + userId + " is not a member of team with id " + teamId)
+        );
+
+        var leader = team.getLeader();
+        if (leader.getId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot remove the leader of the team");
+        }
+
+        userTeamRepository.delete(userTeam);
+
+        notificationService.sendTeamLeftNotification(userTeam);
     }
 }
