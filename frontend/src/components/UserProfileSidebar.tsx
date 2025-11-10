@@ -9,7 +9,8 @@ const UserProfileSidebar = ({ active, onSelect }: UserProfileSidebarProps) => {
 	const items = [
 		{ label: "Informacje", icon: Info },
 		{ label: "Historia wydarzeń", icon: Calendar },
-		{ label: "Oceny", icon: Star },
+		{ label: "Oceny (uczestnik)", icon: Star },
+		{ label: "Oceny (organizator)", icon: Star },
 	]
 
 	return (
@@ -35,3 +36,4 @@ const UserProfileSidebar = ({ active, onSelect }: UserProfileSidebarProps) => {
 }
 
 export default UserProfileSidebar
+
