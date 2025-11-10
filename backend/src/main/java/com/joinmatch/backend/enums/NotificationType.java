@@ -10,6 +10,7 @@ public enum NotificationType {
     TEAM_REQUEST,
     TEAM_REQUEST_ACCEPTED,
     TEAM_REQUEST_REJECTED,
-    TEAM_LEFT
+    TEAM_LEFT,
+    TEAM_MEMBER_REMOVED
 }
 

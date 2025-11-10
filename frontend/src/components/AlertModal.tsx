@@ -12,6 +12,12 @@ interface AlertModalProps {
     confirmText?: string;
     cancelText?: string;
     isLoading?: boolean;
+    showTextInput?: boolean;
+    textInputLabel?: string;
+    textInputPlaceholder?: string;
+    textInputValue?: string;
+    onTextInputChange?: (value: string) => void;
+    textInputRequired?: boolean;
 }
 
 const AlertModal = ({
@@ -24,7 +30,13 @@ const AlertModal = ({
     onConfirm,
     confirmText = "Potwierdź",
     cancelText = "Anuluj",
-    isLoading = false
+    isLoading = false,
+    showTextInput = false,
+    textInputLabel,
+    textInputPlaceholder,
+    textInputValue = "",
+    onTextInputChange,
+    textInputRequired = false
 }: AlertModalProps) => {
     useEffect(() => {
         if (isOpen) {
@@ -67,6 +79,25 @@ const AlertModal = ({
                     </button>
                 </div>
                 <p className="text-zinc-300 mb-6">{message}</p>
+                
+                {showTextInput && (
+                    <div className="mb-6">
+                        {textInputLabel && (
+                            <label className="block text-sm font-medium text-zinc-300 mb-2">
+                                {textInputLabel}
+                                {textInputRequired && <span className="text-red-400 ml-1">*</span>}
+                            </label>
+                        )}
+                        <textarea
+                            value={textInputValue}
+                            onChange={(e) => onTextInputChange?.(e.target.value)}
+                            placeholder={textInputPlaceholder}
+                            rows={3}
+                            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/60 px-4 py-3 text-white placeholder-zinc-400 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
+                        />
+                    </div>
+                )}
+
                 <div className={`flex ${showConfirm ? 'justify-end gap-2' : 'justify-end'}`}>
                     {showConfirm ? (
                         <>
@@ -79,7 +110,7 @@ const AlertModal = ({
                             </button>
                             <button
                                 onClick={onConfirm}
-                                disabled={isLoading}
+                                disabled={isLoading || (showTextInput && textInputRequired && !textInputValue?.trim())}
                                 className={`rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                     variant === "error"
                                         ? "bg-red-600 hover:bg-red-500"

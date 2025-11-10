@@ -37,6 +37,10 @@ public class UserTeamService {
     }
 
     public void removeUserFromTeam(Integer teamId, Integer userId) {
+        removeUserFromTeam(teamId, userId, null);
+    }
+
+    public void removeUserFromTeam(Integer teamId, Integer userId, String reason) {
         var team = teamRepository.findById(teamId).orElseThrow(
                 () -> new IllegalArgumentException("Team with id " + teamId + " not found")
         );
@@ -54,6 +58,6 @@ public class UserTeamService {
             throw new IllegalArgumentException("Cannot remove the leader of the team");
         }
         userTeamRepository.delete(userTeam);
-        notificationService.sendTeamLeftNotification(userTeam);
+        notificationService.sendTeamMemberRemovedNotification(userTeam, reason);
     }
 }
