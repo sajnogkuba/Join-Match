@@ -7,7 +7,8 @@ import type { TeamRequestResponseDto } from '../Api/types/TeamRequest'
 import type { TeamMember } from '../Api/types/TeamMember'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
-import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut } from 'lucide-react'
+import ContextMenu from '../components/ContextMenu'
+import { MapPin, Users, Crown, UserRound, Loader2, AlertTriangle, Search, X, UserPlus, Clock, ChevronDown, LogOut, UserMinus } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { parseLocalDate } from '../utils/formatDate'
@@ -40,6 +41,10 @@ const TeamPage: React.FC = () => {
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 	const [showLeaveTeamModal, setShowLeaveTeamModal] = useState(false)
 	const [leavingTeam, setLeavingTeam] = useState(false)
+	const [showRemoveMemberModal, setShowRemoveMemberModal] = useState(false)
+	const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null)
+	const [removingMember, setRemovingMember] = useState(false)
+	const [removeMemberReason, setRemoveMemberReason] = useState('')
 
 	useEffect(() => {
 		if (!id) {
@@ -236,10 +241,14 @@ const TeamPage: React.FC = () => {
 			})
 				.then(({ data }) => {
 					// Znajdź zaproszenie dla tej drużyny ze statusem PENDING
-					const pendingRequest = data.content.find(
-						req => req.teamId === team.idTeam && req.status === 'PENDING'
-					)
-					setUserTeamRequest(pendingRequest || null)
+					if (data && data.content && Array.isArray(data.content)) {
+						const pendingRequest = data.content.find(
+							req => req.teamId === team.idTeam && req.status === 'PENDING'
+						)
+						setUserTeamRequest(pendingRequest || null)
+					} else {
+						setUserTeamRequest(null)
+					}
 				})
 				.catch((error) => {
 					console.error('Error fetching user team request:', error)
@@ -325,6 +334,32 @@ const TeamPage: React.FC = () => {
 				alert('Nie możesz opuścić drużyny. Możliwe, że jesteś liderem lub nie jesteś członkiem tej drużyny.')
 			} else {
 				alert('Nie udało się opuścić drużyny. Spróbuj ponownie.')
+			}
+		}
+	}
+
+	const handleRemoveMember = async () => {
+		if (!team || !memberToRemove) return
+
+		setRemovingMember(true)
+		try {
+			await api.delete(`/user-team/${team.idTeam}/members/${memberToRemove.userId}`, {
+				data: {
+					reason: removeMemberReason.trim() || null
+				}
+			})
+			// Po sukcesie odśwież listę członków
+			await fetchTeamMembers()
+			setShowRemoveMemberModal(false)
+			setMemberToRemove(null)
+			setRemoveMemberReason('')
+		} catch (error: any) {
+			console.error('Error removing member:', error)
+			setRemovingMember(false)
+			if (error.response?.status === 403 || error.response?.status === 400) {
+				alert('Nie można usunąć członka. Możliwe, że jest liderem lub nie jest członkiem tej drużyny.')
+			} else {
+				alert('Nie udało się usunąć członka. Spróbuj ponownie.')
 			}
 		}
 	}
@@ -471,29 +506,48 @@ const TeamPage: React.FC = () => {
 							) : (
 								<div className='flex flex-wrap gap-2'>
 									{teamMembers.slice(0, showAllMembers ? teamMembers.length : 8).map(member => (
-										<Link
+										<div
 											key={member.id}
-											to={`/profile/${member.userId}`}
-											className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'
+											className='group flex items-center justify-between gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'
 										>
-											<Avatar
-												src={member.userAvatarUrl || null}
-												name={member.userName}
-												size='sm'
-												className='ring-1 ring-zinc-700 shadow-sm'
-											/>
-											<div className='text-sm'>
-												<div className='font-medium text-white leading-tight'>
-													{member.userEmail === userEmail ? `${member.userName} (Ty)` : member.userName}
-												</div>
-												{member.userId === team.leaderId && (
-													<div className='mt-0.5 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-violet-500/20 text-violet-300'>
-														<Crown size={10} />
-														Lider
+											<Link
+												to={`/profile/${member.userId}`}
+												className='flex items-center gap-3 flex-1'
+											>
+												<Avatar
+													src={member.userAvatarUrl || null}
+													name={member.userName}
+													size='sm'
+													className='ring-1 ring-zinc-700 shadow-sm'
+												/>
+												<div className='text-sm'>
+													<div className='font-medium text-white leading-tight'>
+														{member.userEmail === userEmail ? `${member.userName} (Ty)` : member.userName}
 													</div>
-												)}
-											</div>
-										</Link>
+													{member.userId === team.leaderId && (
+														<div className='mt-0.5 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-violet-500/20 text-violet-300'>
+															<Crown size={10} />
+															Lider
+														</div>
+													)}
+												</div>
+											</Link>
+											{isLeader && member.userId !== currentUserId && (
+												<ContextMenu
+													items={[
+														{
+															label: 'Usuń z drużyny',
+															icon: <UserMinus size={16} />,
+															onClick: () => {
+																setMemberToRemove(member)
+																setShowRemoveMemberModal(true)
+															},
+															variant: 'danger'
+														}
+													]}
+												/>
+											)}
+										</div>
 									))}
 								</div>
 							)}
@@ -800,6 +854,30 @@ const TeamPage: React.FC = () => {
 				confirmText="Opuść drużynę"
 				cancelText="Anuluj"
 				isLoading={leavingTeam}
+			/>
+
+			{/* Modal potwierdzenia usunięcia członka */}
+			<AlertModal
+				isOpen={showRemoveMemberModal}
+				onClose={() => {
+					setShowRemoveMemberModal(false)
+					setMemberToRemove(null)
+					setRemoveMemberReason('')
+				}}
+				title="Usuń członka drużyny"
+				message={memberToRemove ? `Czy na pewno chcesz usunąć ${memberToRemove.userName} z drużyny? Tej akcji nie można cofnąć.` : ''}
+				variant="warning"
+				showConfirm={true}
+				onConfirm={handleRemoveMember}
+				confirmText="Usuń z drużyny"
+				cancelText="Anuluj"
+				isLoading={removingMember}
+				showTextInput={true}
+				textInputLabel="Powód usunięcia (opcjonalnie)"
+				textInputPlaceholder="Podaj powód usunięcia członka z drużyny..."
+				textInputValue={removeMemberReason}
+				onTextInputChange={setRemoveMemberReason}
+				textInputRequired={false}
 			/>
 		</main>
 	)

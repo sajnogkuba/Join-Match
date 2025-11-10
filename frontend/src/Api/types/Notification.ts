@@ -8,7 +8,8 @@ export const NotificationType = {
   TEAM_REQUEST: 'TEAM_REQUEST',
   TEAM_REQUEST_ACCEPTED: 'TEAM_REQUEST_ACCEPTED',
   TEAM_REQUEST_REJECTED: 'TEAM_REQUEST_REJECTED',
-  TEAM_LEFT: 'TEAM_LEFT'
+  TEAM_LEFT: 'TEAM_LEFT',
+  TEAM_MEMBER_REMOVED: 'TEAM_MEMBER_REMOVED'
 } as const;
 
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];

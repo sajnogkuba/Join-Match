@@ -206,6 +206,42 @@ public class NotificationService {
         }
     }
 
+    public void sendTeamMemberRemovedNotification(UserTeam userTeam, String reason) {
+        try {
+            TeamLeftNotificationDataDto data = new TeamLeftNotificationDataDto(
+                    userTeam.getTeam().getLeader().getId(),
+                    userTeam.getTeam().getId(),
+                    userTeam.getUser().getId()
+            );
+            String dataJson = objectMapper.writeValueAsString(data);
+            
+            String message = "Zostałeś usunięty z drużyny " + userTeam.getTeam().getName();
+            if (reason != null && !reason.trim().isEmpty()) {
+                message += ". Powód: " + reason;
+            }
+            
+            Notification notification = Notification.builder()
+                    .user(userTeam.getUser())
+                    .type(NotificationType.TEAM_MEMBER_REMOVED)
+                    .title("Zostałeś usunięty z drużyny")
+                    .message(message)
+                    .data(dataJson)
+                    .build();
+
+            Notification savedNotification = notificationRepository.save(notification);
+
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+
+            messagingTemplate.convertAndSendToUser(
+                    userTeam.getUser().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
+
     public void sendTeamRequestNotification(TeamRequest teamRequest) {
         try {
             TeamRequestNotificationDataDto data = new TeamRequestNotificationDataDto(

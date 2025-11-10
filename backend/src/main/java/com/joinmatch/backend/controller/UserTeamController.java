@@ -1,5 +1,6 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.UserTeam.RemoveMemberRequestDto;
 import com.joinmatch.backend.dto.UserTeam.UserTeamResponseDto;
 import com.joinmatch.backend.service.UserTeamService;
 import lombok.RequiredArgsConstructor;
@@ -33,9 +34,11 @@ public class UserTeamController {
     @DeleteMapping("/{teamId}/members/{userId}")
     public ResponseEntity<Void> removeUserFromTeam(
             @PathVariable Integer teamId,
-            @PathVariable Integer userId
+            @PathVariable Integer userId,
+            @RequestBody(required = false) RemoveMemberRequestDto requestDto
     ) {
-        userTeamService.removeUserFromTeam(teamId, userId);
+        String reason = requestDto != null ? requestDto.reason() : null;
+        userTeamService.removeUserFromTeam(teamId, userId, reason);
         return ResponseEntity.noContent().build();
     }
 }
