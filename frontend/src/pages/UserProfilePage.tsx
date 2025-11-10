@@ -194,7 +194,7 @@ const UserProfilePage = () => {
 					params: { userId: currentUserId },
 				}
 			)
-			toast.success('Zaktualizowano ocenę organizatora')
+			showRatingToast({ type: 'update', target: 'organizatora' })
 			cancelEditOrganizerRating()
 			fetchOrganizerRatings()
 		} catch (e) {
@@ -209,7 +209,7 @@ const UserProfilePage = () => {
 				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
-			toast.success('Usunięto ocenę organizatora')
+			showRatingToast({ type: 'delete', target: 'organizatora' })
 			if (editingOrganizerRatingId === ratingId) cancelEditOrganizerRating()
 			fetchOrganizerRatings()
 		} catch (e) {

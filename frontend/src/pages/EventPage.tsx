@@ -26,6 +26,7 @@ import {
 	CalendarDays,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showRatingToast } from '../components/RatingToast'
 
 dayjs.locale('pl')
 
@@ -151,7 +152,7 @@ const EventPage: React.FC = () => {
 				rating,
 				comment,
 			})
-			toast.success('Dziękujemy za ocenę wydarzenia!')
+			showRatingToast({ type: 'add', target: 'wydarzenia' })
 			fetchEventRatings()
 		} catch (e: any) {
 			const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? ''
@@ -196,7 +197,7 @@ const EventPage: React.FC = () => {
 					params: { userId: currentUserId },
 				}
 			)
-			toast.success('Zmieniono ocenę wydarzenia')
+			showRatingToast({ type: 'update', target: 'wydarzenia' })
 			cancelEditEventRating()
 			fetchEventRatings()
 		} catch (e) {
@@ -211,7 +212,7 @@ const EventPage: React.FC = () => {
 				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
-			toast.success('Usunięto ocenę wydarzenia')
+			showRatingToast({ type: 'delete', target: 'wydarzenia' })
 			if (editingRatingId === ratingId) cancelEditEventRating()
 			fetchEventRatings()
 		} catch (e) {
@@ -649,7 +650,7 @@ const EventPage: React.FC = () => {
 												comment,
 												eventId: parseInt(id!),
 											})
-											toast.success('Dziękujemy za ocenę organizatora!')
+											showRatingToast({ type: 'add', target: 'organizatora' })
 											setHasRatedOrganizer(true)
 										} catch (e: any) {
 											const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? ''

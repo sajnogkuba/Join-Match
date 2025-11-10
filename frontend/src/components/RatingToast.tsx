@@ -4,10 +4,9 @@ import { motion, AnimatePresence, easeOut } from 'framer-motion'
 
 interface RatingToastOptions {
 	type: 'add' | 'update' | 'delete'
-	target?: string // np. "użytkownika", "wydarzeniu", "organizatorze"
+	target?: string
 }
 
-// ✅ główny helper do wywoływania toastów
 export const showRatingToast = ({ type, target = 'użytkownika' }: RatingToastOptions) => {
 	const baseStyle = {
 		style: {
@@ -44,7 +43,6 @@ export const showRatingToast = ({ type, target = 'użytkownika' }: RatingToastOp
 					<p className="font-semibold text-white text-sm">{title}</p>
 					<p className="text-xs text-zinc-300">{message}</p>
 				</div>
-				{/* subtelny błysk */}
 				<div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" />
 			</motion.div>
 		</AnimatePresence>
