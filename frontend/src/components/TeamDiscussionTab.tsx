@@ -16,6 +16,7 @@ import api from '../Api/axios'
 import type { TeamMember } from '../Api/types/TeamMember'
 import type { Event } from '../Api/types'
 import type { TeamPostRequestDto, TeamPostResponseDto, TeamPostPageResponse, PostType } from '../Api/types/TeamPost'
+import type { TeamPostCommentRequestDto, TeamPostCommentResponseDto, TeamPostCommentPageResponse } from '../Api/types/TeamPostComment'
 import type { User } from '../Api/types/User'
 import Avatar from './Avatar'
 import { Link } from 'react-router-dom'
@@ -99,6 +100,15 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [page, setPage] = useState(0)
 	const [hasNext, setHasNext] = useState(false)
 	const [totalElements, setTotalElements] = useState(0)
+	const [comments, setComments] = useState<Map<number, TeamPostCommentResponseDto[]>>(new Map())
+	const [loadingComments, setLoadingComments] = useState<Map<number, boolean>>(new Map())
+	const [commentTexts, setCommentTexts] = useState<Map<number, string>>(new Map())
+	const [postingComment, setPostingComment] = useState<Map<number, boolean>>(new Map())
+	const [showComments, setShowComments] = useState<Map<number, boolean>>(new Map())
+	const [showCommentEmojiPicker, setShowCommentEmojiPicker] = useState<Map<number, boolean>>(new Map())
+	const [commentPages, setCommentPages] = useState<Map<number, number>>(new Map())
+	const [commentHasNext, setCommentHasNext] = useState<Map<number, boolean>>(new Map())
+	const commentEmojiPickerRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
 	const colorPickerRef = useRef<HTMLDivElement>(null)
 	const highlightPickerRef = useRef<HTMLDivElement>(null)
 	const emojiPickerRef = useRef<HTMLDivElement>(null)
@@ -307,6 +317,17 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 			if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
 				setShowEmojiPicker(false)
 			}
+			
+			// Zamknij emoji pickery dla komentarzy
+			commentEmojiPickerRefs.current.forEach((ref, postId) => {
+				if (ref && !ref.contains(event.target as Node)) {
+					setShowCommentEmojiPicker(prev => {
+						const newMap = new Map(prev)
+						newMap.set(postId, false)
+						return newMap
+					})
+				}
+			})
 		}
 
 		document.addEventListener('mousedown', handleClickOutside)
@@ -463,6 +484,147 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		return [...new Set(userIds)] // Usuń duplikaty
 	}
 
+	// Konwertuj emotki na emoji
+	const convertEmoticonsToEmoji = (text: string): string => {
+		const emoticonMap: Record<string, string> = {
+			':)': '😊',
+			':-)': '😊',
+			':(': '😢',
+			':-(': '😢',
+			':D': '😃',
+			':-D': '😃',
+			':P': '😛',
+			':-P': '😛',
+			';)': '😉',
+			';-)': '😉',
+			':O': '😮',
+			':-O': '😮',
+			':*': '😘',
+			':-*': '😘',
+			'<3': '❤️',
+			'</3': '💔',
+			':3': '😸',
+			':|': '😐',
+			':-|': '😐',
+			':/': '😕',
+			':-/': '😕',
+			':\\': '😕',
+			':-\\': '😕',
+			'xD': '😆',
+			'XD': '😆',
+			'x)': '😆',
+			'X)': '😆',
+		}
+		
+		let result = text
+		// Sortuj po długości (dłuższe najpierw), żeby uniknąć częściowych zamian
+		const sortedEntries = Object.entries(emoticonMap).sort((a, b) => b[0].length - a[0].length)
+		
+		for (const [emoticon, emoji] of sortedEntries) {
+			// Escapuj specjalne znaki regex
+			const escaped = emoticon.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+			result = result.replace(new RegExp(escaped, 'g'), emoji)
+		}
+		
+		return result
+	}
+
+	// Pobierz komentarze dla posta
+	const fetchComments = useCallback(async (postId: number, append: boolean = false) => {
+		try {
+			setLoadingComments(prev => new Map(prev).set(postId, true))
+
+			const currentPage = append ? (commentPages.get(postId) || 0) + 1 : 0
+			
+			const params = {
+				page: currentPage,
+				size: 12,
+				sort: 'createdAt',
+				direction: 'ASC' as const,
+			}
+
+			const response = await api.get<TeamPostCommentPageResponse>(`/comment/${postId}`, { params })
+			const data = response.data
+
+			if (append) {
+				setComments(prev => {
+					const newMap = new Map(prev)
+					const existingComments = newMap.get(postId) || []
+					newMap.set(postId, [...existingComments, ...(data.content || [])])
+					return newMap
+				})
+			} else {
+				setComments(prev => new Map(prev).set(postId, data.content || []))
+			}
+
+			setCommentPages(prev => new Map(prev).set(postId, currentPage))
+			setCommentHasNext(prev => new Map(prev).set(postId, !data.last))
+		} catch (error) {
+			console.error('Błąd pobierania komentarzy:', error)
+			if (!append) {
+				setComments(prev => new Map(prev).set(postId, []))
+			}
+		} finally {
+			setLoadingComments(prev => new Map(prev).set(postId, false))
+		}
+	}, [commentPages])
+
+	// Utwórz komentarz
+	const postComment = async (postId: number) => {
+		if (!currentUserId) {
+			alert('Musisz być zalogowany, aby dodać komentarz')
+			return
+		}
+
+		const content = commentTexts.get(postId)?.trim() || ''
+		if (!content) {
+			alert('Komentarz nie może być pusty')
+			return
+		}
+
+		setPostingComment(prev => new Map(prev).set(postId, true))
+
+		try {
+			const commentData: TeamPostCommentRequestDto = {
+				postId,
+				authorId: currentUserId,
+				parentCommentId: null,
+				content,
+			}
+
+			await api.post<TeamPostCommentResponseDto>('/comment', commentData)
+			
+			// Wyczyść textarea i odśwież komentarze
+			setCommentTexts(prev => {
+				const newMap = new Map(prev)
+				newMap.set(postId, '')
+				return newMap
+			})
+			await fetchComments(postId, false)
+		} catch (error) {
+			console.error('Błąd tworzenia komentarza:', error)
+			alert('Nie udało się dodać komentarza. Spróbuj ponownie.')
+		} finally {
+			setPostingComment(prev => new Map(prev).set(postId, false))
+		}
+	}
+
+	// Przełącz widoczność komentarzy
+	const toggleComments = (postId: number) => {
+		const isShowing = showComments.get(postId) || false
+		setShowComments(prev => new Map(prev).set(postId, !isShowing))
+		
+		// Jeśli pokazujemy komentarze i jeszcze ich nie pobraliśmy, pobierz je z page=0
+		if (!isShowing && !comments.has(postId)) {
+			fetchComments(postId, false)
+		}
+	}
+
+	// Wczytaj więcej komentarzy
+	const loadMoreComments = async (postId: number) => {
+		await fetchComments(postId, true)
+	}
+
 	// Utwórz post
 	const createPost = async () => {
 		if (!editor || !currentUserId) {
@@ -470,13 +632,14 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 			return
 		}
 
-		const htmlContent = editor.getHTML()
-		const textContent = editor.getText().trim()
+		let htmlContent = editor.getHTML()
+		let textContent = editor.getText().trim()
 
 		if (!textContent || textContent === 'Wpisz swoją wiadomość tutaj...') {
 			alert('Post nie może być pusty')
 			return
 		}
+
 
 		setPublishing(true)
 
@@ -577,6 +740,175 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 									className='prose prose-invert max-w-none text-zinc-300 [&_*]:text-zinc-300 [&_strong]:text-white [&_em]:text-zinc-200 [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_a]:text-violet-400 [&_a]:hover:text-violet-300 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:my-1 [&_p]:my-2 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4 [&_.mention]:bg-violet-500/20 [&_.mention]:text-violet-300 [&_.mention]:px-1 [&_.mention]:rounded [&_.mention]:font-medium'
 									dangerouslySetInnerHTML={{ __html: post.contentHtml }}
 								/>
+								
+								{/* Sekcja komentarzy */}
+								<div className='mt-4 pt-4 border-t border-zinc-800'>
+									{/* Przycisk pokaż/ukryj komentarze */}
+									<button
+										onClick={() => toggleComments(post.postId)}
+										className='text-sm text-zinc-400 hover:text-violet-400 transition-colors mb-3'
+									>
+										{showComments.get(post.postId) ? 'Ukryj komentarze' : 'Pokaż komentarze'}
+										{comments.get(post.postId) && comments.get(post.postId)!.length > 0 && (
+											<span className='ml-2'>({comments.get(post.postId)!.length})</span>
+										)}
+									</button>
+									
+									{/* Lista komentarzy */}
+									{showComments.get(post.postId) && (
+										<div className='space-y-3 mb-4'>
+											{loadingComments.get(post.postId) ? (
+												<div className='flex items-center justify-center py-4'>
+													<Loader2 className='animate-spin text-violet-400' size={18} />
+													<span className='ml-2 text-zinc-400 text-sm'>Ładowanie komentarzy...</span>
+												</div>
+											) : comments.get(post.postId) && comments.get(post.postId)!.length > 0 ? (
+												comments.get(post.postId)!.map((comment) => (
+													<div
+														key={comment.commentId}
+														className='flex items-start gap-3 p-3 rounded-lg bg-zinc-800/40'
+													>
+														<Link to={`/profile/${comment.authorId}`}>
+															<Avatar
+																src={comment.authorAvatarUrl || null}
+																name={comment.authorName}
+																size='sm'
+																className='ring-1 ring-zinc-700'
+															/>
+														</Link>
+														<div className='flex-1'>
+															<div className='flex items-center gap-2 mb-1'>
+																<Link
+																	to={`/profile/${comment.authorId}`}
+																	className='text-white font-medium text-sm hover:text-violet-400 transition-colors'
+																>
+																	{comment.authorName}
+																</Link>
+																<span className='text-xs text-zinc-500'>
+																	{new Date(comment.createdAt).toLocaleDateString('pl-PL', {
+																		day: 'numeric',
+																		month: 'long',
+																		year: 'numeric',
+																		hour: '2-digit',
+																		minute: '2-digit',
+																	})}
+																</span>
+															</div>
+															<p className='text-zinc-300 text-sm whitespace-pre-wrap'>{comment.content}</p>
+														</div>
+													</div>
+												))
+											) : (
+												<p className='text-zinc-400 text-sm text-center py-2'>Brak komentarzy</p>
+											)}
+											
+											{/* Przycisk "Wczytaj więcej" */}
+											{commentHasNext.get(post.postId) && (
+												<div className='flex justify-center pt-2'>
+													<button
+														onClick={() => loadMoreComments(post.postId)}
+														disabled={loadingComments.get(post.postId)}
+														className='px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm'
+													>
+														{loadingComments.get(post.postId) ? (
+															<>
+																<Loader2 size={16} className='animate-spin' />
+																Ładowanie...
+															</>
+														) : (
+															'Wczytaj więcej'
+														)}
+													</button>
+												</div>
+											)}
+										</div>
+									)}
+									
+									{/* Formularz dodawania komentarza */}
+									{currentUserId && (
+										<div className='space-y-2'>
+											<div className='relative'>
+												<textarea
+													value={commentTexts.get(post.postId) || ''}
+													onChange={(e) => {
+														setCommentTexts(prev => {
+															const newMap = new Map(prev)
+															newMap.set(post.postId, e.target.value)
+															return newMap
+														})
+													}}
+													placeholder='Napisz komentarz...'
+													rows={3}
+													className='w-full px-4 py-2 pr-12 rounded-lg bg-zinc-800/60 border border-zinc-700 text-white placeholder-zinc-500 focus:ring-2 focus:ring-violet-600 focus:border-transparent resize-none transition'
+												/>
+												{/* Przycisk emoji pickera */}
+												<div className='absolute bottom-2 right-2'>
+													<div className='relative' ref={(el) => {
+														if (el) {
+															commentEmojiPickerRefs.current.set(post.postId, el)
+														} else {
+															commentEmojiPickerRefs.current.delete(post.postId)
+														}
+													}}>
+														<button
+															type='button'
+															onClick={(e) => {
+																e.preventDefault()
+																setShowCommentEmojiPicker(prev => {
+																	const newMap = new Map(prev)
+																	newMap.set(post.postId, !(prev.get(post.postId) || false))
+																	return newMap
+																})
+															}}
+															className='p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors'
+															title='Emoji'
+														>
+															<Smile size={18} />
+														</button>
+														{showCommentEmojiPicker.get(post.postId) && (
+															<div className='absolute bottom-full right-0 mb-2 z-50'>
+																<EmojiPicker
+																	onEmojiClick={(emojiData) => {
+																		const currentText = commentTexts.get(post.postId) || ''
+																		setCommentTexts(prev => {
+																			const newMap = new Map(prev)
+																			newMap.set(post.postId, currentText + emojiData.emoji)
+																			return newMap
+																		})
+																		setShowCommentEmojiPicker(prev => {
+																			const newMap = new Map(prev)
+																			newMap.set(post.postId, false)
+																			return newMap
+																		})
+																	}}
+																	theme={Theme.DARK}
+																	width={350}
+																	height={400}
+																/>
+															</div>
+														)}
+													</div>
+												</div>
+											</div>
+											<div className='flex justify-end'>
+												<button
+													onClick={() => postComment(post.postId)}
+													disabled={postingComment.get(post.postId) || !commentTexts.get(post.postId)?.trim()}
+													className='px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm'
+												>
+													{postingComment.get(post.postId) ? (
+														<>
+															<Loader2 size={16} className='animate-spin' />
+															Publikowanie...
+														</>
+													) : (
+														'Dodaj komentarz'
+													)}
+												</button>
+											</div>
+										</div>
+									)}
+								</div>
 							</div>
 						))}
 						
@@ -872,7 +1204,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 										<div className='absolute top-full right-0 mt-2 z-50'>
 											<EmojiPicker
 												onEmojiClick={(emojiData) => {
-													editor.chain().focus().insertContent(emojiData.emoji).run()
+													// Wstaw emoji jako zwykły tekst, tak samo jak w komentarzach
+													editor.commands.insertContent(emojiData.emoji)
+													editor.commands.focus()
 													setShowEmojiPicker(false)
 												}}
 												theme={Theme.DARK}
