@@ -14,6 +14,8 @@ import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
 
+import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
+
 interface FriendStatus {
 	isFriend: boolean
 	pendingRequestId?: number
@@ -43,7 +45,6 @@ const UserProfilePage = () => {
 	const [editOrganizerRatingValue, setEditOrganizerRatingValue] = useState<number>(0)
 	const [editOrganizerRatingComment, setEditOrganizerRatingComment] = useState<string>('')
 
-	// Map level string/number to numeric scale (supports 'niski/średni/wysoki' or 1..10)
 	const levelToNumber = (lvl: any): number => {
 		if (typeof lvl === 'number') return lvl
 		const s = String(lvl || '').toLowerCase()
@@ -53,13 +54,15 @@ const UserProfilePage = () => {
 		const parsed = parseInt(s)
 		return isNaN(parsed) ? 0 : parsed
 	}
-	// Convert to 5-star scale if levels are 1..10
 	const toFiveScale = (n: number) => (n > 5 ? n / 2 : n)
 
 	const [friendStatus, setFriendStatus] = useState<FriendStatus>({ isFriend: false })
 
 	const EVENTS_PREVIEW = 3
 	const [showAllEvents, setShowAllEvents] = useState(false)
+
+	const [mutualEvents, setMutualEvents] = useState<any[]>([])
+	const [isLoadingMutual, setIsLoadingMutual] = useState(false)
 
 	const fetchUserRatings = async () => {
 		try {
@@ -80,11 +83,14 @@ const UserProfilePage = () => {
 		}
 	}
 
-	const averageRating = userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
+	const averageRating =
+		userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
 
 	const hasRated = !!(currentUserName && userRatings.some(r => r.raterName === currentUserName))
 	const hasCommonEvent =
-		viewerEvents.length > 0 && events.length > 0 && viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
+		viewerEvents.length > 0 &&
+		events.length > 0 &&
+		viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
 
 	const handleAddUserRating = async (rating: number, comment: string) => {
 		if (!currentUserId || !id) return
@@ -222,12 +228,15 @@ const UserProfilePage = () => {
 		if (!token || !id) return
 
 		const fetchData = async () => {
+			setLoading(true)
 			try {
 				const currentRes = await api.get('/auth/user', { params: { token } })
 				setCurrentUserId(currentRes.data.id)
 				setCurrentUserName(currentRes.data.name)
 
-				const profileRes = await api.get(`/auth/user/${id}`, { params: { viewerId: currentRes.data.id } })
+				const profileRes = await api.get(`/auth/user/${id}`, {
+					params: { viewerId: currentRes.data.id },
+				})
 				setUser(profileRes.data)
 
 				const relation = profileRes.data.relationStatus
@@ -236,10 +245,12 @@ const UserProfilePage = () => {
 				else setFriendStatus({ isFriend: false })
 
 				const targetEmail = profileRes.data.email
-				const targetEventsRes = await api.get(`/user-event/by-user-email`, { params: { userEmail: targetEmail } })
+				const targetEventsRes = await api.get(`/user-event/by-user-email`, {
+					params: { userEmail: targetEmail },
+				})
 				setEvents(targetEventsRes.data || [])
 
-				// friends count for viewed user
+				// liczba znajomych
 				try {
 					const friendsRes = await api.get(`/friends/${profileRes.data.id}`)
 					setFriendsCount((friendsRes.data || []).length)
@@ -247,10 +258,12 @@ const UserProfilePage = () => {
 					setFriendsCount(0)
 				}
 
-				// main sport name heuristic: highest level or first
+				// główny sport (heurystyka)
 				try {
 					const sports = profileRes.data.sports || []
-					const best = [...sports].sort((a: any, b: any) => levelToNumber(b.level) - levelToNumber(a.level))[0]
+					const best = [...sports].sort(
+						(a: any, b: any) => levelToNumber(b.level) - levelToNumber(a.level)
+					)[0]
 					setMainSportName(best?.name || '')
 				} catch {
 					setMainSportName('')
@@ -258,11 +271,11 @@ const UserProfilePage = () => {
 
 				const viewerEmail = currentRes.data.email
 				if (viewerEmail) {
-					const viewerEventsRes = await api.get(`/user-event/by-user-email`, { params: { userEmail: viewerEmail } })
+					const viewerEventsRes = await api.get(`/user-event/by-user-email`, {
+						params: { userEmail: viewerEmail },
+					})
 					setViewerEvents(viewerEventsRes.data || [])
 				}
-
-				fetchUserRatings()
 			} catch {
 				setErrorMsg('Nie udało się pobrać profilu użytkownika.')
 			} finally {
@@ -271,6 +284,28 @@ const UserProfilePage = () => {
 		}
 		fetchData()
 	}, [id])
+
+	useEffect(() => {
+		if (!currentUserId || !user?.id) return
+		const fetchMutual = async () => {
+			setIsLoadingMutual(true)
+			try {
+				const mutualRes = await api.get('/event/mutualEvents', {
+					params: {
+						idLogUser: currentUserId, // zalogowany
+						idViewedUser: user.id, // oglądany profil
+						// token: localStorage.getItem('accessToken'), // odkomentuj, jeśli BE wymaga tokenu w query
+					},
+				})
+				setMutualEvents(Array.isArray(mutualRes.data) ? mutualRes.data : [])
+			} catch {
+				setMutualEvents([])
+			} finally {
+				setIsLoadingMutual(false)
+			}
+		}
+		fetchMutual()
+	}, [currentUserId, user?.id])
 
 	useEffect(() => {
 		if (currentUserId && id && currentUserId === parseInt(id)) {
@@ -438,6 +473,27 @@ const UserProfilePage = () => {
 								</section>
 							)}
 
+
+							{activeTab === 'Wspólne wydarzenia' && (
+								isLoadingMutual ? (
+									<div className="space-y-3">
+										<div className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
+										<div className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
+										<div className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
+									</div>
+								) : (
+									<section>
+										{mutualEvents.length ? (
+											<>
+												<MutualEventsUserProfile events={mutualEvents} previewCount={3} />
+											</>
+										) : (
+											<p className='text-sm text-zinc-500 italic'>Brak wspólnych wydarzeń.</p>
+										)}
+									</section>
+								)
+							)}
+
 							{activeTab === 'Oceny (uczestnik)' && (
 								<section>
 									<h3 className='text-lg font-semibold text-white mb-3'>Oceny użytkownika</h3>
@@ -505,6 +561,7 @@ const UserProfilePage = () => {
 									)}
 								</section>
 							)}
+
 							{activeTab === 'Oceny (organizator)' && (
 								<section>
 									<h3 className='text-lg font-semibold text-white mb-3'>Oceny jako organizator</h3>
@@ -528,15 +585,12 @@ const UserProfilePage = () => {
 																	</a>
 																</div>
 																<span className='text-xs text-zinc-500'>
-																	{parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
-																</span>
+                                  {parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
+                                </span>
 															</div>
 
 															<div className='mt-2 space-y-2'>
-																<StarRatingInput
-																	value={editOrganizerRatingValue}
-																	onChange={setEditOrganizerRatingValue}
-																/>
+																<StarRatingInput value={editOrganizerRatingValue} onChange={setEditOrganizerRatingValue} />
 																<textarea
 																	className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200'
 																	value={editOrganizerRatingComment}

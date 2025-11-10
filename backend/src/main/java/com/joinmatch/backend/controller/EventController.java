@@ -76,4 +76,8 @@ public class EventController {
     {
         return ResponseEntity.ok(eventService.getEventsForUser(token));
     }
+    @GetMapping("/mutualEvents")
+    public ResponseEntity<List<EventResponseDto>> getMutualEvents(@RequestParam Integer idLogUser, Integer idViewedUser){
+        return ResponseEntity.ok(eventService.getMutualEvents(idLogUser,idViewedUser));
+    }
 }
