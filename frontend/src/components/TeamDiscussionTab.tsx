@@ -103,12 +103,16 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [comments, setComments] = useState<Map<number, TeamPostCommentResponseDto[]>>(new Map())
 	const [loadingComments, setLoadingComments] = useState<Map<number, boolean>>(new Map())
 	const [commentTexts, setCommentTexts] = useState<Map<number, string>>(new Map())
+	const [replyTexts, setReplyTexts] = useState<Map<string, string>>(new Map()) // Klucz: "postId-commentId", wartość: tekst odpowiedzi
 	const [postingComment, setPostingComment] = useState<Map<number, boolean>>(new Map())
 	const [showComments, setShowComments] = useState<Map<number, boolean>>(new Map())
 	const [showCommentEmojiPicker, setShowCommentEmojiPicker] = useState<Map<number, boolean>>(new Map())
+	const [showReplyEmojiPicker, setShowReplyEmojiPicker] = useState<Map<string, boolean>>(new Map()) // Klucz: "postId-commentId"
 	const [commentPages, setCommentPages] = useState<Map<number, number>>(new Map())
 	const [commentHasNext, setCommentHasNext] = useState<Map<number, boolean>>(new Map())
+	const [replyingToComment, setReplyingToComment] = useState<Map<string, number | null>>(new Map()) // Klucz: "postId-commentId", wartość: commentId na który odpowiadamy
 	const commentEmojiPickerRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
+	const replyEmojiPickerRefs = useRef<Map<string, HTMLDivElement | null>>(new Map()) // Klucz: "postId-commentId"
 	const colorPickerRef = useRef<HTMLDivElement>(null)
 	const highlightPickerRef = useRef<HTMLDivElement>(null)
 	const emojiPickerRef = useRef<HTMLDivElement>(null)
@@ -569,14 +573,19 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		}
 	}, [commentPages])
 
-	// Utwórz komentarz
-	const postComment = async (postId: number) => {
+	// Utwórz komentarz lub odpowiedź
+	const postComment = async (postId: number, parentCommentId: number | null = null) => {
 		if (!currentUserId) {
 			alert('Musisz być zalogowany, aby dodać komentarz')
 			return
 		}
 
-		const content = commentTexts.get(postId)?.trim() || ''
+		const key = parentCommentId ? `${postId}-${parentCommentId}` : `${postId}-main`
+		// Użyj odpowiedniego stanu w zależności od tego, czy to odpowiedź czy główny komentarz
+		const content = parentCommentId 
+			? (replyTexts.get(key)?.trim() || '')
+			: (commentTexts.get(postId)?.trim() || '')
+		
 		if (!content) {
 			alert('Komentarz nie może być pusty')
 			return
@@ -588,25 +597,87 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 			const commentData: TeamPostCommentRequestDto = {
 				postId,
 				authorId: currentUserId,
-				parentCommentId: null,
+				parentCommentId: parentCommentId,
 				content,
 			}
 
 			await api.post<TeamPostCommentResponseDto>('/comment', commentData)
 			
-			// Wyczyść textarea i odśwież komentarze
-			setCommentTexts(prev => {
+			// Wyczyść odpowiedni textarea i anuluj tryb odpowiedzi
+			if (parentCommentId) {
+				setReplyTexts(prev => {
+					const newMap = new Map(prev)
+					newMap.set(key, '')
+					return newMap
+				})
+			} else {
+				setCommentTexts(prev => {
+					const newMap = new Map(prev)
+					newMap.set(postId, '')
+					return newMap
+				})
+			}
+			
+			setReplyingToComment(prev => {
 				const newMap = new Map(prev)
-				newMap.set(postId, '')
+				newMap.set(key, null)
 				return newMap
 			})
-			await fetchComments(postId, false)
+
+			// Odśwież komentarze lub odpowiedzi
+			if (parentCommentId) {
+				// Jeśli to odpowiedź, odśwież odpowiedzi dla tego komentarza
+				await fetchReplies(parentCommentId)
+			} else {
+				// Jeśli to główny komentarz, odśwież listę komentarzy
+				await fetchComments(postId, false)
+			}
 		} catch (error) {
 			console.error('Błąd tworzenia komentarza:', error)
 			alert('Nie udało się dodać komentarza. Spróbuj ponownie.')
 		} finally {
 			setPostingComment(prev => new Map(prev).set(postId, false))
 		}
+	}
+
+	// Pobierz odpowiedzi dla komentarza (odśwież wszystkie komentarze, aby zobaczyć nowe odpowiedzi)
+	const fetchReplies = useCallback(async (parentCommentId: number) => {
+		try {
+			// Znajdź postId dla tego komentarza
+			let postId = 0
+			for (const [pid, commentsList] of comments.entries()) {
+				const comment = commentsList.find(c => c.commentId === parentCommentId)
+				if (comment) {
+					postId = pid
+					break
+				}
+			}
+			
+			if (postId > 0) {
+				// Odśwież wszystkie komentarze, aby zobaczyć nowe odpowiedzi
+				await fetchComments(postId, false)
+			}
+		} catch (error) {
+			console.error('Błąd pobierania odpowiedzi:', error)
+		}
+	}, [comments, fetchComments])
+
+	// Funkcja pomocnicza do grupowania komentarzy (główne vs odpowiedzi)
+	const groupComments = (commentsList: TeamPostCommentResponseDto[]) => {
+		const mainComments = commentsList.filter(c => !c.parentCommentId)
+		const repliesMap = new Map<number, TeamPostCommentResponseDto[]>()
+		
+		commentsList.forEach(comment => {
+			if (comment.parentCommentId) {
+				const parentId = comment.parentCommentId
+				if (!repliesMap.has(parentId)) {
+					repliesMap.set(parentId, [])
+				}
+				repliesMap.get(parentId)!.push(comment)
+			}
+		})
+
+		return { mainComments, repliesMap }
 	}
 
 	// Przełącz widoczność komentarzy
@@ -763,41 +834,213 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 													<span className='ml-2 text-zinc-400 text-sm'>Ładowanie komentarzy...</span>
 												</div>
 											) : comments.get(post.postId) && comments.get(post.postId)!.length > 0 ? (
-												comments.get(post.postId)!.map((comment) => (
-													<div
-														key={comment.commentId}
-														className='flex items-start gap-3 p-3 rounded-lg bg-zinc-800/40'
-													>
-														<Link to={`/profile/${comment.authorId}`}>
-															<Avatar
-																src={comment.authorAvatarUrl || null}
-																name={comment.authorName}
-																size='sm'
-																className='ring-1 ring-zinc-700'
-															/>
-														</Link>
-														<div className='flex-1'>
-															<div className='flex items-center gap-2 mb-1'>
-																<Link
-																	to={`/profile/${comment.authorId}`}
-																	className='text-white font-medium text-sm hover:text-violet-400 transition-colors'
-																>
-																	{comment.authorName}
-																</Link>
-																<span className='text-xs text-zinc-500'>
-																	{new Date(comment.createdAt).toLocaleDateString('pl-PL', {
-																		day: 'numeric',
-																		month: 'long',
-																		year: 'numeric',
-																		hour: '2-digit',
-																		minute: '2-digit',
-																	})}
-																</span>
+												(() => {
+													const commentsList = comments.get(post.postId) || []
+													const { mainComments, repliesMap } = groupComments(commentsList)
+													
+													return mainComments.map((comment) => {
+														const commentReplies = repliesMap.get(comment.commentId) || []
+														const key = `${post.postId}-${comment.commentId}`
+														const isReplying = replyingToComment.get(key) === comment.commentId
+														
+														return (
+															<div key={comment.commentId} className='space-y-2'>
+																{/* Główny komentarz */}
+																<div className='flex items-start gap-3 p-3 rounded-lg bg-zinc-800/40'>
+																	<Link to={`/profile/${comment.authorId}`}>
+																		<Avatar
+																			src={comment.authorAvatarUrl || null}
+																			name={comment.authorName}
+																			size='sm'
+																			className='ring-1 ring-zinc-700'
+																		/>
+																	</Link>
+																	<div className='flex-1'>
+																		<div className='flex items-center gap-2 mb-1'>
+																			<Link
+																				to={`/profile/${comment.authorId}`}
+																				className='text-white font-medium text-sm hover:text-violet-400 transition-colors'
+																			>
+																				{comment.authorName}
+																			</Link>
+																			<span className='text-xs text-zinc-500'>
+																				{new Date(comment.createdAt).toLocaleDateString('pl-PL', {
+																					day: 'numeric',
+																					month: 'long',
+																					year: 'numeric',
+																					hour: '2-digit',
+																					minute: '2-digit',
+																				})}
+																			</span>
+																		</div>
+																		<p className='text-zinc-300 text-sm whitespace-pre-wrap'>{comment.content}</p>
+																		{/* Przycisk "Odpowiedz" */}
+																		{currentUserId && (
+																			<button
+																				onClick={() => {
+																					setReplyingToComment(prev => {
+																						const newMap = new Map(prev)
+																						if (isReplying) {
+																							newMap.set(key, null)
+																						} else {
+																							newMap.set(key, comment.commentId)
+																						}
+																						return newMap
+																					})
+																				}}
+																				className='text-xs text-zinc-400 hover:text-violet-400 transition-colors mt-2'
+																			>
+																				{isReplying ? 'Anuluj odpowiedź' : 'Odpowiedz'}
+																			</button>
+																		)}
+																	</div>
+																</div>
+																
+																{/* Formularz odpowiedzi */}
+																{isReplying && currentUserId && (
+																	<div className='ml-12 space-y-2'>
+																		<div className='relative'>
+																			<textarea
+																				value={replyTexts.get(key) || ''}
+																				onChange={(e) => {
+																					setReplyTexts(prev => {
+																						const newMap = new Map(prev)
+																						newMap.set(key, e.target.value)
+																						return newMap
+																					})
+																				}}
+																				placeholder={`Odpowiedz ${comment.authorName}...`}
+																				rows={2}
+																				className='w-full px-4 py-2 pr-12 rounded-lg bg-zinc-800/60 border border-zinc-700 text-white placeholder-zinc-500 focus:ring-2 focus:ring-violet-600 focus:border-transparent resize-none transition text-sm'
+																			/>
+																			<div className='absolute bottom-2 right-2'>
+																				<div className='relative' ref={(el) => {
+																					if (el) {
+																						replyEmojiPickerRefs.current.set(key, el)
+																					} else {
+																						replyEmojiPickerRefs.current.delete(key)
+																					}
+																				}}>
+																					<button
+																						type='button'
+																						onClick={(e) => {
+																							e.preventDefault()
+																							setShowReplyEmojiPicker(prev => {
+																								const newMap = new Map(prev)
+																								newMap.set(key, !(prev.get(key) || false))
+																								return newMap
+																							})
+																						}}
+																						className='p-1 rounded-lg text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors'
+																						title='Emoji'
+																					>
+																						<Smile size={16} />
+																					</button>
+																					{showReplyEmojiPicker.get(key) && (
+																						<div className='absolute bottom-full right-0 mb-2 z-50'>
+																							<EmojiPicker
+																								onEmojiClick={(emojiData) => {
+																									const currentText = replyTexts.get(key) || ''
+																									setReplyTexts(prev => {
+																										const newMap = new Map(prev)
+																										newMap.set(key, currentText + emojiData.emoji)
+																										return newMap
+																									})
+																									setShowReplyEmojiPicker(prev => {
+																										const newMap = new Map(prev)
+																										newMap.set(key, false)
+																										return newMap
+																									})
+																								}}
+																								theme={Theme.DARK}
+																								width={350}
+																								height={400}
+																							/>
+																						</div>
+																					)}
+																				</div>
+																			</div>
+																		</div>
+																		<div className='flex justify-end gap-2'>
+																			<button
+																				onClick={() => {
+																					setReplyingToComment(prev => {
+																						const newMap = new Map(prev)
+																						newMap.set(key, null)
+																						return newMap
+																					})
+																					setReplyTexts(prev => {
+																						const newMap = new Map(prev)
+																						newMap.set(key, '')
+																						return newMap
+																					})
+																				}}
+																				className='px-3 py-1.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-medium transition-colors'
+																			>
+																				Anuluj
+																			</button>
+																			<button
+																				onClick={() => postComment(post.postId, comment.commentId)}
+																				disabled={postingComment.get(post.postId) || !replyTexts.get(key)?.trim()}
+																				className='px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+																			>
+																				{postingComment.get(post.postId) ? (
+																					<>
+																						<Loader2 size={14} className='animate-spin' />
+																						Publikowanie...
+																					</>
+																				) : (
+																					'Odpowiedz'
+																				)}
+																			</button>
+																		</div>
+																	</div>
+																)}
+																
+																{/* Odpowiedzi */}
+																{commentReplies.length > 0 && (
+																	<div className='ml-12 space-y-2 mt-2 border-l-2 border-zinc-700 pl-4'>
+																		{commentReplies.map((reply) => (
+																			<div
+																				key={reply.commentId}
+																				className='flex items-start gap-3 p-2 rounded-lg bg-zinc-800/30'
+																			>
+																				<Link to={`/profile/${reply.authorId}`}>
+																					<Avatar
+																						src={reply.authorAvatarUrl || null}
+																						name={reply.authorName}
+																						size='sm'
+																						className='ring-1 ring-zinc-700'
+																					/>
+																				</Link>
+																				<div className='flex-1'>
+																					<div className='flex items-center gap-2 mb-1'>
+																						<Link
+																							to={`/profile/${reply.authorId}`}
+																							className='text-white font-medium text-xs hover:text-violet-400 transition-colors'
+																						>
+																							{reply.authorName}
+																						</Link>
+																						<span className='text-xs text-zinc-500'>
+																							{new Date(reply.createdAt).toLocaleDateString('pl-PL', {
+																								day: 'numeric',
+																								month: 'long',
+																								year: 'numeric',
+																								hour: '2-digit',
+																								minute: '2-digit',
+																							})}
+																						</span>
+																					</div>
+																					<p className='text-zinc-300 text-xs whitespace-pre-wrap'>{reply.content}</p>
+																				</div>
+																			</div>
+																		))}
+																	</div>
+																)}
 															</div>
-															<p className='text-zinc-300 text-sm whitespace-pre-wrap'>{comment.content}</p>
-														</div>
-													</div>
-												))
+														)
+													})
+												})()
 											) : (
 												<p className='text-zinc-400 text-sm text-center py-2'>Brak komentarzy</p>
 											)}
