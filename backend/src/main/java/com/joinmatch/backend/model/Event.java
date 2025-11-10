@@ -68,4 +68,7 @@ public class Event {
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserEvent> userEvents = new ArrayList<>();
+
+    @OneToMany(mappedBy = "event")
+    private List<Conversation> conversations;
 }
