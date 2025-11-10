@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,6 +19,7 @@ public class RatingService {
     private final UserRatingRepository userRatingRepository;
     private final EventRatingRepository eventRatingRepository;
     private final UserEventRepository userEventRepository;
+    private final OrganizerRatingRepository organizerRatingRepository;
 
     @Transactional
     public UserRatingResponseDto addUserRating(UserRatingRequestDto request) {
@@ -193,6 +195,112 @@ public class RatingService {
         }
 
         eventRatingRepository.delete(rating);
+    }
+    @Transactional
+    public OrganizerRatingResponseDto addOrganizerRating(OrganizerRatingRequestDto request) {
+        User rater = userRepository.findById(request.raterId())
+                .orElseThrow(() -> new RuntimeException("Rater not found"));
+        User organizer = userRepository.findById(request.organizerId())
+                .orElseThrow(() -> new RuntimeException("Organizer not found"));
+        Event event = eventRepository.findById(request.eventId())
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        if (organizerRatingRepository.existsByRaterAndEvent(rater, event)) {
+            throw new RuntimeException("You already rated this organizer for this event");
+        }
+
+        boolean participated = userEventRepository.existsByUserAndEvent(rater, event);
+        if (!participated) {
+            throw new RuntimeException("You can only rate organizer of events you participated in");
+        }
+
+        OrganizerRating rating = OrganizerRating.builder()
+                .rater(rater)
+                .organizer(organizer)
+                .event(event)
+                .rating(request.rating())
+                .comment(request.comment())
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        organizerRatingRepository.save(rating);
+
+        return new OrganizerRatingResponseDto(
+                rating.getId(),
+                rating.getRating(),
+                rating.getComment(),
+                rater.getName(),
+                rater.getEmail(),
+                rater.getUrlOfPicture(),
+                rating.getCreatedAt(),
+                rating.getEvent().getEventName(),
+                rating.getEvent().getEventId(),
+                rater.getId()
+        );
+    }
+
+    public List<OrganizerRatingResponseDto> getRatingsByOrganizer(Integer organizerId) {
+        User organizer = userRepository.findById(organizerId)
+                .orElseThrow(() -> new RuntimeException("Organizer not found"));
+
+        return organizerRatingRepository.findByOrganizer(organizer)
+                .stream()
+                .map(r -> new OrganizerRatingResponseDto(
+                        r.getId(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getRater().getName(),
+                        r.getRater().getEmail(),
+                        r.getRater().getUrlOfPicture(),
+                        r.getCreatedAt(),
+                        r.getEvent().getEventName(),
+                        r.getEvent().getEventId(),
+                        r.getRater().getId()
+                ))
+                .toList();
+    }
+    public Double getAverageOrganizerRating(Integer organizerId) {
+        return organizerRatingRepository.getAverageOrganizerRating(organizerId);
+    }
+
+    @Transactional
+    public OrganizerRatingResponseDto updateOrganizerRating(Integer ratingId, OrganizerRatingRequestDto request, Integer currentUserId) {
+        OrganizerRating existingRating = organizerRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new RuntimeException("Organizer rating not found"));
+
+        if (!existingRating.getRater().getId().equals(currentUserId)) {
+            throw new RuntimeException("You can only edit your own organizer ratings");
+        }
+
+        existingRating.setRating(request.rating());
+        existingRating.setComment(request.comment());
+
+        organizerRatingRepository.save(existingRating);
+
+        return new OrganizerRatingResponseDto(
+                existingRating.getId(),
+                existingRating.getRating(),
+                existingRating.getComment(),
+                existingRating.getRater().getName(),
+                existingRating.getRater().getEmail(),
+                existingRating.getRater().getUrlOfPicture(),
+                existingRating.getCreatedAt(),
+                existingRating.getEvent().getEventName(),
+                existingRating.getEvent().getEventId(),
+                existingRating.getRater().getId()
+        );
+    }
+
+    @Transactional
+    public void deleteOrganizerRating(Integer ratingId, Integer currentUserId) {
+        OrganizerRating rating = organizerRatingRepository.findById(ratingId)
+                .orElseThrow(() -> new RuntimeException("Organizer rating not found"));
+
+        if (!rating.getRater().getId().equals(currentUserId)) {
+            throw new RuntimeException("You can only delete your own organizer ratings");
+        }
+
+        organizerRatingRepository.delete(rating);
     }
 
 }

@@ -57,12 +57,31 @@ const EventPage: React.FC = () => {
 	const [editingRatingId, setEditingRatingId] = useState<number | null>(null)
 	const [editRatingValue, setEditRatingValue] = useState<number>(0)
 	const [editRatingComment, setEditRatingComment] = useState<string>('')
+	const [hasRatedOrganizer, setHasRatedOrganizer] = useState(false)
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+
+	useEffect(() => {
+		const checkOrganizerRated = async () => {
+			if (!currentUserId || !event?.ownerId || !id) return
+			try {
+				const { data } = await axiosInstance.get(`/ratings/${event.ownerId}`)
+				const eventIdNum = parseInt(id)
+				const already = Array.isArray(data)
+					? data.some((r: any) => Number(r.eventId) === eventIdNum && Number(r.raterId) === Number(currentUserId))
+					: false
+				setHasRatedOrganizer(already)
+			} catch (e) {
+				console.error('❌ Błąd sprawdzania oceny organizatora:', e)
+			}
+		}
+
+		checkOrganizerRated()
+	}, [currentUserId, event?.ownerId, id])
 
 	// fetch user email from backend based on stored access token (similar to ProfilePage)
 	useEffect(() => {
@@ -89,10 +108,10 @@ const EventPage: React.FC = () => {
 			const token = localStorage.getItem('accessToken')
 			if (!token) return
 			try {
-					const { data } = await axiosInstance.get('/auth/user', { params: { token } })
-					setCurrentUserId(data.id)
-					setCurrentUserName(data.name)
-					setUserEmail(data.email)
+				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
+				setCurrentUserId(data.id)
+				setCurrentUserName(data.name)
+				setUserEmail(data.email)
 			} catch (err) {
 				console.error('❌ Błąd pobierania usera:', err)
 			}
@@ -134,8 +153,15 @@ const EventPage: React.FC = () => {
 			})
 			toast.success('Dziękujemy za ocenę wydarzenia!')
 			fetchEventRatings()
-		} catch {
-			toast.error('Nie możesz ocenić tego wydarzenia.')
+		} catch (e: any) {
+			const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? ''
+			const msg = typeof raw === 'string' ? raw.toLowerCase() : ''
+			if (msg.includes('already rated')) {
+				setHasRatedOrganizer(true)
+				toast.info('Już oceniłeś tego organizatora — ukrywam formularz.')
+			} else {
+				toast.error('Nie możesz ocenić tego organizatora.')
+			}
 		} finally {
 			setIsSending(false)
 		}
@@ -371,15 +397,19 @@ const EventPage: React.FC = () => {
 								</div>
 							)}
 
+							{joined && isEventPast && hasRatedOrganizer && (
+								<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego organizatora.</p>
+							)}
+
 							{/* Tytuł i szczegóły */}
 							<div>
-									<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
-									{isEventPast && averageRating && (
-										<div className='flex items-center gap-2 mt-2'>
-											<StarRatingDisplay value={averageRating} size={16} />
-											<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
-										</div>
-									)}
+								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
+								{isEventPast && averageRating && (
+									<div className='flex items-center gap-2 mt-2'>
+										<StarRatingDisplay value={averageRating} size={16} />
+										<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
+									</div>
+								)}
 								<p className='text-sm text-zinc-400 mt-1'>{formatEventDate(event.eventDate)}</p>
 								<p className='text-sm text-zinc-400'>{event.sportObjectName}</p>
 							</div>
@@ -553,44 +583,102 @@ const EventPage: React.FC = () => {
 								)}
 
 								{/* Lista ocen */}
-									{eventRatings.length ? (
-										<ul className='space-y-3 mt-6'>
-											{eventRatings.map(r => {
-												const participant = participants.find(p => p.userName === r.userName)
-												const isMine = currentUserName && r.userName === currentUserName
-													const isEditing = editingRatingId === r.id
-													return (
-														<li key={r.id}>
-															{isEditing ? (
-																<div className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700 mt-2 space-y-2'>
-																	<StarRatingInput value={editRatingValue} onChange={setEditRatingValue} />
-																	<textarea className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200' value={editRatingComment} onChange={e => setEditRatingComment(e.target.value)} placeholder='Komentarz (opcjonalnie)' />
-																	<div className='flex gap-2'>
-																		<button className='px-3 py-1 rounded-md bg-violet-600 text-white text-sm hover:bg-violet-500' onClick={() => saveEditEventRating(r.id)}>Zapisz</button>
-																		<button className='px-3 py-1 rounded-md bg-zinc-700 text-zinc-200 text-sm hover:bg-zinc-600' onClick={cancelEditEventRating}>Anuluj</button>
-																	</div>
-																</div>
-															) : (
-																<RatingCard
-																	rating={r.rating}
-																	comment={r.comment}
-																	raterName={r.userName}
-																	raterAvatarUrl={participant?.userAvatarUrl || undefined}
-																	raterEmail={participant?.userEmail}
-																	createdAt={r.createdAt}
-																	isMine={!!isMine}
-																	onEdit={() => startEditEventRating(r)}
-																	onDelete={() => deleteEventRating(r.id)}
-																/>
-															)}
-														</li>
-													)
-											})}
-										</ul>
-									) : (
+								{eventRatings.length ? (
+									<ul className='space-y-3 mt-6'>
+										{eventRatings.map(r => {
+											const participant = participants.find(p => p.userName === r.userName)
+											const isMine = currentUserName && r.userName === currentUserName
+											const isEditing = editingRatingId === r.id
+											return (
+												<li key={r.id}>
+													{isEditing ? (
+														<div className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700 mt-2 space-y-2'>
+															<StarRatingInput value={editRatingValue} onChange={setEditRatingValue} />
+															<textarea
+																className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200'
+																value={editRatingComment}
+																onChange={e => setEditRatingComment(e.target.value)}
+																placeholder='Komentarz (opcjonalnie)'
+															/>
+															<div className='flex gap-2'>
+																<button
+																	className='px-3 py-1 rounded-md bg-violet-600 text-white text-sm hover:bg-violet-500'
+																	onClick={() => saveEditEventRating(r.id)}>
+																	Zapisz
+																</button>
+																<button
+																	className='px-3 py-1 rounded-md bg-zinc-700 text-zinc-200 text-sm hover:bg-zinc-600'
+																	onClick={cancelEditEventRating}>
+																	Anuluj
+																</button>
+															</div>
+														</div>
+													) : (
+														<RatingCard
+															rating={r.rating}
+															comment={r.comment}
+															raterName={r.userName}
+															raterAvatarUrl={participant?.userAvatarUrl || undefined}
+															raterEmail={participant?.userEmail}
+															createdAt={r.createdAt}
+															isMine={!!isMine}
+															onEdit={() => startEditEventRating(r)}
+															onDelete={() => deleteEventRating(r.id)}
+														/>
+													)}
+												</li>
+											)
+										})}
+									</ul>
+								) : (
 									<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego wydarzenia.</p>
 								)}
 							</div>
+							{/* --- Ocena organizatora --- */}
+							{joined && isEventPast && !hasRatedOrganizer && (
+								<EventRatingForm
+									title='Oceń organizatora' // <--- tu zmiana
+									onSubmit={async (rating, comment) => {
+										if (!currentUserId || !event?.ownerId) return
+										setIsSending(true)
+										try {
+											await axiosInstance.post('/ratings', {
+												raterId: currentUserId,
+												organizerId: event.ownerId,
+												rating,
+												comment,
+												eventId: parseInt(id!),
+											})
+											toast.success('Dziękujemy za ocenę organizatora!')
+											setHasRatedOrganizer(true)
+										} catch (e: any) {
+											const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? ''
+											const msg = typeof raw === 'string' ? raw.toLowerCase() : ''
+											if (msg.includes('already rated')) {
+												setHasRatedOrganizer(true)
+												toast.info('Już oceniłeś tego organizatora — ukrywam formularz.')
+											} else {
+												toast.error('Nie możesz ocenić tego organizatora.')
+											}
+										} finally {
+											setIsSending(false)
+										}
+									}}
+									disabled={isSending}
+								/>
+							)}
+
+							{!joined && (
+								<p className='text-sm text-zinc-400 italic mt-3'>
+									Możesz ocenić organizatora tylko, jeśli uczestniczyłeś w wydarzeniu.
+								</p>
+							)}
+
+							{joined && !isEventPast && (
+								<p className='text-sm text-zinc-400 italic mt-3'>
+									Ocenić organizatora możesz dopiero po zakończeniu wydarzenia.
+								</p>
+							)}
 						</section>
 
 						{/* Sidebar */}
