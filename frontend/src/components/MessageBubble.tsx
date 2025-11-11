@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ChatMessage } from '../Context/ChatContext';
+import Avatar from './Avatar';
 
 interface Props {
   message: ChatMessage;
@@ -10,10 +11,11 @@ const MessageBubble: React.FC<Props> = ({ message, isOwn }) => {
   return (
     <div className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
       {!isOwn && (
-        <img
-          src={message.senderAvatarUrl || '/default-avatar.png'}
-          alt={message.senderName}
-          className="w-8 h-8 rounded-full"
+        <Avatar
+          src={message.senderAvatarUrl || null}
+          name={message.senderName}
+          size="sm"
+          className="h-8 w-8"
         />
       )}
       <div

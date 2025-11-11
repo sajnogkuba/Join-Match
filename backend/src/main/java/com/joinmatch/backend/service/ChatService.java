@@ -2,6 +2,7 @@ package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.Message.ChatMessageDto;
 import com.joinmatch.backend.dto.Message.ConversationDto;
+import com.joinmatch.backend.dto.Message.ConversationPreviewDto;
 import com.joinmatch.backend.dto.Message.ParticipantDto;
 import com.joinmatch.backend.enums.ConversationType;
 import com.joinmatch.backend.model.Conversation;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -104,6 +106,32 @@ public class ChatService {
     }
     public List<Conversation> getUserConversations(Integer userId) {
         return conversationRepository.findByParticipantId(userId);
+    }
+
+    public List<ConversationPreviewDto> getUserConversationPreviews(Integer userId) {
+        List<Conversation> convos = conversationRepository.findByParticipantId(userId);
+
+        return convos.stream().map(c -> {
+            User other = c.getParticipants().stream()
+                    .filter(u -> !u.getId().equals(userId))
+                    .findFirst()
+                    .orElse(null);
+
+            Message last = messageRepository
+                    .findTopByConversationIdOrderByCreatedAtDesc(c.getId())
+                    .orElse(null);
+
+            String lastMessage = (last != null)
+                    ? last.getSender().getName() + ": " + last.getContent()
+                    : "Brak wiadomości";
+
+            return new ConversationPreviewDto(
+                    c.getId(),
+                    other != null ? other.getName() : "Rozmowa prywatna",
+                    other != null ? other.getUrlOfPicture() : null,
+                    lastMessage
+            );
+        }).collect(Collectors.toList());
     }
 
 }

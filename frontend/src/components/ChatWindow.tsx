@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import type { ChatMessage } from '../Context/ChatContext'
 import MessageBubble from './MessageBubble'
+import Avatar from './Avatar'
 
 interface ChatWindowProps {
 	messages: ChatMessage[]
@@ -22,7 +23,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setI
 		<div className='flex flex-col flex-1 bg-zinc-950'>
 			{activeConversation && (
 				<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900'>
-					<img src={activeConversation.avatarUrl || '/default-avatar.png'} className='w-10 h-10 rounded-full' />
+					<Avatar
+						src={activeConversation?.avatarUrl ?? '/default-avatar.png'}
+						name={activeConversation?.name ?? ''}
+						size='sm'
+						className='h-10 w-10'
+					/>
 					<div className='text-white font-semibold'>{activeConversation.name}</div>
 				</div>
 			)}

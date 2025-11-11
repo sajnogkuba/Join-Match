@@ -2,6 +2,7 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.Message.ChatMessageDto;
 import com.joinmatch.backend.dto.Message.ConversationDto;
+import com.joinmatch.backend.dto.Message.ConversationPreviewDto;
 import com.joinmatch.backend.model.Conversation;
 import com.joinmatch.backend.service.ChatService;
 import lombok.RequiredArgsConstructor;
@@ -49,5 +50,10 @@ public class ChatController {
         return chatService.getUserConversations(userId);
     }
 
+    @GetMapping("/conversations/preview")
+    @ResponseBody
+    public List<ConversationPreviewDto> getUserConversationPreviews(@RequestParam Integer userId) {
+        return chatService.getUserConversationPreviews(userId);
+    }
 
 }

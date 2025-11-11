@@ -9,8 +9,8 @@ import type { ChatMessage } from '../Context/ChatContext'
 import { useLocation } from 'react-router-dom'
 
 const ChatPage: React.FC = () => {
-	const { user } = useAuth()
-	const myUserId = (user as any)?.id ?? null
+	const { user, accessToken } = useAuth()
+	const [myUserId, setMyUserId] = useState<number | null>(null)
 
 	const { messages, sendMessage, addMessage, stompClient, isConnected, setActiveConversation, markConversationRead } =
 		useChat()
@@ -30,8 +30,29 @@ const ChatPage: React.FC = () => {
 	})
 
 	useEffect(() => {
-		if (!myUserId) return
-		api.get(`/conversations/all`, { params: { userId: myUserId } }).then(res => setConversations(res.data))
+		const fetchUserId = async () => {
+			try {
+				if (!accessToken) return
+				const res = await api.get('/auth/user', { params: { token: accessToken } })
+				setMyUserId(res.data.id)
+			} catch (err) {
+				console.error('❌ Nie udało się pobrać userId:', err)
+			}
+		}
+		fetchUserId()
+	}, [accessToken])
+
+	useEffect(() => {
+		if (!myUserId) {
+			console.log('🔴 myUserId is null, skip /conversations/preview')
+			return
+		}
+		api
+			.get(`/conversations/preview`, { params: { userId: myUserId } })
+			.then(res => {
+				setConversations(res.data)
+			})
+			.catch(err => console.error('❌ /conversations/preview error', err))
 	}, [myUserId])
 
 	useEffect(() => {
@@ -84,7 +105,7 @@ const ChatPage: React.FC = () => {
 			<ChatSidebar conversations={conversations} activeId={conversationId} onSelect={setConversationId} />
 			<ChatWindow
 				messages={list}
-				myUserId={myUserId}
+				myUserId={myUserId ?? 0}
 				input={input}
 				setInput={setInput}
 				onSend={handleSend}
