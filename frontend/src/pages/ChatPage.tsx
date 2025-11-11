@@ -9,11 +9,20 @@ import type { ChatMessage } from '../Context/ChatContext'
 import { useLocation } from 'react-router-dom'
 
 const ChatPage: React.FC = () => {
-	const { user, accessToken } = useAuth()
+	const { accessToken } = useAuth()
 	const [myUserId, setMyUserId] = useState<number | null>(null)
 
-	const { messages, sendMessage, addMessage, stompClient, isConnected, setActiveConversation, markConversationRead } =
-		useChat()
+	const {
+		messages,
+		sendMessage,
+		addMessage,
+		addMessages,
+		clearMessages,
+		stompClient,
+		isConnected,
+		setActiveConversation,
+		markConversationRead,
+	} = useChat()
 
 	const [conversations, setConversations] = useState<any[]>([])
 	const [conversationId, setConversationId] = useState<number | null>(null)
@@ -57,16 +66,18 @@ const ChatPage: React.FC = () => {
 
 	useEffect(() => {
 		if (!conversationId) return
+
 		setActiveConversation(conversationId)
 		markConversationRead(conversationId)
 
-		api.get<ChatMessage[]>(`/conversations/${conversationId}/messages`).then(res => {
-			const data = res.data as ChatMessage[]
+		clearMessages(conversationId)
 
-			const unique: ChatMessage[] = Array.from(new Map(data.map(m => [m.createdAt, m])).values())
-
-			unique.forEach(msg => addMessage(msg))
-		})
+		api
+			.get<ChatMessage[]>(`/conversations/${conversationId}/messages`)
+			.then(res => {
+				addMessages(conversationId, res.data)
+			})
+			.catch(err => console.error('❌ Błąd ładowania wiadomości', err))
 	}, [conversationId])
 
 	useEffect(() => {
