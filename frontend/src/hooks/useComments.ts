@@ -33,7 +33,9 @@ export const useComments = () => {
 				setComments(prev => {
 					const newMap = new Map(prev)
 					const existingComments = newMap.get(postId) || []
-					newMap.set(postId, [...existingComments, ...(data.content || [])])
+					const existingIds = new Set(existingComments.map(c => c.commentId))
+					const newComments = (data.content || []).filter(c => !existingIds.has(c.commentId))
+					newMap.set(postId, [...existingComments, ...newComments])
 					return newMap
 				})
 			} else {

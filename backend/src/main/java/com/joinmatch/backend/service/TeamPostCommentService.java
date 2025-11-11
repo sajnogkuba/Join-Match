@@ -25,7 +25,15 @@ public class TeamPostCommentService {
     public TeamPostCommentResponseDto createComment(TeamPostCommentResponseDto dto) {
         TeamPostComment teamPostComment = new TeamPostComment();
         var responseDto = getTeamPostCommentResponseDto(dto, teamPostComment);
-        notificationService.sendCommentNotifications(teamPostComment);
+        
+        // Jeśli to odpowiedź na komentarz, wyślij powiadomienie o odpowiedzi
+        if (teamPostComment.getParentComment() != null) {
+            notificationService.sendCommentReplyNotification(teamPostComment);
+        } else {
+            // Jeśli to zwykły komentarz do posta, wyślij powiadomienie o komentarzu
+            notificationService.sendCommentNotifications(teamPostComment);
+        }
+        
         return responseDto;
     }
 

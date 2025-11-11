@@ -99,6 +99,14 @@ const NotificationBell: React.FC = () => {
       if (notification.data?.postId) {
         navigate(`/post/${notification.data.postId}`);
       }
+    } else if (notification.type === NotificationType.COMMENT_REACTION) {
+      if (notification.data?.postId && notification.data?.commentId) {
+        navigate(`/post/${notification.data.postId}?highlightComment=${notification.data.commentId}`);
+      }
+    } else if (notification.type === NotificationType.COMMENT_REPLY) {
+      if (notification.data?.postId && notification.data?.commentId) {
+        navigate(`/post/${notification.data.postId}?highlightComment=${notification.data.commentId}`);
+      }
     }
   };
 
@@ -157,6 +165,10 @@ const NotificationBell: React.FC = () => {
         return <MessageSquare size={16} className="text-violet-400" />;
       case NotificationType.POST_REACTION:
         return <Heart size={16} className="text-violet-400" />;
+      case NotificationType.COMMENT_REACTION:
+        return <Heart size={16} className="text-violet-400" />;
+      case NotificationType.COMMENT_REPLY:
+        return <MessageSquare size={16} className="text-violet-400" />;
       default:
         return <Bell size={16} className="text-zinc-400" />;
     }

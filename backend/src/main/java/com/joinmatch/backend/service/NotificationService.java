@@ -395,4 +395,66 @@ public class NotificationService {
             throw new RuntimeException("Error serializing notification data", e);
         }
     }
+
+    public void sendCommentReactionNotification(TeamPostCommentReaction reaction) {
+        try {
+            CommentReactionNotificationDto data = new CommentReactionNotificationDto(
+                    reaction.getComment().getPost().getPostId(),
+                    reaction.getComment().getCommentId(),
+                    reaction.getComment().getParentComment() != null
+                            ? reaction.getComment().getParentComment().getCommentId()
+                            : null
+            );
+            String dataJson = objectMapper.writeValueAsString(data);
+            Notification notification = Notification.builder()
+                    .user(reaction.getComment().getAuthor())
+                    .type(NotificationType.COMMENT_REACTION)
+                    .title("Nowa reakcja do Twojego komentarza")
+                    .message(reaction.getUser().getName() + " zareagował na Twój komentarz")
+                    .data(dataJson)
+                    .build();
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    reaction.getComment().getAuthor().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
+
+    public void sendCommentReplyNotification(TeamPostComment reply) {
+        try {
+            if (reply.getParentComment() == null) {
+                return;
+            }
+            
+            CommentReplyNotificationDto data = new CommentReplyNotificationDto(
+                    reply.getPost().getPostId(),
+                    reply.getCommentId(),
+                    reply.getParentComment().getCommentId()
+            );
+            String dataJson = objectMapper.writeValueAsString(data);
+            Notification notification = Notification.builder()
+                    .user(reply.getParentComment().getAuthor())
+                    .type(NotificationType.COMMENT_REPLY)
+                    .title("Nowa odpowiedź do Twojego komentarza")
+                    .message(reply.getAuthor().getName() + " odpowiedział na Twój komentarz")
+                    .data(dataJson)
+                    .build();
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    reply.getParentComment().getAuthor().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
 }

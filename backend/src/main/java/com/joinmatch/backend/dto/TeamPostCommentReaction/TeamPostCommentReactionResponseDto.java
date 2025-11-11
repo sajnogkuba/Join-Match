@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 public record TeamPostCommentReactionResponseDto(
         Integer id,
         Integer userId,
+        String userName,
+        String userAvatarUrl,
         Integer commentId,
         ReactionTypeResponseDto reactionType,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -19,6 +21,8 @@ public record TeamPostCommentReactionResponseDto(
         return new TeamPostCommentReactionResponseDto(
                 reaction.getId(),
                 reaction.getUser() != null ? reaction.getUser().getId() : null,
+                reaction.getUser() != null ? reaction.getUser().getName() : null,
+                reaction.getUser() != null ? reaction.getUser().getUrlOfPicture() : null,
                 reaction.getComment() != null ? reaction.getComment().getCommentId() : null,
                 reaction.getReactionType() != null ? ReactionTypeResponseDto.fromEntity(reaction.getReactionType()) : null,
                 reaction.getCreatedAt()

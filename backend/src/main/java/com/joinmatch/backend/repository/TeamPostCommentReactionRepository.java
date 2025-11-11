@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TeamPostCommentReactionRepository extends JpaRepository<TeamPostCommentReaction, Integer> {
@@ -15,4 +16,6 @@ public interface TeamPostCommentReactionRepository extends JpaRepository<TeamPos
     Optional<TeamPostCommentReaction> findByUserAndComment(User user, TeamPostComment comment);
 
     Page<TeamPostCommentReaction> findAllByComment(TeamPostComment comment, Pageable sortedPageable);
+    
+    List<TeamPostCommentReaction> findByComment_CommentIdInAndUser_Id(List<Integer> commentIds, Integer userId);
 }

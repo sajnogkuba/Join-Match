@@ -8,7 +8,7 @@ interface CommentFormProps {
 	isSubmitting: boolean
 	showEmojiPicker: boolean
 	setShowEmojiPicker: (show: boolean) => void
-	emojiPickerRef: React.RefObject<HTMLDivElement>
+	emojiPickerRef: React.RefObject<HTMLDivElement | null>
 }
 
 export const CommentForm = ({

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Edit, Trash2, RotateCcw, X, Check } from 'lucide-react'
 import Avatar from './Avatar'
@@ -11,6 +11,7 @@ interface CommentItemProps {
 	comment: TeamPostCommentResponseDto
 	replies: TeamPostCommentResponseDto[]
 	postId: number
+	highlightCommentId?: number | null
 	currentUserId: number | null
 	isReplying: boolean
 	replyText: string
@@ -33,6 +34,7 @@ export const CommentItem = ({
 	comment,
 	replies,
 	postId,
+	highlightCommentId,
 	currentUserId,
 	isReplying,
 	replyText,
@@ -59,12 +61,16 @@ export const CommentItem = ({
 	const [editReplyContent, setEditReplyContent] = useState<string>('')
 	const [savingReplyEdit, setSavingReplyEdit] = useState(false)
 
-	const { addOrUpdateReaction, getUserReaction, deleteReaction, getReactionUsers } = useCommentReactions()
+	const { addOrUpdateReaction, getUserReaction, getUserReactionsBatch, deleteReaction, getReactionUsers } = useCommentReactions()
 	const [userReactionTypeId, setUserReactionTypeId] = useState<number | null>(null)
 	const [userReactionsForReplies, setUserReactionsForReplies] = useState<Map<number, number | null>>(new Map())
 	const [updatingReaction, setUpdatingReaction] = useState(false)
 	const [localReactionCounts, setLocalReactionCounts] = useState<Record<number, number> | undefined>(comment.reactionCounts)
 	const [localReactionCountsForReplies, setLocalReactionCountsForReplies] = useState<Map<number, Record<number, number>>>(new Map())
+	const commentRef = useRef<HTMLDivElement>(null)
+	const replyRefs = useRef<Map<number, HTMLDivElement>>(new Map())
+	const [isHighlighted, setIsHighlighted] = useState(false)
+	const [highlightedReplyId, setHighlightedReplyId] = useState<number | null>(null)
 
 	useEffect(() => {
 		setEditContent(comment.content)
@@ -85,38 +91,40 @@ export const CommentItem = ({
 	}, [replies])
 
 	useEffect(() => {
-		if (currentUserId && comment.commentId) {
-			getUserReaction(comment.commentId, currentUserId).then(reactionTypeId => {
-				setUserReactionTypeId(reactionTypeId)
-			}).catch(() => {
-				setUserReactionTypeId(null)
+		if (currentUserId && (comment.commentId || replies.length > 0)) {
+			const commentIds: number[] = []
+			if (comment.commentId) {
+				commentIds.push(comment.commentId)
+			}
+			replies.forEach(reply => {
+				if (reply.commentId) {
+					commentIds.push(reply.commentId)
+				}
 			})
+			
+			if (commentIds.length > 0) {
+				getUserReactionsBatch(commentIds, currentUserId).then(reactionsMap => {
+					if (comment.commentId) {
+						setUserReactionTypeId(reactionsMap.get(comment.commentId) || null)
+					}
+					
+					const repliesMap = new Map<number, number | null>()
+					replies.forEach(reply => {
+						if (reply.commentId) {
+							repliesMap.set(reply.commentId, reactionsMap.get(reply.commentId) || null)
+						}
+					})
+					setUserReactionsForReplies(repliesMap)
+				}).catch(() => {
+					setUserReactionTypeId(null)
+					setUserReactionsForReplies(new Map())
+				})
+			}
 		} else {
 			setUserReactionTypeId(null)
-		}
-	}, [currentUserId, comment.commentId, getUserReaction])
-
-	useEffect(() => {
-		if (currentUserId && replies.length > 0) {
-			replies.forEach(reply => {
-				getUserReaction(reply.commentId, currentUserId).then(reactionTypeId => {
-					setUserReactionsForReplies(prev => {
-						const newMap = new Map(prev)
-						newMap.set(reply.commentId, reactionTypeId)
-						return newMap
-					})
-				}).catch(() => {
-					setUserReactionsForReplies(prev => {
-						const newMap = new Map(prev)
-						newMap.set(reply.commentId, null)
-						return newMap
-					})
-				})
-			})
-		} else {
 			setUserReactionsForReplies(new Map())
 		}
-	}, [currentUserId, replies, getUserReaction])
+	}, [currentUserId, comment.commentId, replies, getUserReactionsBatch])
 
 	const handleReactionClick = async (commentId: number, reactionTypeId: number, isReply: boolean = false) => {
 		if (!currentUserId || updatingReaction) {
@@ -254,15 +262,56 @@ export const CommentItem = ({
 		setEditReplyContent(reply.content)
 	}
 
+	const isCommentHighlighted = highlightCommentId === comment.commentId
+
+	useEffect(() => {
+		if (isCommentHighlighted && commentRef.current) {
+			setIsHighlighted(true)
+			setTimeout(() => {
+				commentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+			}, 200)
+			const timer1 = setTimeout(() => {
+				setIsHighlighted(false)
+			}, 3000)
+			return () => clearTimeout(timer1)
+		} else {
+			setIsHighlighted(false)
+		}
+	}, [isCommentHighlighted, highlightCommentId])
+
+	useEffect(() => {
+		if (highlightCommentId && replies.some(reply => reply.commentId === highlightCommentId)) {
+			setHighlightedReplyId(highlightCommentId)
+			const replyRef = replyRefs.current.get(highlightCommentId)
+			if (replyRef) {
+				setTimeout(() => {
+					replyRef.scrollIntoView({ behavior: 'smooth', block: 'center' })
+				}, 300)
+				const timer = setTimeout(() => {
+					setHighlightedReplyId(null)
+				}, 3000)
+				return () => clearTimeout(timer)
+			}
+		} else {
+			setHighlightedReplyId(null)
+		}
+	}, [highlightCommentId, replies])
+
 	return (
 		<div className='space-y-2'>
-			<div className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-				isDeleted && isAuthor 
-					? 'bg-zinc-800/20 opacity-60' 
-					: isDeleted 
-						? 'bg-zinc-800/40' 
-						: 'bg-zinc-800/40'
-			}`}>
+			<div 
+				ref={commentRef}
+				id={`comment-${comment.commentId}`}
+				className={`flex items-start gap-3 p-3 rounded-lg transition-all duration-300 ${
+					isHighlighted
+						? 'bg-yellow-500/20 ring-2 ring-yellow-500'
+						: isDeleted && isAuthor 
+							? 'bg-zinc-800/20 opacity-60' 
+							: isDeleted 
+								? 'bg-zinc-800/40' 
+								: 'bg-zinc-800/40'
+				}`}
+			>
 				<Link to={`/profile/${comment.authorId}`}>
 					<Avatar
 						src={comment.authorAvatarUrl || null}
@@ -445,16 +494,27 @@ export const CommentItem = ({
 						const isReplyAuthor = currentUserId === reply.authorId
 						const isReplyDeleted = reply.isDeleted
 						const isEditingReply = editingReplyId === reply.commentId
+						const isReplyHighlighted = highlightedReplyId === reply.commentId
 
 						return (
 							<div
 								key={reply.commentId}
-								className={`flex items-start gap-3 p-2 rounded-lg transition-colors ${
-									isReplyDeleted && isReplyAuthor 
-										? 'bg-zinc-800/15 opacity-60' 
-										: isReplyDeleted 
-											? 'bg-zinc-800/30' 
-											: 'bg-zinc-800/30'
+								ref={(el) => {
+									if (el) {
+										replyRefs.current.set(reply.commentId, el)
+									} else {
+										replyRefs.current.delete(reply.commentId)
+									}
+								}}
+								id={`reply-${reply.commentId}`}
+								className={`flex items-start gap-3 p-2 rounded-lg transition-all duration-300 ${
+									isReplyHighlighted
+										? 'bg-yellow-500/20 ring-2 ring-yellow-500'
+										: isReplyDeleted && isReplyAuthor 
+											? 'bg-zinc-800/15 opacity-60' 
+											: isReplyDeleted 
+												? 'bg-zinc-800/30' 
+												: 'bg-zinc-800/30'
 								}`}
 							>
 								<Link to={`/profile/${reply.authorId}`}>
