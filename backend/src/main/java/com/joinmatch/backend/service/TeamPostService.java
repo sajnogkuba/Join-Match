@@ -83,4 +83,12 @@ public class TeamPostService {
                 .orElseThrow(() -> new IllegalArgumentException("Team post with ID " + postId + " does not exist."));
         teamPostRepository.delete(post);
     }
+
+    public void restore(Integer postId) {
+        var post = teamPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Team post with ID " + postId + " does not exist."));
+        post.setIsDeleted(false);
+        post.setDeletedAt(null);
+        teamPostRepository.save(post);
+    }
 }

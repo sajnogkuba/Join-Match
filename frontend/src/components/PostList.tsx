@@ -39,6 +39,10 @@ interface PostListProps {
 	onUpdatePost?: (postId: number, updates: Partial<TeamPostResponseDto>) => void
 	onEditPost?: (postId: number) => void
 	onDeletePost?: (postId: number) => void
+	onRestorePost?: (postId: number) => void
+	onEditComment?: (postId: number, commentId: number, content: string) => Promise<boolean>
+	onDeleteComment?: (postId: number, commentId: number) => void
+	onRestoreComment?: (postId: number, commentId: number) => Promise<boolean>
 }
 
 export const PostList = ({
@@ -74,6 +78,10 @@ export const PostList = ({
 	onUpdatePost,
 	onEditPost,
 	onDeletePost,
+	onRestorePost,
+	onEditComment,
+	onDeleteComment,
+	onRestoreComment,
 }: PostListProps) => {
 	if (loadingPosts && posts.length === 0) {
 		return (
@@ -123,9 +131,13 @@ export const PostList = ({
 					replyEmojiPickerRefs={replyEmojiPickerRefs}
 					onUpdateComment={onUpdateComment ? (commentId, updates) => onUpdateComment(post.postId, commentId, updates) : undefined}
 					onUpdateReply={onUpdateReply ? (commentId, updates) => onUpdateReply(post.postId, commentId, updates) : undefined}
-					onUpdatePost={onUpdatePost ? (updates) => onUpdatePost(post.postId, updates) : undefined}
+					onUpdatePost={onUpdatePost ? (postId: number, updates: Partial<TeamPostResponseDto>) => onUpdatePost(postId, updates) : undefined}
 					onEditPost={onEditPost}
 					onDeletePost={onDeletePost}
+					onRestorePost={onRestorePost}
+					onEditComment={onEditComment}
+					onDeleteComment={onDeleteComment}
+					onRestoreComment={onRestoreComment}
 				/>
 			))}
 			

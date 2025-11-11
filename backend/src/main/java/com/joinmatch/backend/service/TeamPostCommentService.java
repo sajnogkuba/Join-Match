@@ -13,8 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 @Service
 @AllArgsConstructor
 public class TeamPostCommentService {
@@ -38,8 +36,6 @@ public class TeamPostCommentService {
         teamPostComment.setAuthor(author);
         teamPostComment.setContent(dto.content());
         teamPostComment.setIsDeleted(false);
-        teamPostComment.setCreatedAt(LocalDateTime.now());
-        teamPostComment.setUpdatedAt(LocalDateTime.now());
         if (dto.parentCommentId() != null) {
             var parentComment = teamPostCommentRepository.findById(dto.parentCommentId())
                     .orElseThrow(() -> new IllegalArgumentException("Parent comment not found with ID: " + dto.parentCommentId()));
@@ -61,5 +57,25 @@ public class TeamPostCommentService {
 
         Page<TeamPostComment> comments = teamPostCommentRepository.findAllByPost(posts, sortedPageable);
         return comments.map(TeamPostCommentResponseDto::fromEntity);
+    }
+
+    public void restore(Integer commentId) {
+        var comment = teamPostCommentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found with ID: " + commentId));
+        comment.setIsDeleted(false);
+        comment.setDeletedAt(null);
+        teamPostCommentRepository.save(comment);
+    }
+
+    public TeamPostCommentResponseDto update(TeamPostCommentResponseDto dto) {
+        var comment = teamPostCommentRepository.findById(dto.commentId())
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found with ID: " + dto.commentId()));
+        return getTeamPostCommentResponseDto(dto, comment);
+    }
+
+    public void delete(Integer commentId) {
+        var comment = teamPostCommentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found with ID: " + commentId));
+        teamPostCommentRepository.delete(comment);
     }
 }

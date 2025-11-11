@@ -176,6 +176,87 @@ export const useComments = () => {
 		})
 	}, [])
 
+	const updateCommentAPI = useCallback(async (
+		postId: number,
+		commentId: number,
+		content: string
+	) => {
+		try {
+			// Znajdź komentarz w stanie
+			const postComments = comments.get(postId) || []
+			const comment = postComments.find(c => c.commentId === commentId)
+			if (!comment) {
+				alert('Komentarz nie został znaleziony')
+				return false
+			}
+
+			const commentData: TeamPostCommentResponseDto = {
+				...comment,
+				content,
+			}
+
+			const response = await api.put<TeamPostCommentResponseDto>('/comment', commentData)
+			const updatedComment = response.data
+			
+			// Aktualizuj komentarz w liście
+			updateComment(postId, commentId, updatedComment)
+			return true
+		} catch (error: any) {
+			console.error('Błąd edycji komentarza:', error)
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Nie udało się zapisać zmian: ${errorMessage}`)
+			return false
+		}
+	}, [comments, updateComment])
+
+	// Funkcja pomocnicza do formatowania daty jako LocalDateTime (bez strefy czasowej)
+	const formatLocalDateTime = (date: Date): string => {
+		const year = date.getFullYear()
+		const month = String(date.getMonth() + 1).padStart(2, '0')
+		const day = String(date.getDate()).padStart(2, '0')
+		const hours = String(date.getHours()).padStart(2, '0')
+		const minutes = String(date.getMinutes()).padStart(2, '0')
+		const seconds = String(date.getSeconds()).padStart(2, '0')
+		return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+	}
+
+	const deleteCommentAPI = useCallback(async (postId: number, commentId: number) => {
+		try {
+			await api.delete(`/comment/${commentId}`)
+			
+			// Aktualizuj komentarz w liście - ustaw isDeleted na true i deletedAt
+			// Używamy formatLocalDateTime zamiast toISOString(), aby zachować lokalną strefę czasową
+			updateComment(postId, commentId, {
+				isDeleted: true,
+				deletedAt: formatLocalDateTime(new Date()),
+			})
+			return true
+		} catch (error: any) {
+			console.error('Błąd usuwania komentarza:', error)
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Nie udało się usunąć komentarza: ${errorMessage}`)
+			return false
+		}
+	}, [updateComment])
+
+	const restoreCommentAPI = useCallback(async (postId: number, commentId: number) => {
+		try {
+			await api.patch(`/comment/${commentId}/restore`)
+			
+			// Aktualizuj komentarz w liście - ustaw isDeleted na false i deletedAt na null
+			updateComment(postId, commentId, {
+				isDeleted: false,
+				deletedAt: null,
+			})
+			return true
+		} catch (error: any) {
+			console.error('Błąd przywracania komentarza:', error)
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Nie udało się przywrócić komentarza: ${errorMessage}`)
+			return false
+		}
+	}, [updateComment])
+
 	return {
 		comments,
 		loadingComments,
@@ -194,6 +275,9 @@ export const useComments = () => {
 		toggleComments,
 		loadMoreComments,
 		updateComment,
+		updateCommentAPI,
+		deleteCommentAPI,
+		restoreCommentAPI,
 	}
 }
 

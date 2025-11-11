@@ -34,6 +34,9 @@ interface CommentSectionProps {
 	replyEmojiPickerRefs: React.MutableRefObject<Map<string, HTMLDivElement | null>>
 	onUpdateComment?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 	onUpdateReply?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
+	onEditComment?: (postId: number, commentId: number, content: string) => Promise<boolean>
+	onDeleteComment?: (postId: number, commentId: number) => void
+	onRestoreComment?: (postId: number, commentId: number) => Promise<boolean>
 }
 
 export const CommentSection = ({
@@ -63,6 +66,9 @@ export const CommentSection = ({
 	replyEmojiPickerRefs,
 	onUpdateComment,
 	onUpdateReply,
+	onEditComment,
+	onDeleteComment,
+	onRestoreComment,
 }: CommentSectionProps) => {
 	const commentEmojiPickerRef = useRef<HTMLDivElement>(null)
 
@@ -126,6 +132,9 @@ export const CommentSection = ({
 										} as React.MutableRefObject<HTMLDivElement | null>}
 										onUpdateComment={onUpdateComment}
 										onUpdateReply={onUpdateReply}
+										onEditComment={onEditComment}
+										onDeleteComment={onDeleteComment}
+										onRestoreComment={onRestoreComment}
 									/>
 								)
 							})

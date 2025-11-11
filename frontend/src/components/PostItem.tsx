@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, RotateCcw } from 'lucide-react'
 import Avatar from './Avatar'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
 import { CommentSection } from './CommentSection'
@@ -41,6 +41,10 @@ interface PostItemProps {
 	onUpdatePost?: (postId: number, updates: Partial<TeamPostResponseDto>) => void
 	onEditPost?: (postId: number) => void
 	onDeletePost?: (postId: number) => void
+	onRestorePost?: (postId: number) => void
+	onEditComment?: (postId: number, commentId: number, content: string) => Promise<boolean>
+	onDeleteComment?: (postId: number, commentId: number) => void
+	onRestoreComment?: (postId: number, commentId: number) => Promise<boolean>
 }
 
 export const PostItem = ({
@@ -73,6 +77,10 @@ export const PostItem = ({
 	onUpdatePost,
 	onEditPost,
 	onDeletePost,
+	onRestorePost,
+	onEditComment,
+	onDeleteComment,
+	onRestoreComment,
 }: PostItemProps) => {
 	const isAuthor = currentUserId === post.authorId
 	const isDeleted = post.isDeleted
@@ -255,6 +263,15 @@ export const PostItem = ({
 						)}
 					</div>
 				)}
+				{isAuthor && isDeleted && onRestorePost && (
+					<button
+						onClick={() => onRestorePost(post.postId)}
+						className='p-2 rounded-lg text-zinc-400 hover:text-green-400 hover:bg-zinc-800 transition-colors'
+						title='Przywróć post'
+					>
+						<RotateCcw size={18} />
+					</button>
+				)}
 			</div>
 			
 			{isDeleted && !isAuthor ? (
@@ -315,6 +332,9 @@ export const PostItem = ({
 								replyEmojiPickerRefs={replyEmojiPickerRefs}
 								onUpdateComment={onUpdateComment}
 								onUpdateReply={onUpdateReply}
+								onEditComment={onEditComment}
+								onDeleteComment={onDeleteComment}
+								onRestoreComment={onRestoreComment}
 							/>
 						</>
 					)}

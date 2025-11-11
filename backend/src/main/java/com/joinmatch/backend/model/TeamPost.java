@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,7 +19,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@SQLDelete(sql = "UPDATE team_post SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE post_id = ?")
+@SQLDelete(sql = "UPDATE team_post SET is_deleted = true, deleted_at = LOCALTIMESTAMP WHERE post_id = ?")
 public class TeamPost {
 
     @Id

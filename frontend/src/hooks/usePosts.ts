@@ -171,6 +171,24 @@ export const usePosts = (teamId: number) => {
 		}
 	}, [updatePost])
 
+	const restorePostAPI = useCallback(async (postId: number) => {
+		try {
+			await api.patch(`/team-post/${postId}/restore`)
+			
+			// Aktualizuj post w liście - ustaw isDeleted na false i deletedAt na null
+			updatePost(postId, {
+				isDeleted: false,
+				deletedAt: null,
+			})
+			return true
+		} catch (error: any) {
+			console.error('Błąd przywracania posta:', error)
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Nie udało się przywrócić posta: ${errorMessage}`)
+			return false
+		}
+	}, [updatePost])
+
 	return {
 		posts,
 		loadingPosts,
@@ -182,6 +200,7 @@ export const usePosts = (teamId: number) => {
 		updatePost,
 		updatePostAPI,
 		deletePostAPI,
+		restorePostAPI,
 	}
 }
 

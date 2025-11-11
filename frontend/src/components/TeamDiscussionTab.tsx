@@ -37,6 +37,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [showDeletePostModal, setShowDeletePostModal] = useState(false)
 	const [postToDelete, setPostToDelete] = useState<number | null>(null)
 	const [deletingPost, setDeletingPost] = useState(false)
+	const [showDeleteCommentModal, setShowDeleteCommentModal] = useState(false)
+	const [commentToDelete, setCommentToDelete] = useState<{ postId: number; commentId: number } | null>(null)
+	const [deletingComment, setDeletingComment] = useState(false)
 
 	const {
 		editor,
@@ -58,6 +61,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		updatePost,
 		updatePostAPI,
 		deletePostAPI,
+		restorePostAPI,
 	} = usePosts(teamId)
 
 	const {
@@ -77,6 +81,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		toggleComments,
 		loadMoreComments,
 		updateComment,
+		updateCommentAPI,
+		deleteCommentAPI,
+		restoreCommentAPI,
 	} = useComments()
 
 	const commentEmojiPickerRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
@@ -252,6 +259,41 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		}
 	}
 
+	const handleRestorePost = async (postId: number) => {
+		const success = await restorePostAPI(postId)
+		if (success) {
+			// Post został przywrócony, stan został zaktualizowany przez restorePostAPI
+		}
+	}
+
+	const handleEditComment = async (postId: number, commentId: number, content: string) => {
+		return await updateCommentAPI(postId, commentId, content)
+	}
+
+	const handleDeleteComment = (postId: number, commentId: number) => {
+		setCommentToDelete({ postId, commentId })
+		setShowDeleteCommentModal(true)
+	}
+
+	const handleConfirmDeleteComment = async () => {
+		if (!commentToDelete) return
+
+		setDeletingComment(true)
+		try {
+			const success = await deleteCommentAPI(commentToDelete.postId, commentToDelete.commentId)
+			if (success) {
+				setShowDeleteCommentModal(false)
+				setCommentToDelete(null)
+			}
+		} finally {
+			setDeletingComment(false)
+		}
+	}
+
+	const handleRestoreComment = async (postId: number, commentId: number) => {
+		return await restoreCommentAPI(postId, commentId)
+	}
+
 	if (!editor) {
 		return null
 	}
@@ -322,6 +364,10 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					onUpdatePost={updatePost}
 					onEditPost={handleEditPost}
 					onDeletePost={handleDeletePost}
+					onRestorePost={handleRestorePost}
+					onEditComment={handleEditComment}
+					onDeleteComment={handleDeleteComment}
+					onRestoreComment={handleRestoreComment}
 				/>
 			</div>
 			
@@ -394,6 +440,22 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 				confirmText='Usuń post'
 				cancelText='Anuluj'
 				isLoading={deletingPost}
+			/>
+
+			<AlertModal
+				isOpen={showDeleteCommentModal}
+				onClose={() => {
+					setShowDeleteCommentModal(false)
+					setCommentToDelete(null)
+				}}
+				title='Usuń komentarz'
+				message='Czy na pewno chcesz usunąć ten komentarz? Komentarz będzie widoczny jako usunięty dla innych użytkowników, ale nadal będziesz mógł go zobaczyć (wyszarzony).'
+				variant='warning'
+				showConfirm={true}
+				onConfirm={handleConfirmDeleteComment}
+				confirmText='Usuń komentarz'
+				cancelText='Anuluj'
+				isLoading={deletingComment}
 			/>
 		</div>
 	)
