@@ -1,5 +1,6 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.TeamPostCommentReaction.TeamPostCommentReactionBatchRequestDto;
 import com.joinmatch.backend.dto.TeamPostCommentReaction.TeamPostCommentReactionRequestDto;
 import com.joinmatch.backend.dto.TeamPostCommentReaction.TeamPostCommentReactionResponseDto;
 import com.joinmatch.backend.service.TeamPostCommentReactionService;
@@ -8,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reaction/team-post-comment")
@@ -46,6 +49,12 @@ public class TeamPostCommentReactionController {
         if (reactions.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
+        return ResponseEntity.ok(reactions);
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<Map<Integer, Integer>> getUserReactionsBatch(@RequestBody TeamPostCommentReactionBatchRequestDto dto) {
+        Map<Integer, Integer> reactions = teamPostCommentReactionService.getUserReactionsBatch(dto.commentIds(), dto.userId());
         return ResponseEntity.ok(reactions);
     }
 

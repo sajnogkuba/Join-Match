@@ -43,7 +43,7 @@ public class TeamPostCommentController {
             @RequestParam(required = false, defaultValue = "0") Integer page,
             @RequestParam(required = false, defaultValue = "12") Integer size,
             @RequestParam(required = false, defaultValue = "createdAt") String sort,
-            @RequestParam(required = false, defaultValue = "ASC") String direction,
+            @RequestParam(required = false, defaultValue = "DESC") String direction,
             @PathVariable Integer postId
     ) {
         Pageable pageable = Pageable.ofSize(size).withPage(page);

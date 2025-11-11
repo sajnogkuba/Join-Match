@@ -10,6 +10,7 @@ import { usePostReactions } from '../hooks/usePostReactions'
 
 interface PostItemProps {
 	post: TeamPostResponseDto
+	highlightCommentId?: number | null
 	currentUserId: number | null
 	comments: TeamPostCommentResponseDto[]
 	loadingComments: boolean
@@ -49,6 +50,7 @@ interface PostItemProps {
 
 export const PostItem = ({
 	post,
+	highlightCommentId,
 	currentUserId,
 	comments,
 	loadingComments,
@@ -316,6 +318,7 @@ export const PostItem = ({
 							
 							<CommentSection
 								postId={post.postId}
+								highlightCommentId={highlightCommentId}
 								currentUserId={currentUserId}
 								comments={comments}
 								loadingComments={loadingComments}

@@ -21,11 +21,14 @@ public class TeamPostReactionService {
     private final UserRepository userRepository;
     private final ReactionTypeRepository reactionTypeRepository;
     private final TeamPostRepository teamPostRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public TeamPostReactionResponseDto create(TeamPostReactionRequestDto dto) {
         TeamPostReaction reaction = new TeamPostReaction();
-        return getTeamPostReaction(dto, reaction);
+        var responseDto = getTeamPostReaction(dto, reaction);
+        notificationService.sendPostReactionNotification(reaction);
+        return responseDto;
     }
 
     @Transactional
@@ -36,8 +39,9 @@ public class TeamPostReactionService {
                 .orElseThrow(() -> new IllegalArgumentException("Post with id " + dto.postId() + " not found"));
         var reaction = teamPostReactionRepository.findByUserAndPost(user, post)
                 .orElseThrow(() -> new IllegalArgumentException("Reaction by user with id " + dto.userId() + " on post with id " + dto.postId() + " not found"));
-        return getTeamPostReaction(dto, reaction);
-
+        var responseDto = getTeamPostReaction(dto, reaction);
+        notificationService.sendPostReactionNotification(reaction);
+        return responseDto;
     }
 
     @Transactional

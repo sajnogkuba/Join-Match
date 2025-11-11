@@ -6,6 +6,7 @@ import { CommentForm } from './CommentForm'
 
 interface CommentSectionProps {
 	postId: number
+	highlightCommentId?: number | null
 	currentUserId: number | null
 	comments: TeamPostCommentResponseDto[]
 	loadingComments: boolean
@@ -41,6 +42,7 @@ interface CommentSectionProps {
 
 export const CommentSection = ({
 	postId,
+	highlightCommentId,
 	currentUserId,
 	comments,
 	loadingComments,
@@ -70,7 +72,7 @@ export const CommentSection = ({
 	onDeleteComment,
 	onRestoreComment,
 }: CommentSectionProps) => {
-	const commentEmojiPickerRef = useRef<HTMLDivElement>(null)
+	const commentEmojiPickerRef = useRef<HTMLDivElement | null>(null)
 
 	return (
 		<div className='mt-4 pt-4 border-t border-zinc-800'>
@@ -104,10 +106,11 @@ export const CommentSection = ({
 								
 								return (
 									<CommentItem
-										key={comment.commentId}
+										key={key}
 										comment={comment}
 										replies={commentReplies}
 										postId={postId}
+										highlightCommentId={highlightCommentId}
 										currentUserId={currentUserId}
 										isReplying={isReplying}
 										replyText={replyText}

@@ -196,6 +196,33 @@ export const useCommentReactions = () => {
 		}
 	}, [])
 
+	const getUserReactionsBatch = useCallback(async (
+		commentIds: number[],
+		userId: number
+	): Promise<Map<number, number>> => {
+		try {
+			if (commentIds.length === 0) {
+				return new Map()
+			}
+			
+			const response = await api.post<Record<string, number>>('/reaction/team-post-comment/batch', {
+				userId,
+				commentIds
+			})
+			
+			const result = new Map<number, number>()
+			Object.entries(response.data).forEach(([commentIdStr, reactionTypeId]) => {
+				const commentId = parseInt(commentIdStr, 10)
+				result.set(commentId, reactionTypeId)
+			})
+			
+			return result
+		} catch (error) {
+			console.error('Błąd pobierania reakcji użytkownika (batch):', error)
+			return new Map()
+		}
+	}, [])
+
 	const getReactionUsers = useCallback(async (
 		commentId: number,
 		reactionTypeId: number
@@ -214,25 +241,54 @@ export const useCommentReactions = () => {
 					reaction.reactionType?.id === reactionTypeId
 			)
 			
-			// Pobierz dane użytkowników
-			const usersData = await Promise.all(
-				filteredReactions.map(async (reaction: TeamPostCommentReactionResponseDto) => {
-					try {
-						const userResponse = await api.get(`/auth/user/${reaction.userId}`)
-						return {
-							userId: reaction.userId,
-							name: userResponse.data.name || 'Nieznany użytkownik',
-							avatarUrl: userResponse.data.urlOfPicture || null
-						}
-					} catch {
-						return {
-							userId: reaction.userId,
-							name: 'Nieznany użytkownik',
-							avatarUrl: null
-						}
+			// Użyj danych użytkownika z DTO jeśli są dostępne
+			const usersData = filteredReactions.map((reaction: TeamPostCommentReactionResponseDto) => {
+				if (reaction.userName) {
+					return {
+						userId: reaction.userId,
+						name: reaction.userName,
+						avatarUrl: reaction.userAvatarUrl || null
 					}
-				})
-			)
+				}
+				
+				// Fallback do starego sposobu jeśli DTO nie ma danych użytkownika
+				return {
+					userId: reaction.userId,
+					name: 'Nieznany użytkownik',
+					avatarUrl: null
+				}
+			})
+			
+			// Jeśli DTO nie ma danych użytkownika, pobierz je osobno
+			if (usersData.some((u: { userId: number; name: string; avatarUrl: string | null }) => u.name === 'Nieznany użytkownik')) {
+				const usersDataWithFetch = await Promise.all(
+					filteredReactions.map(async (reaction: TeamPostCommentReactionResponseDto) => {
+						if (reaction.userName) {
+							return {
+								userId: reaction.userId,
+								name: reaction.userName,
+								avatarUrl: reaction.userAvatarUrl || null
+							}
+						}
+						
+						try {
+							const userResponse = await api.get(`/auth/user/${reaction.userId}`)
+							return {
+								userId: reaction.userId,
+								name: userResponse.data.name || 'Nieznany użytkownik',
+								avatarUrl: userResponse.data.urlOfPicture || null
+							}
+						} catch {
+							return {
+								userId: reaction.userId,
+								name: 'Nieznany użytkownik',
+								avatarUrl: null
+							}
+						}
+					})
+				)
+				return usersDataWithFetch
+			}
 			
 			return usersData
 		} catch (error) {
@@ -243,6 +299,7 @@ export const useCommentReactions = () => {
 
 	return {
 		getUserReaction,
+		getUserReactionsBatch,
 		addOrUpdateReaction,
 		deleteReaction,
 		getReactionUsers,

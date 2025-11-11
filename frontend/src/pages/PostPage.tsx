@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Loader2, AlertTriangle } from 'lucide-react'
 import api from '../Api/axios'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
@@ -13,6 +13,10 @@ import AlertModal from '../components/AlertModal'
 
 const PostPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
+	const [searchParams] = useSearchParams()
+	const highlightCommentIdParam = searchParams.get('highlightComment')
+	const highlightCommentId = highlightCommentIdParam ? parseInt(highlightCommentIdParam, 10) : null
+	
 	const [post, setPost] = useState<TeamPostResponseDto | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -62,7 +66,6 @@ const PostPage: React.FC = () => {
 		updateCommentAPI,
 		deleteCommentAPI,
 		restoreCommentAPI,
-		fetchComments,
 	} = useComments()
 
 	const replyEmojiPickerRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
@@ -128,18 +131,67 @@ const PostPage: React.FC = () => {
 		fetchPost()
 	}, [id])
 
-	// Automatycznie rozwiń komentarze po załadowaniu posta
 	useEffect(() => {
 		if (post && post.postId) {
 			const postId = post.postId
 			const isShowing = showComments.get(postId) || false
-			
-			// Jeśli komentarze nie są rozwinięte, rozwiń je
 			if (!isShowing) {
 				toggleComments(postId)
 			}
 		}
 	}, [post, showComments, toggleComments])
+
+	const prevLoadingRef = useRef<Map<number, boolean>>(new Map())
+	const isSearchingForCommentRef = useRef<Map<number, boolean>>(new Map())
+	
+	useEffect(() => {
+		if (!highlightCommentId || !post) {
+			isSearchingForCommentRef.current.set(post?.postId || 0, false)
+			return
+		}
+		
+		const postId = post.postId
+		const postComments = comments.get(postId) || []
+		const commentExists = postComments.some(c => c.commentId === highlightCommentId)
+		
+		if (commentExists) {
+			isSearchingForCommentRef.current.set(postId, false)
+			return
+		}
+		
+		const hasNext = commentHasNext.get(postId) || false
+		const isLoading = loadingComments.get(postId) || false
+		const prevLoading = prevLoadingRef.current.get(postId) || false
+		const isSearching = isSearchingForCommentRef.current.get(postId) || false
+		
+		if (!commentExists && hasNext) {
+			isSearchingForCommentRef.current.set(postId, true)
+			if (prevLoading && !isLoading) {
+				loadMoreComments(postId)
+			} else if (!isLoading && !isSearching) {
+				loadMoreComments(postId)
+			}
+		} else if (!hasNext) {
+			isSearchingForCommentRef.current.set(postId, false)
+		}
+		
+		prevLoadingRef.current.set(postId, isLoading)
+	}, [highlightCommentId, post, comments, commentHasNext, loadingComments, loadMoreComments])
+
+	const [effectiveLoadingComments, setEffectiveLoadingComments] = useState<Map<number, boolean>>(new Map())
+	
+	useEffect(() => {
+		if (!post) return
+		const postId = post.postId
+		const isLoading = loadingComments.get(postId) || false
+		const isSearching = isSearchingForCommentRef.current.get(postId) || false
+		
+		setEffectiveLoadingComments(prev => {
+			const newMap = new Map(prev)
+			newMap.set(postId, isLoading || isSearching)
+			return newMap
+		})
+	}, [post, loadingComments, comments])
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -393,9 +445,10 @@ const PostPage: React.FC = () => {
 			<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
 				<PostItem
 					post={post}
+					highlightCommentId={highlightCommentId}
 					currentUserId={currentUserId}
 					comments={comments.get(post.postId) || []}
-					loadingComments={loadingComments.get(post.postId) || false}
+					loadingComments={effectiveLoadingComments.get(post.postId) || false}
 					showComments={showComments.get(post.postId) || false}
 					commentHasNext={commentHasNext.get(post.postId) || false}
 					commentText={commentTexts.get(post.postId) || ''}
