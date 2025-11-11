@@ -1,6 +1,8 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.Message.ChatMessageDto;
+import com.joinmatch.backend.dto.Message.ConversationDto;
+import com.joinmatch.backend.dto.Message.ParticipantDto;
 import com.joinmatch.backend.enums.ConversationType;
 import com.joinmatch.backend.model.Conversation;
 import com.joinmatch.backend.model.Message;
@@ -89,6 +91,19 @@ public class ChatService {
                 .build();
 
         return conversationRepository.save(conversation);
+    }
+    @Transactional
+    public ConversationDto createDirectConversationDto(Integer user1Id, Integer user2Id) {
+        Conversation conversation = createDirectConversation(user1Id, user2Id);
+
+        List<ParticipantDto> participants = conversation.getParticipants().stream()
+                .map(u -> new ParticipantDto(u.getId(), u.getName(), u.getUrlOfPicture()))
+                .toList();
+
+        return new ConversationDto(conversation.getId(), conversation.getType().name(), participants);
+    }
+    public List<Conversation> getUserConversations(Integer userId) {
+        return conversationRepository.findByParticipantId(userId);
     }
 
 }

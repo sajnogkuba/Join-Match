@@ -17,7 +17,6 @@ export const useChatSocket = ({
   useEffect(() => {
     if (!stompClient || !isConnected || !conversationId) return;
 
-    console.log('📡 Subscribing to', `/topic/conversation/${conversationId}`);
     const subscription = stompClient.subscribe(
       `/topic/conversation/${conversationId}`,
       (message) => {

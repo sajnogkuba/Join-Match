@@ -15,11 +15,9 @@ export const useChatWebSocket = () => {
       reconnectDelay: 0,
       debug: (msg) => console.log('💬 CHAT WS:', msg),
       onConnect: () => {
-        console.log('✅ Chat WebSocket connected');
         setIsConnected(true);
       },
       onDisconnect: () => {
-        console.log('🔌 Chat WebSocket disconnected');
         setIsConnected(false);
       },
       onStompError: (frame) => {

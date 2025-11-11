@@ -1,0 +1,62 @@
+import React from 'react';
+import { useChat } from '../Context/ChatContext';
+import { UserCircle } from 'lucide-react';
+
+interface Conversation {
+  id: number;
+  name: string;
+  avatarUrl?: string;
+  lastMessage?: string;
+}
+
+interface ChatSidebarProps {
+  conversations: Conversation[];
+  activeId: number | null;
+  onSelect: (id: number) => void;
+}
+
+const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSelect }) => {
+  const { unreadCounts } = useChat();
+
+  return (
+    <div className="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+      <div className="p-4 text-lg font-semibold text-white border-b border-zinc-800">
+        💬 Twoje rozmowy
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {conversations.map(conv => (
+          <div
+            key={conv.id}
+            onClick={() => onSelect(conv.id)}
+            className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+              activeId === conv.id ? 'bg-violet-700/30' : 'hover:bg-zinc-800'
+            }`}
+          >
+            {conv.avatarUrl ? (
+              <img
+                src={conv.avatarUrl}
+                className="w-10 h-10 rounded-full object-cover"
+                alt={conv.name}
+              />
+            ) : (
+              <UserCircle className="w-10 h-10 text-zinc-400" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-white font-medium truncate">{conv.name}</div>
+              <div className="text-sm text-zinc-400 truncate">
+                {conv.lastMessage || 'Brak wiadomości'}
+              </div>
+            </div>
+            {unreadCounts[conv.id] ? (
+              <div className="bg-violet-600 text-xs text-white rounded-full px-2 py-0.5">
+                {unreadCounts[conv.id]}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default ChatSidebar;

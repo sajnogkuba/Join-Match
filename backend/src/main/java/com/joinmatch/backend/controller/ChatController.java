@@ -1,6 +1,7 @@
 package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.Message.ChatMessageDto;
+import com.joinmatch.backend.dto.Message.ConversationDto;
 import com.joinmatch.backend.model.Conversation;
 import com.joinmatch.backend.service.ChatService;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +39,15 @@ public class ChatController {
 
     @PostMapping("/conversations/direct")
     @ResponseBody
-    public Conversation createDirectConversation(@RequestParam Integer user1Id, @RequestParam Integer user2Id) {
-        return chatService.createDirectConversation(user1Id, user2Id);
+    public ConversationDto createDirectConversation(@RequestParam Integer user1Id, @RequestParam Integer user2Id) {
+        return chatService.createDirectConversationDto(user1Id, user2Id);
     }
+
+    @GetMapping("/conversations/all")
+    @ResponseBody
+    public List<Conversation> getUserConversations(@RequestParam Integer userId) {
+        return chatService.getUserConversations(userId);
+    }
+
 
 }

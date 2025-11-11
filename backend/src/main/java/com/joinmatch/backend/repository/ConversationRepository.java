@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -19,5 +20,13 @@ public interface ConversationRepository extends JpaRepository<Conversation, Inte
       AND p2.id = :user2Id
 """)
     Optional<Conversation> findDirectBetweenUsers(@Param("user1Id") Integer user1Id, @Param("user2Id") Integer user2Id);
+
+    @Query("""
+    SELECT DISTINCT c FROM Conversation c
+    JOIN c.participants p
+    WHERE p.id = :userId
+""")
+    List<Conversation> findByParticipantId(@Param("userId") Integer userId);
+
 
 }
