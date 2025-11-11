@@ -59,7 +59,7 @@ export const CommentItem = ({
 	const [editReplyContent, setEditReplyContent] = useState<string>('')
 	const [savingReplyEdit, setSavingReplyEdit] = useState(false)
 
-	const { addOrUpdateReaction, getUserReaction, deleteReaction } = useCommentReactions()
+	const { addOrUpdateReaction, getUserReaction, deleteReaction, getReactionUsers } = useCommentReactions()
 	const [userReactionTypeId, setUserReactionTypeId] = useState<number | null>(null)
 	const [userReactionsForReplies, setUserReactionsForReplies] = useState<Map<number, number | null>>(new Map())
 	const [updatingReaction, setUpdatingReaction] = useState(false)
@@ -367,6 +367,7 @@ export const CommentItem = ({
 										reactionCounts={localReactionCounts}
 										userReactionTypeId={userReactionTypeId}
 										onReactionClick={(reactionTypeId) => handleReactionClick(comment.commentId, reactionTypeId, false)}
+										getReactionUsers={getReactionUsers}
 									/>
 									<button
 										onClick={onToggleReply}
@@ -384,6 +385,7 @@ export const CommentItem = ({
 										reactionCounts={localReactionCounts}
 										userReactionTypeId={null}
 										onReactionClick={undefined}
+										getReactionUsers={getReactionUsers}
 									/>
 								</div>
 							)}
@@ -559,6 +561,7 @@ export const CommentItem = ({
 														reactionCounts={localReactionCountsForReplies.get(reply.commentId) || reply.reactionCounts}
 														userReactionTypeId={currentUserId ? userReactionsForReplies.get(reply.commentId) || null : null}
 														onReactionClick={currentUserId ? (reactionTypeId) => handleReactionClick(reply.commentId, reactionTypeId, true) : undefined}
+														getReactionUsers={getReactionUsers}
 													/>
 												</div>
 											)}

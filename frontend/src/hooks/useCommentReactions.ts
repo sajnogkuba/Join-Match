@@ -196,10 +196,56 @@ export const useCommentReactions = () => {
 		}
 	}, [])
 
+	const getReactionUsers = useCallback(async (
+		commentId: number,
+		reactionTypeId: number
+	): Promise<Array<{ userId: number; name: string; avatarUrl: string | null }>> => {
+		try {
+			const response = await api.get(`/reaction/team-post-comment/${commentId}`, {
+				params: { page: 0, size: 100 }
+			})
+			
+			const pageData = response.data
+			const reactions = pageData?.content || []
+			
+			// Filtruj reakcje po typie
+			const filteredReactions = reactions.filter(
+				(reaction: TeamPostCommentReactionResponseDto) => 
+					reaction.reactionType?.id === reactionTypeId
+			)
+			
+			// Pobierz dane użytkowników
+			const usersData = await Promise.all(
+				filteredReactions.map(async (reaction: TeamPostCommentReactionResponseDto) => {
+					try {
+						const userResponse = await api.get(`/auth/user/${reaction.userId}`)
+						return {
+							userId: reaction.userId,
+							name: userResponse.data.name || 'Nieznany użytkownik',
+							avatarUrl: userResponse.data.urlOfPicture || null
+						}
+					} catch {
+						return {
+							userId: reaction.userId,
+							name: 'Nieznany użytkownik',
+							avatarUrl: null
+						}
+					}
+				})
+			)
+			
+			return usersData
+		} catch (error) {
+			console.error('Błąd pobierania użytkowników reakcji:', error)
+			return []
+		}
+	}, [])
+
 	return {
 		getUserReaction,
 		addOrUpdateReaction,
 		deleteReaction,
+		getReactionUsers,
 	}
 }
 

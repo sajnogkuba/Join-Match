@@ -41,6 +41,12 @@ public class TeamPostController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/post/{postId}")
+    public ResponseEntity<TeamPostResponseDto> getPostById(@PathVariable Integer postId) {
+        TeamPostResponseDto post = teamPostService.findById(postId);
+        return ResponseEntity.ok(post);
+    }
+
     @GetMapping("/{teamId}")
     public ResponseEntity<Page<TeamPostResponseDto>> getTeamPostById(
             @RequestParam(required = false, defaultValue = "0") Integer page,
