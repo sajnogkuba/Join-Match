@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { ChatMessage } from '../Context/ChatContext'
 import MessageBubble from './MessageBubble'
 import Avatar from './Avatar'
@@ -12,6 +13,10 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setInput, onSend, activeConversation }) => {
+	// Znajdź ID drugiego użytkownika z wiadomości
+	const otherUserMessage = messages.find(m => m.senderId !== myUserId)
+	const otherUserId = otherUserMessage?.senderId
+
 	return (
 		<div className='flex flex-col flex-1 bg-zinc-950 min-h-0'>
 			{activeConversation && (
@@ -22,7 +27,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setI
 						size='sm'
 						className='h-10 w-10'
 					/>
-					<div className='text-white font-semibold'>{activeConversation.name}</div>
+					{otherUserId ? (
+						<Link
+							to={`/profile/${otherUserId}`}
+							className='text-white font-semibold hover:text-violet-400 transition-colors cursor-pointer'
+						>
+							{activeConversation.name}
+						</Link>
+					) : (
+						<div className='text-white font-semibold'>{activeConversation.name}</div>
+					)}
 				</div>
 			)}
 			<div className='flex-1 overflow-y-auto p-6 space-y-3 dark-scrollbar min-h-0'>

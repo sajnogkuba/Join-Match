@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import ChatSidebar from '../components/ChatSidebar'
 import ChatWindow from '../components/ChatWindow'
 import { useChat } from '../Context/ChatContext'
@@ -120,6 +121,10 @@ const ChatPage: React.FC = () => {
 
 	const list = conversationId ? messages[conversationId] || [] : []
 
+	// Znajdź ID drugiego użytkownika z wiadomości (dla mobile nagłówka)
+	const otherUserMessage = list.find(m => m.senderId !== myUserId)
+	const otherUserId = otherUserMessage?.senderId
+
 	// Powrót na mobile
 	const handleBack = () => setConversationId(null)
 
@@ -152,9 +157,18 @@ const ChatPage: React.FC = () => {
 								<button onClick={handleBack} className='text-white'>
 									<ArrowLeft size={22} />
 								</button>
-								<div className='font-semibold text-white'>
-									{conversations.find(c => c.id === conversationId)?.name || 'Rozmowa'}
-								</div>
+								{otherUserId ? (
+									<Link
+										to={`/profile/${otherUserId}`}
+										className='font-semibold text-white hover:text-violet-400 transition-colors cursor-pointer'
+									>
+										{conversations.find(c => c.id === conversationId)?.name || 'Rozmowa'}
+									</Link>
+								) : (
+									<div className='font-semibold text-white'>
+										{conversations.find(c => c.id === conversationId)?.name || 'Rozmowa'}
+									</div>
+								)}
 							</div>
 							<ChatWindow
 								messages={list}
