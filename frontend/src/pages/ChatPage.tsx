@@ -124,7 +124,7 @@ const ChatPage: React.FC = () => {
 	const handleBack = () => setConversationId(null)
 
 	return (
-		<div className='flex h-[calc(100vh-80px)] mt-[60px] md:mt-20 bg-zinc-950'>
+		<div className='flex h-[calc(100vh-80px)] mt-[60px] md:mt-20 bg-zinc-950 min-h-0'>
 			{/* Desktop: sidebar + chat obok siebie */}
 			{!isMobile && (
 				<>
@@ -147,8 +147,8 @@ const ChatPage: React.FC = () => {
 						<ChatSidebar conversations={conversations} activeId={conversationId} onSelect={setConversationId} />
 					)}
 					{conversationId && (
-						<div className='flex flex-col flex-1'>
-							<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900'>
+						<div className='flex flex-col flex-1 min-h-0'>
+							<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900 flex-shrink-0'>
 								<button onClick={handleBack} className='text-white'>
 									<ArrowLeft size={22} />
 								</button>

@@ -23,7 +23,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSe
       <div className="p-4 text-lg font-semibold text-white border-b border-zinc-800">
         💬 Twoje rozmowy
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto dark-scrollbar">
         {conversations.map(conv => (
           <div
             key={conv.id}

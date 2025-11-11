@@ -13,9 +13,9 @@ interface ChatWindowProps {
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setInput, onSend, activeConversation }) => {
 	return (
-		<div className='flex flex-col flex-1 bg-zinc-950'>
+		<div className='flex flex-col flex-1 bg-zinc-950 min-h-0'>
 			{activeConversation && (
-				<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900'>
+				<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900 flex-shrink-0'>
 					<Avatar
 						src={activeConversation?.avatarUrl || messages.find(m => m.senderId !== myUserId)?.senderAvatarUrl}
 						name={activeConversation?.name || messages.find(m => m.senderId !== myUserId)?.senderName || ''}
@@ -25,12 +25,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setI
 					<div className='text-white font-semibold'>{activeConversation.name}</div>
 				</div>
 			)}
-			<div className='flex-1 overflow-y-auto p-6 space-y-3'>
+			<div className='flex-1 overflow-y-auto p-6 space-y-3 dark-scrollbar min-h-0'>
 				{messages.map((m, i) => (
 					<MessageBubble key={`${m.createdAt}-${i}`} message={m} isOwn={m.senderId === myUserId} />
 				))}
 			</div>
-			<div className='flex gap-2 p-4 border-t border-zinc-800 bg-zinc-900'>
+			<div className='flex gap-2 p-4 border-t border-zinc-800 bg-zinc-900 flex-shrink-0'>
 				<input
 					value={input}
 					onChange={e => setInput(e.target.value)}
