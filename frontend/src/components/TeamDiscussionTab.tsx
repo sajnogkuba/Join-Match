@@ -31,6 +31,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [pollQuestion, setPollQuestion] = useState('')
 	const [pollOptions, setPollOptions] = useState(['', ''])
 	
+	const [editingPostId, setEditingPostId] = useState<number | null>(null)
+	const [editingPostContent, setEditingPostContent] = useState<string | null>(null)
+
 	const {
 		editor,
 		colorPickerRef,
@@ -38,6 +41,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		emojiPickerRef,
 		fileInputRef,
 		handleFileSelect,
+		setEditorContent,
 	} = usePostEditor(teamMembers)
 
 	const {
@@ -194,6 +198,36 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		await postComment(postId, currentUserId, null)
 	}
 
+	const handleEditPost = (postId: number) => {
+		const post = posts.find(p => p.postId === postId)
+		if (post && editor) {
+			setEditingPostId(postId)
+			setEditingPostContent(post.contentHtml)
+			setEditorContent(post.contentHtml)
+			setShowEditorModal(true)
+		}
+	}
+
+	const handleSaveEdit = async () => {
+		if (!editor || !currentUserId || !editingPostId) {
+			return
+		}
+
+		// TODO: Backend integration - call API to update post
+		// For now, just close the modal
+		setPublishing(true)
+		try {
+			// Placeholder for future API call
+			// await updatePostAPI(editingPostId, editor.getHTML())
+			
+			setShowEditorModal(false)
+			setEditingPostId(null)
+			setEditingPostContent(null)
+		} finally {
+			setPublishing(false)
+		}
+	}
+
 	if (!editor) {
 		return null
 	}
@@ -203,7 +237,14 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 			<div className='flex items-center justify-between mb-4'>
 				<h3 className='text-white text-lg font-semibold'>Dyskusja</h3>
 				<button
-					onClick={() => setShowEditorModal(true)}
+					onClick={() => {
+						setEditingPostId(null)
+						setEditingPostContent(null)
+						if (editor) {
+							editor.commands.clearContent()
+						}
+						setShowEditorModal(true)
+					}}
 					className='inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition-colors'
 				>
 					<Plus size={18} />
@@ -255,14 +296,18 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					onUpdateComment={updateComment}
 					onUpdateReply={updateComment}
 					onUpdatePost={updatePost}
+					onEditPost={handleEditPost}
 				/>
 			</div>
 			
 			<PostEditorModal
 				isOpen={showEditorModal}
 				onClose={() => {
+					const wasEditing = editingPostId !== null
 					setShowEditorModal(false)
-					if (editor) {
+					setEditingPostId(null)
+					setEditingPostContent(null)
+					if (editor && !wasEditing) {
 						editor.commands.clearContent()
 					}
 				}}
@@ -283,7 +328,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					setShowEventLinkModal(true)
 				}}
 				emojiPickerRef={emojiPickerRef}
-				onPublish={handleCreatePost}
+				onPublish={editingPostId ? handleSaveEdit : handleCreatePost}
+				mode={editingPostId ? 'edit' : 'create'}
+				initialContent={editingPostContent || undefined}
 			/>
 
 			<PollModal

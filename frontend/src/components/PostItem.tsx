@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Edit } from 'lucide-react'
 import Avatar from './Avatar'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
 import { CommentSection } from './CommentSection'
@@ -38,6 +39,7 @@ interface PostItemProps {
 	onUpdateComment?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 	onUpdateReply?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 	onUpdatePost?: (postId: number, updates: Partial<TeamPostResponseDto>) => void
+	onEditPost?: (postId: number) => void
 }
 
 export const PostItem = ({
@@ -68,6 +70,7 @@ export const PostItem = ({
 	onUpdateComment,
 	onUpdateReply,
 	onUpdatePost,
+	onEditPost,
 }: PostItemProps) => {
 	const { addOrUpdateReaction, getUserReaction, deleteReaction } = usePostReactions()
 	const [userReactionTypeId, setUserReactionTypeId] = useState<number | null>(null)
@@ -177,8 +180,31 @@ export const PostItem = ({
 							hour: '2-digit',
 							minute: '2-digit',
 						})}
+						{post.updatedAt && post.updatedAt !== post.createdAt && (
+							<>
+								<br />
+								<span className='text-zinc-500 italic'>
+									Edytowano - {new Date(post.updatedAt).toLocaleDateString('pl-PL', {
+										day: 'numeric',
+										month: 'long',
+										year: 'numeric',
+										hour: '2-digit',
+										minute: '2-digit',
+									})}
+								</span>
+							</>
+						)}
 					</p>
 				</div>
+				{currentUserId === post.authorId && onEditPost && (
+					<button
+						onClick={() => onEditPost(post.postId)}
+						className='p-2 rounded-lg text-zinc-400 hover:text-violet-400 hover:bg-zinc-800 transition-colors'
+						title='Edytuj post'
+					>
+						<Edit size={18} />
+					</button>
+				)}
 			</div>
 			
 			<div

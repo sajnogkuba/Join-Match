@@ -37,6 +37,7 @@ interface PostListProps {
 	onUpdateComment?: (postId: number, commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 	onUpdateReply?: (postId: number, commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 	onUpdatePost?: (postId: number, updates: Partial<TeamPostResponseDto>) => void
+	onEditPost?: (postId: number) => void
 }
 
 export const PostList = ({
@@ -70,6 +71,7 @@ export const PostList = ({
 	onUpdateComment,
 	onUpdateReply,
 	onUpdatePost,
+	onEditPost,
 }: PostListProps) => {
 	if (loadingPosts && posts.length === 0) {
 		return (
@@ -120,6 +122,7 @@ export const PostList = ({
 					onUpdateComment={onUpdateComment ? (commentId, updates) => onUpdateComment(post.postId, commentId, updates) : undefined}
 					onUpdateReply={onUpdateReply ? (commentId, updates) => onUpdateReply(post.postId, commentId, updates) : undefined}
 					onUpdatePost={onUpdatePost ? (updates) => onUpdatePost(post.postId, updates) : undefined}
+					onEditPost={onEditPost}
 				/>
 			))}
 			

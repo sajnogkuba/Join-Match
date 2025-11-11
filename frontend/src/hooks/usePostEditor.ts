@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { TextStyle } from '@tiptap/extension-text-style'
@@ -15,7 +15,7 @@ import api from '../Api/axios'
 import type { TeamMember } from '../Api/types/TeamMember'
 import { MentionList } from '../components/MentionList'
 
-export const usePostEditor = (teamMembers: TeamMember[]) => {
+export const usePostEditor = (teamMembers: TeamMember[], initialContent?: string) => {
 	const [content, setContent] = useState('')
 	const [uploadingImage, setUploadingImage] = useState(false)
 	const colorPickerRef = useRef<HTMLDivElement>(null)
@@ -190,7 +190,7 @@ export const usePostEditor = (teamMembers: TeamMember[]) => {
 				placeholder: 'Wpisz swoją wiadomość tutaj...',
 			}),
 		],
-		content: '',
+		content: initialContent || '',
 		onUpdate: ({ editor }) => {
 			setContent(editor.getHTML())
 		},
@@ -200,6 +200,22 @@ export const usePostEditor = (teamMembers: TeamMember[]) => {
 			},
 		},
 	})
+
+	// Update editor content when initialContent changes
+	useEffect(() => {
+		if (editor && initialContent !== undefined) {
+			const currentContent = editor.getHTML()
+			if (currentContent !== initialContent) {
+				editor.commands.setContent(initialContent)
+			}
+		}
+	}, [editor, initialContent])
+
+	const setEditorContent = useCallback((content: string) => {
+		if (editor) {
+			editor.commands.setContent(content)
+		}
+	}, [editor])
 
 	const handleImageUpload = useCallback(async (file: File) => {
 		if (!editor) return
@@ -237,6 +253,7 @@ export const usePostEditor = (teamMembers: TeamMember[]) => {
 		emojiPickerRef,
 		fileInputRef,
 		handleFileSelect,
+		setEditorContent,
 	}
 }
 
