@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Avatar from './Avatar'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
 import { CommentSection } from './CommentSection'
 import type { TeamPostCommentResponseDto } from '../Api/types/TeamPostComment'
 import { Reactions } from './Reactions'
+import { usePostReactions } from '../hooks/usePostReactions'
 
 interface PostItemProps {
 	post: TeamPostResponseDto
@@ -35,6 +37,7 @@ interface PostItemProps {
 	replyEmojiPickerRefs: React.MutableRefObject<Map<string, HTMLDivElement | null>>
 	onUpdateComment?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 	onUpdateReply?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
+	onUpdatePost?: (postId: number, updates: Partial<TeamPostResponseDto>) => void
 }
 
 export const PostItem = ({
@@ -64,7 +67,90 @@ export const PostItem = ({
 	replyEmojiPickerRefs,
 	onUpdateComment,
 	onUpdateReply,
+	onUpdatePost,
 }: PostItemProps) => {
+	const { addOrUpdateReaction, getUserReaction, deleteReaction } = usePostReactions()
+	const [userReactionTypeId, setUserReactionTypeId] = useState<number | null>(null)
+	const [updatingReaction, setUpdatingReaction] = useState(false)
+	const [localReactionCounts, setLocalReactionCounts] = useState<Record<number, number> | undefined>(post.reactionCounts)
+
+	useEffect(() => {
+		setLocalReactionCounts(post.reactionCounts)
+	}, [post.reactionCounts])
+
+	useEffect(() => {
+		if (currentUserId && post.postId) {
+			getUserReaction(post.postId, currentUserId).then(reactionTypeId => {
+				setUserReactionTypeId(reactionTypeId)
+			}).catch(() => {
+				setUserReactionTypeId(null)
+			})
+		} else {
+			setUserReactionTypeId(null)
+		}
+	}, [currentUserId, post.postId, getUserReaction])
+
+	const handleReactionClick = async (postId: number, reactionTypeId: number) => {
+		if (!currentUserId || updatingReaction) {
+			return
+		}
+
+		setUpdatingReaction(true)
+		try {
+			const currentReactionCounts = post.reactionCounts
+			const previousUserReactionTypeId = userReactionTypeId
+			
+			if (previousUserReactionTypeId === reactionTypeId) {
+				const updatedCounts = await deleteReaction(
+					postId,
+					currentUserId,
+					currentReactionCounts,
+					reactionTypeId
+				)
+				
+				if (updatedCounts !== null) {
+					setLocalReactionCounts(updatedCounts)
+					onUpdatePost?.(postId, { reactionCounts: updatedCounts })
+					setUserReactionTypeId(null)
+				} else {
+					alert('Nie udało się usunąć reakcji.')
+				}
+			} else {
+				const updatedCounts = await addOrUpdateReaction(
+					postId, 
+					currentUserId, 
+					reactionTypeId,
+					currentReactionCounts,
+					previousUserReactionTypeId
+				)
+				
+				if (updatedCounts) {
+					setLocalReactionCounts(updatedCounts)
+					let newUserReaction: number | null = null
+					try {
+						newUserReaction = await getUserReaction(postId, currentUserId)
+					} catch {
+						newUserReaction = reactionTypeId
+					}
+					
+					if (newUserReaction === null) {
+						newUserReaction = reactionTypeId
+					}
+					
+					onUpdatePost?.(postId, { reactionCounts: updatedCounts })
+					setUserReactionTypeId(newUserReaction)
+				} else {
+					alert('Nie udało się zapisać reakcji. Sprawdź konsolę przeglądarki.')
+				}
+			}
+		} catch (error: any) {
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Błąd podczas zapisywania reakcji: ${errorMessage}`)
+		} finally {
+			setUpdatingReaction(false)
+		}
+	}
+
 	return (
 		<div className='rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:bg-zinc-900/60 transition-colors'>
 			<div className='flex items-center gap-3 mb-3'>
@@ -102,9 +188,9 @@ export const PostItem = ({
 			
 			<Reactions
 				targetId={post.postId}
-				onReactionClick={(reactionTypeId) => {
-					// TODO: Implement reaction click handler when backend endpoints are ready
-				}}
+				reactionCounts={localReactionCounts}
+				userReactionTypeId={userReactionTypeId}
+				onReactionClick={currentUserId ? (reactionTypeId) => handleReactionClick(post.postId, reactionTypeId) : undefined}
 			/>
 			
 			<CommentSection

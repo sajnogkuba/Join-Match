@@ -47,6 +47,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		hasNext,
 		fetchPosts,
 		createPost: createPostHook,
+		updatePost,
 	} = usePosts(teamId)
 
 	const {
@@ -253,6 +254,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					replyEmojiPickerRefs={replyEmojiPickerRefs}
 					onUpdateComment={updateComment}
 					onUpdateReply={updateComment}
+					onUpdatePost={updatePost}
 				/>
 			</div>
 			

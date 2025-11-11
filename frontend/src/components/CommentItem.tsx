@@ -47,6 +47,22 @@ export const CommentItem = ({
 	const [userReactionTypeId, setUserReactionTypeId] = useState<number | null>(null)
 	const [userReactionsForReplies, setUserReactionsForReplies] = useState<Map<number, number | null>>(new Map())
 	const [updatingReaction, setUpdatingReaction] = useState(false)
+	const [localReactionCounts, setLocalReactionCounts] = useState<Record<number, number> | undefined>(comment.reactionCounts)
+	const [localReactionCountsForReplies, setLocalReactionCountsForReplies] = useState<Map<number, Record<number, number>>>(new Map())
+
+	useEffect(() => {
+		setLocalReactionCounts(comment.reactionCounts)
+	}, [comment.reactionCounts])
+
+	useEffect(() => {
+		const newMap = new Map<number, Record<number, number>>()
+		replies.forEach(reply => {
+			if (reply.reactionCounts) {
+				newMap.set(reply.commentId, reply.reactionCounts)
+			}
+		})
+		setLocalReactionCountsForReplies(newMap)
+	}, [replies])
 
 	useEffect(() => {
 		if (currentUserId && comment.commentId) {
@@ -90,8 +106,8 @@ export const CommentItem = ({
 		setUpdatingReaction(true)
 		try {
 			const currentReactionCounts = isReply 
-				? replies.find(r => r.commentId === commentId)?.reactionCounts
-				: comment.reactionCounts
+				? localReactionCountsForReplies.get(commentId) || replies.find(r => r.commentId === commentId)?.reactionCounts
+				: localReactionCounts || comment.reactionCounts
 			const previousUserReactionTypeId = isReply
 				? userReactionsForReplies.get(commentId) || null
 				: userReactionTypeId
@@ -106,6 +122,11 @@ export const CommentItem = ({
 				
 				if (updatedCounts !== null) {
 					if (isReply) {
+						setLocalReactionCountsForReplies(prev => {
+							const newMap = new Map(prev)
+							newMap.set(commentId, updatedCounts)
+							return newMap
+						})
 						onUpdateReply?.(commentId, { reactionCounts: updatedCounts })
 						setUserReactionsForReplies(prev => {
 							const newMap = new Map(prev)
@@ -113,6 +134,7 @@ export const CommentItem = ({
 							return newMap
 						})
 					} else {
+						setLocalReactionCounts(updatedCounts)
 						onUpdateComment?.(commentId, { reactionCounts: updatedCounts })
 						setUserReactionTypeId(null)
 					}
@@ -141,6 +163,11 @@ export const CommentItem = ({
 					}
 					
 					if (isReply) {
+						setLocalReactionCountsForReplies(prev => {
+							const newMap = new Map(prev)
+							newMap.set(commentId, updatedCounts)
+							return newMap
+						})
 						onUpdateReply?.(commentId, { reactionCounts: updatedCounts })
 						setUserReactionsForReplies(prev => {
 							const newMap = new Map(prev)
@@ -148,6 +175,7 @@ export const CommentItem = ({
 							return newMap
 						})
 					} else {
+						setLocalReactionCounts(updatedCounts)
 						onUpdateComment?.(commentId, { reactionCounts: updatedCounts })
 						setUserReactionTypeId(newUserReaction)
 					}
@@ -197,7 +225,7 @@ export const CommentItem = ({
 							<Reactions
 								targetId={comment.commentId}
 								compact={true}
-								reactionCounts={comment.reactionCounts}
+								reactionCounts={localReactionCounts}
 								userReactionTypeId={userReactionTypeId}
 								onReactionClick={(reactionTypeId) => handleReactionClick(comment.commentId, reactionTypeId, false)}
 							/>
@@ -214,7 +242,7 @@ export const CommentItem = ({
 							<Reactions
 								targetId={comment.commentId}
 								compact={true}
-								reactionCounts={comment.reactionCounts}
+								reactionCounts={localReactionCounts}
 								userReactionTypeId={null}
 								onReactionClick={undefined}
 							/>
@@ -270,16 +298,16 @@ export const CommentItem = ({
 										})}
 									</span>
 								</div>
-								<p className='text-zinc-300 text-xs whitespace-pre-wrap'>{reply.content}</p>
-								<div className='mt-2'>
-									<Reactions
-										targetId={reply.commentId}
-										compact={true}
-										reactionCounts={reply.reactionCounts}
-										userReactionTypeId={currentUserId ? userReactionsForReplies.get(reply.commentId) || null : null}
-										onReactionClick={currentUserId ? (reactionTypeId) => handleReactionClick(reply.commentId, reactionTypeId, true) : undefined}
-									/>
-								</div>
+									<p className='text-zinc-300 text-xs whitespace-pre-wrap'>{reply.content}</p>
+									<div className='mt-2'>
+										<Reactions
+											targetId={reply.commentId}
+											compact={true}
+											reactionCounts={localReactionCountsForReplies.get(reply.commentId) || reply.reactionCounts}
+											userReactionTypeId={currentUserId ? userReactionsForReplies.get(reply.commentId) || null : null}
+											onReactionClick={currentUserId ? (reactionTypeId) => handleReactionClick(reply.commentId, reactionTypeId, true) : undefined}
+										/>
+									</div>
 							</div>
 						</div>
 					))}

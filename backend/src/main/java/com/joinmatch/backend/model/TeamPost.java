@@ -59,4 +59,8 @@ public class TeamPost {
 
      @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
      private List<TeamPostMention> mentions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TeamPostReaction> reactions = new ArrayList<>();
+
 }

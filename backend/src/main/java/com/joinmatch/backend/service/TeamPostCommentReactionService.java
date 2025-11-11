@@ -43,6 +43,7 @@ public class TeamPostCommentReactionService {
         return reactions.map(TeamPostCommentReactionResponseDto::fromEntity);
     }
 
+    @Transactional
     public TeamPostCommentReactionResponseDto update(TeamPostCommentReactionRequestDto dto) {
         var user = userRepository.findById(dto.userId())
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.userId() + " not found"));
@@ -53,6 +54,7 @@ public class TeamPostCommentReactionService {
         return getTeamPostCommentReaction(dto, reaction);
     }
 
+    @Transactional
     public void delete(TeamPostCommentReactionRequestDto dto) {
         var user = userRepository.findById(dto.userId())
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.userId() + " not found"));

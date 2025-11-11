@@ -6,6 +6,7 @@ import com.joinmatch.backend.model.TeamPost;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public record TeamPostResponseDto(
@@ -24,16 +25,27 @@ public record TeamPostResponseDto(
         Boolean isDeleted,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime deletedAt,
-        List<Integer> mentionedUserIds
+        List<Integer> mentionedUserIds,
+        Map<Integer, Integer> reactionCounts
 ) {
 
     public static TeamPostResponseDto fromEntity(TeamPost post) {
+        var author = post.getAuthor();
+
+        Map<Integer, Integer> reactionCounts = post.getReactions() != null
+                ? post.getReactions().stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getReactionType().getId(),
+                        Collectors.summingInt(r -> 1)
+                ))
+                : Map.of();
+
         return new TeamPostResponseDto(
                 post.getPostId(),
                 post.getTeam() != null ? post.getTeam().getId() : null,
-                post.getAuthor() != null ? post.getAuthor().getId() : null,
-                post.getAuthor() != null ? post.getAuthor().getName() : null,
-                post.getAuthor() != null ? post.getAuthor().getUrlOfPicture() : null,
+                author != null ? author.getId() : null,
+                author != null ? author.getName() : null,
+                author != null ? author.getUrlOfPicture() : null,
                 post.getPostType(),
                 post.getContent(),
                 post.getContentHtml(),
@@ -45,7 +57,8 @@ public record TeamPostResponseDto(
                         ? post.getMentions().stream()
                         .map(m -> m.getMentionedUser().getId())
                         .collect(Collectors.toList())
-                        : List.of()
+                        : List.of(),
+                reactionCounts
         );
     }
 }

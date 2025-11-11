@@ -82,6 +82,14 @@ export const usePosts = (teamId: number) => {
 		}
 	}, [teamId, fetchPosts])
 
+	const updatePost = useCallback((postId: number, updates: Partial<TeamPostResponseDto>) => {
+		setPosts(prev => prev.map(post =>
+			post.postId === postId
+				? { ...post, ...updates }
+				: post
+		))
+	}, [])
+
 	return {
 		posts,
 		loadingPosts,
@@ -90,6 +98,7 @@ export const usePosts = (teamId: number) => {
 		totalElements,
 		fetchPosts,
 		createPost,
+		updatePost,
 	}
 }
 

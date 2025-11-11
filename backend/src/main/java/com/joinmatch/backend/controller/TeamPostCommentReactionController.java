@@ -17,8 +17,8 @@ public class TeamPostCommentReactionController {
 
     @PostMapping
     public ResponseEntity<TeamPostCommentReactionResponseDto> create(@RequestBody TeamPostCommentReactionRequestDto dto) {
-        TeamPostCommentReactionResponseDto createdTeam = teamPostCommentReactionService.create(dto);
-        return ResponseEntity.status(201).body(createdTeam);
+        TeamPostCommentReactionResponseDto created = teamPostCommentReactionService.create(dto);
+        return ResponseEntity.status(201).body(created);
     }
 
     @PatchMapping
