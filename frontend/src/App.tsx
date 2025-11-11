@@ -24,6 +24,7 @@ import TeamsPage from './pages/TeamsPage.tsx'
 import TeamPage from './pages/TeamPage.tsx'
 import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
+import PostPage from './pages/PostPage.tsx'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
@@ -45,6 +46,7 @@ const App: React.FC = () => (
 								<Route path='about' element={<AboutUsPage />} />
 								<Route path='teams' element={<TeamsPage />} />
 								<Route path='team/:id' element={<TeamPage />} />
+								<Route path='post/:id' element={<PostPage />} />
 								<Route path='stworz-druzyne' element={<CreateTeamPage />} />
 								<Route path='kontakt' element={<ContactPage />} />
 								<Route path='faq' element={<FAQPage />} />
