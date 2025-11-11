@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import ChatSidebar from '../components/ChatSidebar'
 import ChatWindow from '../components/ChatWindow'
 import { useChat } from '../Context/ChatContext'
@@ -7,10 +7,12 @@ import { useChatSocket } from '../hooks/useChatSocket'
 import api from '../Api/axios'
 import type { ChatMessage } from '../Context/ChatContext'
 import { useLocation } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 
 const ChatPage: React.FC = () => {
 	const { accessToken } = useAuth()
 	const [myUserId, setMyUserId] = useState<number | null>(null)
+	const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
 	const {
 		messages,
@@ -29,6 +31,13 @@ const ChatPage: React.FC = () => {
 	const [input, setInput] = useState('')
 	const location = useLocation() as any
 	const state = (location && location.state) || {}
+
+	// Wykrywanie rozmiaru ekranu (mobile/desktop)
+	useEffect(() => {
+		const handleResize = () => setIsMobile(window.innerWidth < 768)
+		window.addEventListener('resize', handleResize)
+		return () => window.removeEventListener('resize', handleResize)
+	}, [])
 
 	// Połączenie socketowe
 	useChatSocket({
@@ -53,7 +62,7 @@ const ChatPage: React.FC = () => {
 
 	useEffect(() => {
 		if (!myUserId) {
-			console.log('🔴 myUserId is null, skip /conversations/preview')
+			console.log('ℹ️ myUserId is null, skip /conversations/preview')
 			return
 		}
 		api
@@ -111,17 +120,53 @@ const ChatPage: React.FC = () => {
 
 	const list = conversationId ? messages[conversationId] || [] : []
 
+	// Powrót na mobile
+	const handleBack = () => setConversationId(null)
+
 	return (
-		<div className='flex h-[calc(100vh-80px)] mt-20 bg-zinc-950'>
-			<ChatSidebar conversations={conversations} activeId={conversationId} onSelect={setConversationId} />
-			<ChatWindow
-				messages={list}
-				myUserId={myUserId ?? 0}
-				input={input}
-				setInput={setInput}
-				onSend={handleSend}
-				activeConversation={conversations.find(c => c.id === conversationId)}
-			/>
+		<div className='flex h-[calc(100vh-80px)] mt-[60px] md:mt-20 bg-zinc-950'>
+			{/* Desktop: sidebar + chat obok siebie */}
+			{!isMobile && (
+				<>
+					<ChatSidebar conversations={conversations} activeId={conversationId} onSelect={setConversationId} />
+					<ChatWindow
+						messages={list}
+						myUserId={myUserId ?? 0}
+						input={input}
+						setInput={setInput}
+						onSend={handleSend}
+						activeConversation={conversations.find(c => c.id === conversationId)}
+					/>
+				</>
+			)}
+
+			{/* Mobile: przełączany widok */}
+			{isMobile && (
+				<>
+					{!conversationId && (
+						<ChatSidebar conversations={conversations} activeId={conversationId} onSelect={setConversationId} />
+					)}
+					{conversationId && (
+						<div className='flex flex-col flex-1'>
+							<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900'>
+								<button onClick={handleBack} className='text-white'>
+									<ArrowLeft size={22} />
+								</button>
+								<div className='font-semibold text-white'>
+									{conversations.find(c => c.id === conversationId)?.name || 'Rozmowa'}
+								</div>
+							</div>
+							<ChatWindow
+								messages={list}
+								myUserId={myUserId ?? 0}
+								input={input}
+								setInput={setInput}
+								onSend={handleSend}
+							/>
+						</div>
+					)}
+				</>
+			)}
 		</div>
 	)
 }
