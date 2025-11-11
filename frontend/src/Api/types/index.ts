@@ -33,3 +33,6 @@ export type { TeamRequestResponseDto, TeamRequestRequestDto, TeamRequestStatus }
 
 // TeamMember types
 export type { TeamMember } from "./TeamMember";
+
+// ReactionType types
+export type { ReactionTypeResponseDto } from "./ReactionType";

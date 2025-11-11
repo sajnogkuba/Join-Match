@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "team_post_reaction",
         uniqueConstraints = {
-                @UniqueConstraint(name = "unique_post_reaction", columnNames = {"user_id", "post_id", "reaction_type_id"})
+                @UniqueConstraint(name = "unique_post_reaction", columnNames = {"user_id", "post_id"})
         }
 )
 @Data

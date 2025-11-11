@@ -65,6 +65,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		groupComments,
 		toggleComments,
 		loadMoreComments,
+		updateComment,
 	} = useComments()
 
 	const commentEmojiPickerRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
@@ -250,6 +251,8 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 						})
 					}}
 					replyEmojiPickerRefs={replyEmojiPickerRefs}
+					onUpdateComment={updateComment}
+					onUpdateReply={updateComment}
 				/>
 			</div>
 			

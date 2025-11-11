@@ -32,6 +32,8 @@ interface CommentSectionProps {
 	showReplyEmojiPicker: Map<string, boolean>
 	setShowReplyEmojiPicker: (key: string, show: boolean) => void
 	replyEmojiPickerRefs: React.MutableRefObject<Map<string, HTMLDivElement | null>>
+	onUpdateComment?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
+	onUpdateReply?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 }
 
 export const CommentSection = ({
@@ -59,6 +61,8 @@ export const CommentSection = ({
 	showReplyEmojiPicker,
 	setShowReplyEmojiPicker,
 	replyEmojiPickerRefs,
+	onUpdateComment,
+	onUpdateReply,
 }: CommentSectionProps) => {
 	const commentEmojiPickerRef = useRef<HTMLDivElement>(null)
 
@@ -120,6 +124,8 @@ export const CommentSection = ({
 												}
 											}
 										} as React.MutableRefObject<HTMLDivElement | null>}
+										onUpdateComment={onUpdateComment}
+										onUpdateReply={onUpdateReply}
 									/>
 								)
 							})

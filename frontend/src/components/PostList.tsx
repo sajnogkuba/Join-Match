@@ -34,6 +34,8 @@ interface PostListProps {
 	showReplyEmojiPicker: Map<string, boolean>
 	setShowReplyEmojiPicker: (key: string, show: boolean) => void
 	replyEmojiPickerRefs: React.MutableRefObject<Map<string, HTMLDivElement | null>>
+	onUpdateComment?: (postId: number, commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
+	onUpdateReply?: (postId: number, commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 }
 
 export const PostList = ({
@@ -64,6 +66,8 @@ export const PostList = ({
 	showReplyEmojiPicker,
 	setShowReplyEmojiPicker,
 	replyEmojiPickerRefs,
+	onUpdateComment,
+	onUpdateReply,
 }: PostListProps) => {
 	if (loadingPosts && posts.length === 0) {
 		return (
@@ -111,6 +115,8 @@ export const PostList = ({
 					showReplyEmojiPicker={showReplyEmojiPicker}
 					setShowReplyEmojiPicker={setShowReplyEmojiPicker}
 					replyEmojiPickerRefs={replyEmojiPickerRefs}
+					onUpdateComment={onUpdateComment ? (commentId, updates) => onUpdateComment(post.postId, commentId, updates) : undefined}
+					onUpdateReply={onUpdateReply ? (commentId, updates) => onUpdateReply(post.postId, commentId, updates) : undefined}
 				/>
 			))}
 			

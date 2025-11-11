@@ -5,6 +5,7 @@ import com.joinmatch.backend.model.TeamPostComment;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public record TeamPostCommentResponseDto(
@@ -22,11 +23,20 @@ public record TeamPostCommentResponseDto(
         Boolean isDeleted,
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime deletedAt,
-        List<Integer> replyIds
+        List<Integer> replyIds,
+        Map<Integer, Integer> reactionCounts
 ) {
 
     public static TeamPostCommentResponseDto fromEntity(TeamPostComment comment) {
         var author = comment.getAuthor();
+
+        Map<Integer, Integer> reactionCounts = comment.getReactions() != null
+                ? comment.getReactions().stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getReactionType().getId(),
+                        Collectors.summingInt(r -> 1)
+                ))
+                : Map.of();
 
         return new TeamPostCommentResponseDto(
                 comment.getCommentId(),
@@ -44,7 +54,9 @@ public record TeamPostCommentResponseDto(
                         ? comment.getReplies().stream()
                         .map(TeamPostComment::getCommentId)
                         .collect(Collectors.toList())
-                        : List.of()
+                        : List.of(),
+                reactionCounts
         );
     }
+
 }

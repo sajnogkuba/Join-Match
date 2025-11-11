@@ -162,6 +162,20 @@ export const useComments = () => {
 		await fetchComments(postId, true)
 	}
 
+	const updateComment = useCallback((postId: number, commentId: number, updates: Partial<TeamPostCommentResponseDto>) => {
+		setComments(prev => {
+			const newMap = new Map(prev)
+			const postComments = newMap.get(postId) || []
+			const updatedComments = postComments.map(comment => 
+				comment.commentId === commentId 
+					? { ...comment, ...updates }
+					: comment
+			)
+			newMap.set(postId, updatedComments)
+			return newMap
+		})
+	}, [])
+
 	return {
 		comments,
 		loadingComments,
@@ -179,6 +193,7 @@ export const useComments = () => {
 		groupComments,
 		toggleComments,
 		loadMoreComments,
+		updateComment,
 	}
 }
 

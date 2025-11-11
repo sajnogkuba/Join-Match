@@ -3,6 +3,7 @@ import Avatar from './Avatar'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
 import { CommentSection } from './CommentSection'
 import type { TeamPostCommentResponseDto } from '../Api/types/TeamPostComment'
+import { Reactions } from './Reactions'
 
 interface PostItemProps {
 	post: TeamPostResponseDto
@@ -32,6 +33,8 @@ interface PostItemProps {
 	showReplyEmojiPicker: Map<string, boolean>
 	setShowReplyEmojiPicker: (key: string, show: boolean) => void
 	replyEmojiPickerRefs: React.MutableRefObject<Map<string, HTMLDivElement | null>>
+	onUpdateComment?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
+	onUpdateReply?: (commentId: number, updates: Partial<TeamPostCommentResponseDto>) => void
 }
 
 export const PostItem = ({
@@ -59,6 +62,8 @@ export const PostItem = ({
 	showReplyEmojiPicker,
 	setShowReplyEmojiPicker,
 	replyEmojiPickerRefs,
+	onUpdateComment,
+	onUpdateReply,
 }: PostItemProps) => {
 	return (
 		<div className='rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:bg-zinc-900/60 transition-colors'>
@@ -95,6 +100,13 @@ export const PostItem = ({
 				dangerouslySetInnerHTML={{ __html: post.contentHtml }}
 			/>
 			
+			<Reactions
+				targetId={post.postId}
+				onReactionClick={(reactionTypeId) => {
+					// TODO: Implement reaction click handler when backend endpoints are ready
+				}}
+			/>
+			
 			<CommentSection
 				postId={post.postId}
 				currentUserId={currentUserId}
@@ -120,6 +132,8 @@ export const PostItem = ({
 				showReplyEmojiPicker={showReplyEmojiPicker}
 				setShowReplyEmojiPicker={setShowReplyEmojiPicker}
 				replyEmojiPickerRefs={replyEmojiPickerRefs}
+				onUpdateComment={onUpdateComment}
+				onUpdateReply={onUpdateReply}
 			/>
 		</div>
 	)

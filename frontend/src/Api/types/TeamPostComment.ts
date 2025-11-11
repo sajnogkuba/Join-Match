@@ -18,6 +18,26 @@ export interface TeamPostCommentResponseDto {
 	isDeleted: boolean
 	deletedAt: string | null
 	replyIds: number[]
+	reactionCounts?: Record<number, number>
+}
+
+export interface TeamPostCommentReactionRequestDto {
+	userId: number
+	commentId: number
+	reactionTypeId: number
+}
+
+export interface TeamPostCommentReactionResponseDto {
+	id: number
+	userId: number
+	commentId: number
+	reactionType: {
+		id: number
+		name: string
+		emoji: string
+		description: string
+	}
+	createdAt: string
 }
 
 export interface TeamPostCommentPageResponse {

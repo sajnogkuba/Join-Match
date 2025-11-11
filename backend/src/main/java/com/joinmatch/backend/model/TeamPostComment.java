@@ -50,5 +50,9 @@ public class TeamPostComment {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TeamPostCommentReaction> reactions = new ArrayList<>();
+
 }
 
