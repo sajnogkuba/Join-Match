@@ -19,7 +19,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSe
   const { unreadCounts } = useChat();
 
   return (
-    <div className="w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
+    <div className="w-full md:w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
       <div className="p-4 text-lg font-semibold text-white border-b border-zinc-800">
         💬 Twoje rozmowy
       </div>
