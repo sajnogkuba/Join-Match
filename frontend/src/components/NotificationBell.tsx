@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, X, UserPlus, Clock, Users, UserMinus } from 'lucide-react';
+import { Bell, X, UserPlus, Clock, Users, UserMinus, MessageSquare, Heart } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useNotification } from '../Context/NotificationContext';
 import type { Notification } from '../Api/types/Notification';
@@ -89,6 +89,16 @@ const NotificationBell: React.FC = () => {
       if (notification.data?.teamId) {
         navigate(`/team/${notification.data.teamId}`);
       }
+    } else if (notification.type === NotificationType.POST_COMMENT) {
+      // Nawigacja do konkretnego posta
+      if (notification.data?.postId) {
+        navigate(`/post/${notification.data.postId}`);
+      }
+    } else if (notification.type === NotificationType.POST_REACTION) {
+      // Nawigacja do konkretnego posta
+      if (notification.data?.postId) {
+        navigate(`/post/${notification.data.postId}`);
+      }
     }
   };
 
@@ -143,6 +153,10 @@ const NotificationBell: React.FC = () => {
         return <UserMinus size={16} className="text-red-400" />;
       case NotificationType.TEAM_CANCELED:
         return <Users size={16} className="text-red-400" />;
+      case NotificationType.POST_COMMENT:
+        return <MessageSquare size={16} className="text-violet-400" />;
+      case NotificationType.POST_REACTION:
+        return <Heart size={16} className="text-violet-400" />;
       default:
         return <Bell size={16} className="text-zinc-400" />;
     }

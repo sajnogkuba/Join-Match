@@ -19,11 +19,14 @@ public class TeamPostCommentService {
     private final TeamPostCommentRepository teamPostCommentRepository;
     private final TeamPostRepository teamPostRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public TeamPostCommentResponseDto createComment(TeamPostCommentResponseDto dto) {
         TeamPostComment teamPostComment = new TeamPostComment();
-        return getTeamPostCommentResponseDto(dto, teamPostComment);
+        var responseDto = getTeamPostCommentResponseDto(dto, teamPostComment);
+        notificationService.sendCommentNotifications(teamPostComment);
+        return responseDto;
     }
 
     private TeamPostCommentResponseDto getTeamPostCommentResponseDto(TeamPostCommentResponseDto dto, TeamPostComment teamPostComment) {

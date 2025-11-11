@@ -340,4 +340,59 @@ public class NotificationService {
         });
     }
 
+    public void sendCommentNotifications(TeamPostComment teamPostComment) {
+        try {
+            PostCommentNotificationDto data = new PostCommentNotificationDto(
+                    teamPostComment.getAuthor().getId(),
+                    teamPostComment.getPost().getPostId(),
+                    teamPostComment.getCommentId()
+            );
+            String dataJson = objectMapper.writeValueAsString(data);
+            Notification notification = Notification.builder()
+                    .user(teamPostComment.getPost().getAuthor())
+                    .type(NotificationType.POST_COMMENT)
+                    .title("Nowy komentarz do Twojego posta")
+                    .message(teamPostComment.getAuthor().getName() + " skomentował Twój post")
+                    .data(dataJson)
+                    .build();
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    teamPostComment.getPost().getAuthor().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
+
+    public void sendPostReactionNotification(TeamPostReaction reaction) {
+        try {
+            PostReactionNotificationDto data = new PostReactionNotificationDto(
+                    reaction.getUser().getId(),
+                    reaction.getPost().getPostId(),
+                    reaction.getReactionType().getId()
+            );
+            String dataJson = objectMapper.writeValueAsString(data);
+            Notification notification = Notification.builder()
+                    .user(reaction.getPost().getAuthor())
+                    .type(NotificationType.POST_REACTION)
+                    .title("Nowa reakcja do Twojego posta")
+                    .message(reaction.getUser().getName() + " zareagował na Twój post")
+                    .data(dataJson)
+                    .build();
+            Notification savedNotification = notificationRepository.save(notification);
+            NotificationResponseDto responseDto = NotificationResponseDto.fromNotification(savedNotification);
+            messagingTemplate.convertAndSendToUser(
+                    reaction.getPost().getAuthor().getId().toString(),
+                    "/queue/notifications",
+                    responseDto
+            );
+
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing notification data", e);
+        }
+    }
 }

@@ -10,7 +10,9 @@ export const NotificationType = {
   TEAM_REQUEST_REJECTED: 'TEAM_REQUEST_REJECTED',
   TEAM_LEFT: 'TEAM_LEFT',
   TEAM_MEMBER_REMOVED: 'TEAM_MEMBER_REMOVED',
-  TEAM_CANCELED: 'TEAM_CANCELED'
+  TEAM_CANCELED: 'TEAM_CANCELED',
+  POST_COMMENT: 'POST_COMMENT',
+  POST_REACTION: 'POST_REACTION'
 } as const;
 
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
@@ -23,6 +25,9 @@ export interface NotificationData {
   teamRequestId?: number;
   leaderId?: number;
   userId?: number;
+  postId?: number;
+  commentId?: number;
+  reactionTypeId?: number;
 }
 
 export interface Notification {

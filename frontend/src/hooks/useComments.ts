@@ -23,7 +23,7 @@ export const useComments = () => {
 				page: currentPage,
 				size: 12,
 				sort: 'createdAt',
-				direction: 'ASC' as const,
+				direction: 'DESC' as const,
 			}
 
 			const response = await api.get<TeamPostCommentPageResponse>(`/comment/${postId}`, { params })

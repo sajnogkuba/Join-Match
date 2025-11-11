@@ -21,11 +21,14 @@ public class TeamPostReactionService {
     private final UserRepository userRepository;
     private final ReactionTypeRepository reactionTypeRepository;
     private final TeamPostRepository teamPostRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public TeamPostReactionResponseDto create(TeamPostReactionRequestDto dto) {
         TeamPostReaction reaction = new TeamPostReaction();
-        return getTeamPostReaction(dto, reaction);
+        var responseDto = getTeamPostReaction(dto, reaction);
+        notificationService.sendPostReactionNotification(reaction);
+        return responseDto;
     }
 
     @Transactional
