@@ -21,6 +21,8 @@ interface PostEditorModalProps {
 	onEventLinkClick: () => void
 	emojiPickerRef: React.RefObject<HTMLDivElement | null>
 	onPublish: () => void
+	mode?: 'create' | 'edit'
+	initialContent?: string
 }
 
 export const PostEditorModal = ({
@@ -41,15 +43,22 @@ export const PostEditorModal = ({
 	onEventLinkClick,
 	emojiPickerRef,
 	onPublish,
+	mode = 'create',
+	initialContent,
 }: PostEditorModalProps) => {
 	if (!isOpen || !editor) return null
+
+	const isEditMode = mode === 'edit'
+	const modalTitle = isEditMode ? 'Edytuj post' : 'Nowy post'
+	const buttonText = isEditMode ? 'Zapisz zmiany' : 'Opublikuj'
+	const buttonLoadingText = isEditMode ? 'Zapisywanie...' : 'Publikowanie...'
 
 	return (
 		<div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
 			<div className='absolute inset-0 bg-black/60 backdrop-blur-sm' onClick={onClose} />
 			<div className='relative w-full max-w-4xl bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl max-h-[90vh] flex flex-col'>
 				<div className='flex items-center justify-between p-6 border-b border-zinc-800'>
-					<h3 className='text-white text-xl font-semibold'>Nowy post</h3>
+					<h3 className='text-white text-xl font-semibold'>{modalTitle}</h3>
 					<button
 						onClick={onClose}
 						className='p-2 rounded-xl hover:bg-zinc-800 transition-colors'
@@ -86,7 +95,9 @@ export const PostEditorModal = ({
 					<button
 						onClick={() => {
 							onClose()
-							editor.commands.clearContent()
+							if (!isEditMode) {
+								editor.commands.clearContent()
+							}
 						}}
 						className='px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-medium transition-colors'
 					>
@@ -100,10 +111,10 @@ export const PostEditorModal = ({
 						{publishing ? (
 							<>
 								<Loader2 size={18} className='animate-spin' />
-								Publikowanie...
+								{buttonLoadingText}
 							</>
 						) : (
-							'Opublikuj'
+							buttonText
 						)}
 					</button>
 				</div>

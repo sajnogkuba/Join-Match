@@ -11,6 +11,7 @@ import { PostEditorModal } from './PostEditorModal'
 import { PollModal } from './PollModal'
 import { EventLinkModal } from './EventLinkModal'
 import { PostList } from './PostList'
+import AlertModal from './AlertModal'
 
 interface TeamDiscussionTabProps {
 	teamMembers: TeamMember[]
@@ -31,6 +32,15 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [pollQuestion, setPollQuestion] = useState('')
 	const [pollOptions, setPollOptions] = useState(['', ''])
 	
+	const [editingPostId, setEditingPostId] = useState<number | null>(null)
+	const [editingPostContent, setEditingPostContent] = useState<string | null>(null)
+	const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+	const [postToDelete, setPostToDelete] = useState<number | null>(null)
+	const [deletingPost, setDeletingPost] = useState(false)
+	const [showDeleteCommentModal, setShowDeleteCommentModal] = useState(false)
+	const [commentToDelete, setCommentToDelete] = useState<{ postId: number; commentId: number } | null>(null)
+	const [deletingComment, setDeletingComment] = useState(false)
+
 	const {
 		editor,
 		colorPickerRef,
@@ -38,6 +48,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		emojiPickerRef,
 		fileInputRef,
 		handleFileSelect,
+		setEditorContent,
 	} = usePostEditor(teamMembers)
 
 	const {
@@ -48,6 +59,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		fetchPosts,
 		createPost: createPostHook,
 		updatePost,
+		updatePostAPI,
+		deletePostAPI,
+		restorePostAPI,
 	} = usePosts(teamId)
 
 	const {
@@ -67,6 +81,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		toggleComments,
 		loadMoreComments,
 		updateComment,
+		updateCommentAPI,
+		deleteCommentAPI,
+		restoreCommentAPI,
 	} = useComments()
 
 	const commentEmojiPickerRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
@@ -194,6 +211,89 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		await postComment(postId, currentUserId, null)
 	}
 
+	const handleEditPost = (postId: number) => {
+		const post = posts.find(p => p.postId === postId)
+		if (post && editor) {
+			setEditingPostId(postId)
+			setEditingPostContent(post.contentHtml)
+			setEditorContent(post.contentHtml)
+			setShowEditorModal(true)
+		}
+	}
+
+	const handleSaveEdit = async () => {
+		if (!editor || !currentUserId || !editingPostId) {
+			return
+		}
+
+		setPublishing(true)
+		try {
+			const success = await updatePostAPI(editingPostId, editor, currentUserId)
+			if (success) {
+				setShowEditorModal(false)
+				setEditingPostId(null)
+				setEditingPostContent(null)
+			}
+		} finally {
+			setPublishing(false)
+		}
+	}
+
+	const handleDeletePost = (postId: number) => {
+		setPostToDelete(postId)
+		setShowDeletePostModal(true)
+	}
+
+	const handleConfirmDelete = async () => {
+		if (!postToDelete) return
+
+		setDeletingPost(true)
+		try {
+			const success = await deletePostAPI(postToDelete)
+			if (success) {
+				setShowDeletePostModal(false)
+				setPostToDelete(null)
+			}
+		} finally {
+			setDeletingPost(false)
+		}
+	}
+
+	const handleRestorePost = async (postId: number) => {
+		const success = await restorePostAPI(postId)
+		if (success) {
+			// Post został przywrócony, stan został zaktualizowany przez restorePostAPI
+		}
+	}
+
+	const handleEditComment = async (postId: number, commentId: number, content: string) => {
+		return await updateCommentAPI(postId, commentId, content)
+	}
+
+	const handleDeleteComment = (postId: number, commentId: number) => {
+		setCommentToDelete({ postId, commentId })
+		setShowDeleteCommentModal(true)
+	}
+
+	const handleConfirmDeleteComment = async () => {
+		if (!commentToDelete) return
+
+		setDeletingComment(true)
+		try {
+			const success = await deleteCommentAPI(commentToDelete.postId, commentToDelete.commentId)
+			if (success) {
+				setShowDeleteCommentModal(false)
+				setCommentToDelete(null)
+			}
+		} finally {
+			setDeletingComment(false)
+		}
+	}
+
+	const handleRestoreComment = async (postId: number, commentId: number) => {
+		return await restoreCommentAPI(postId, commentId)
+	}
+
 	if (!editor) {
 		return null
 	}
@@ -203,7 +303,14 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 			<div className='flex items-center justify-between mb-4'>
 				<h3 className='text-white text-lg font-semibold'>Dyskusja</h3>
 				<button
-					onClick={() => setShowEditorModal(true)}
+					onClick={() => {
+						setEditingPostId(null)
+						setEditingPostContent(null)
+						if (editor) {
+							editor.commands.clearContent()
+						}
+						setShowEditorModal(true)
+					}}
 					className='inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition-colors'
 				>
 					<Plus size={18} />
@@ -255,14 +362,23 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					onUpdateComment={updateComment}
 					onUpdateReply={updateComment}
 					onUpdatePost={updatePost}
+					onEditPost={handleEditPost}
+					onDeletePost={handleDeletePost}
+					onRestorePost={handleRestorePost}
+					onEditComment={handleEditComment}
+					onDeleteComment={handleDeleteComment}
+					onRestoreComment={handleRestoreComment}
 				/>
 			</div>
 			
 			<PostEditorModal
 				isOpen={showEditorModal}
 				onClose={() => {
+					const wasEditing = editingPostId !== null
 					setShowEditorModal(false)
-					if (editor) {
+					setEditingPostId(null)
+					setEditingPostContent(null)
+					if (editor && !wasEditing) {
 						editor.commands.clearContent()
 					}
 				}}
@@ -283,7 +399,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					setShowEventLinkModal(true)
 				}}
 				emojiPickerRef={emojiPickerRef}
-				onPublish={handleCreatePost}
+				onPublish={editingPostId ? handleSaveEdit : handleCreatePost}
+				mode={editingPostId ? 'edit' : 'create'}
+				initialContent={editingPostContent || undefined}
 			/>
 
 			<PollModal
@@ -306,6 +424,38 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 				editor={editor}
 				events={events}
 				loadingEvents={loadingEvents}
+			/>
+
+			<AlertModal
+				isOpen={showDeletePostModal}
+				onClose={() => {
+					setShowDeletePostModal(false)
+					setPostToDelete(null)
+				}}
+				title='Usuń post'
+				message='Czy na pewno chcesz usunąć ten post? Post będzie widoczny jako usunięty dla innych użytkowników, ale nadal będziesz mógł go zobaczyć (wyszarzony).'
+				variant='warning'
+				showConfirm={true}
+				onConfirm={handleConfirmDelete}
+				confirmText='Usuń post'
+				cancelText='Anuluj'
+				isLoading={deletingPost}
+			/>
+
+			<AlertModal
+				isOpen={showDeleteCommentModal}
+				onClose={() => {
+					setShowDeleteCommentModal(false)
+					setCommentToDelete(null)
+				}}
+				title='Usuń komentarz'
+				message='Czy na pewno chcesz usunąć ten komentarz? Komentarz będzie widoczny jako usunięty dla innych użytkowników, ale nadal będziesz mógł go zobaczyć (wyszarzony).'
+				variant='warning'
+				showConfirm={true}
+				onConfirm={handleConfirmDeleteComment}
+				confirmText='Usuń komentarz'
+				cancelText='Anuluj'
+				isLoading={deletingComment}
 			/>
 		</div>
 	)

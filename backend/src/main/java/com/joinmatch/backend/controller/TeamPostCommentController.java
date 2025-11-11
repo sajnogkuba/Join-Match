@@ -20,6 +20,24 @@ public class TeamPostCommentController {
         return ResponseEntity.status(201).body(createdComment);
     }
 
+    @PutMapping
+    public ResponseEntity<TeamPostCommentResponseDto> updateComment(@RequestBody TeamPostCommentResponseDto dto) {
+        TeamPostCommentResponseDto updatedComment = teamPostCommentService.update(dto);
+        return ResponseEntity.ok(updatedComment);
+    }
+
+    @DeleteMapping("/{commentId}")
+    public ResponseEntity<Void> deleteComment(@PathVariable Integer commentId) {
+        teamPostCommentService.delete(commentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{commentId}/restore")
+    public ResponseEntity<Void> restoreComment(@PathVariable Integer commentId) {
+        teamPostCommentService.restore(commentId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{postId}")
     public ResponseEntity<Page<TeamPostCommentResponseDto>> getCommentsByPostId(
             @RequestParam(required = false, defaultValue = "0") Integer page,
