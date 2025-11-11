@@ -11,8 +11,6 @@ import org.springframework.data.repository.query.Param;
 public interface TeamRepository extends JpaRepository<Team, Integer>, JpaSpecificationExecutor<Team> {
     boolean existsByName(String name);
 
-    Page<Team> findAllByUserTeams_User(User user, Pageable pageable);
-
     Page<Team> findAllByLeader(User leader, Pageable pageable);
 
     Page<Team> findAllByUserTeams_UserAndLeaderIsNot(User userTeamsUser, User leader, Pageable pageable);
