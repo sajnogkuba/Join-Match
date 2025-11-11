@@ -28,7 +28,6 @@ export const useWebSocket = (userId: number | null): UseWebSocketReturn => {
         webSocketFactory: () => socket,
         debug: () => {},
         onConnect: () => {
-          console.log('WebSocket connected');
           setIsConnected(true);
           reconnectAttempts.current = 0;
           
@@ -68,7 +67,6 @@ export const useWebSocket = (userId: number | null): UseWebSocketReturn => {
     
     if (stompClientRef.current && isConnected) {
       stompClientRef.current.deactivate().then(() => {
-        console.log('WebSocket disconnected');
         setIsConnected(false);
       });
     }

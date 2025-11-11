@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
@@ -13,6 +13,7 @@ import { UserPlus, UserMinus, Users, Trophy, Star } from 'lucide-react'
 import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
+import { useNavigate } from 'react-router-dom'
 
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 
@@ -44,6 +45,7 @@ const UserProfilePage = () => {
 	const [editingOrganizerRatingId, setEditingOrganizerRatingId] = useState<number | null>(null)
 	const [editOrganizerRatingValue, setEditOrganizerRatingValue] = useState<number>(0)
 	const [editOrganizerRatingComment, setEditOrganizerRatingComment] = useState<string>('')
+	const navigate = useNavigate()
 
 	const levelToNumber = (lvl: any): number => {
 		if (typeof lvl === 'number') return lvl
@@ -83,14 +85,11 @@ const UserProfilePage = () => {
 		}
 	}
 
-	const averageRating =
-		userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
+	const averageRating = userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
 
 	const hasRated = !!(currentUserName && userRatings.some(r => r.raterName === currentUserName))
 	const hasCommonEvent =
-		viewerEvents.length > 0 &&
-		events.length > 0 &&
-		viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
+		viewerEvents.length > 0 && events.length > 0 && viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
 
 	const handleAddUserRating = async (rating: number, comment: string) => {
 		if (!currentUserId || !id) return
@@ -108,6 +107,25 @@ const UserProfilePage = () => {
 			toast.error('Nie możesz ocenić tego użytkownika.')
 		} finally {
 			setIsSending(false)
+		}
+	}
+
+	const handleOpenChat = async () => {
+		if (!currentUserId || !id) return
+		try {
+			const token = localStorage.getItem('accessToken')
+			const res = await api.post(`/conversations/direct?user1Id=${currentUserId}&user2Id=${parseInt(id)}`, null, {
+				headers: { Authorization: `Bearer ${token}` },
+			})
+
+			const conversationId = res.data?.id || res.data?.conversationId
+
+			navigate('/chat', {
+				state: { conversationId: conversationId ?? null, targetUserId: parseInt(id) },
+			})
+		} catch (err) {
+			toast.error('Nie udało się otworzyć czatu.')
+			console.error(err)
 		}
 	}
 
@@ -261,9 +279,7 @@ const UserProfilePage = () => {
 				// główny sport (heurystyka)
 				try {
 					const sports = profileRes.data.sports || []
-					const best = [...sports].sort(
-						(a: any, b: any) => levelToNumber(b.level) - levelToNumber(a.level)
-					)[0]
+					const best = [...sports].sort((a: any, b: any) => levelToNumber(b.level) - levelToNumber(a.level))[0]
 					setMainSportName(best?.name || '')
 				} catch {
 					setMainSportName('')
@@ -436,6 +452,11 @@ const UserProfilePage = () => {
 												<UserMinus size={18} /> Usuń znajomego
 											</button>
 										)}
+										<button
+											onClick={handleOpenChat}
+											className='flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition'>
+											💬 Napisz wiadomość
+										</button>
 									</div>
 								</section>
 							)}
@@ -473,13 +494,12 @@ const UserProfilePage = () => {
 								</section>
 							)}
 
-
-							{activeTab === 'Wspólne wydarzenia' && (
-								isLoadingMutual ? (
-									<div className="space-y-3">
-										<div className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
-										<div className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
-										<div className="h-10 rounded-lg bg-zinc-800/50 animate-pulse" />
+							{activeTab === 'Wspólne wydarzenia' &&
+								(isLoadingMutual ? (
+									<div className='space-y-3'>
+										<div className='h-10 rounded-lg bg-zinc-800/50 animate-pulse' />
+										<div className='h-10 rounded-lg bg-zinc-800/50 animate-pulse' />
+										<div className='h-10 rounded-lg bg-zinc-800/50 animate-pulse' />
 									</div>
 								) : (
 									<section>
@@ -491,8 +511,7 @@ const UserProfilePage = () => {
 											<p className='text-sm text-zinc-500 italic'>Brak wspólnych wydarzeń.</p>
 										)}
 									</section>
-								)
-							)}
+								))}
 
 							{activeTab === 'Oceny (uczestnik)' && (
 								<section>
@@ -585,12 +604,15 @@ const UserProfilePage = () => {
 																	</a>
 																</div>
 																<span className='text-xs text-zinc-500'>
-                                  {parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
-                                </span>
+																	{parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
+																</span>
 															</div>
 
 															<div className='mt-2 space-y-2'>
-																<StarRatingInput value={editOrganizerRatingValue} onChange={setEditOrganizerRatingValue} />
+																<StarRatingInput
+																	value={editOrganizerRatingValue}
+																	onChange={setEditOrganizerRatingValue}
+																/>
 																<textarea
 																	className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200'
 																	value={editOrganizerRatingComment}
