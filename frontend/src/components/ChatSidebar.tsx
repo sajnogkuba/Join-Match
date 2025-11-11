@@ -1,6 +1,6 @@
 import React from 'react';
 import { useChat } from '../Context/ChatContext';
-import { UserCircle } from 'lucide-react';
+import Avatar from './Avatar';
 
 interface Conversation {
   id: number;
@@ -32,15 +32,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSe
               activeId === conv.id ? 'bg-violet-700/30' : 'hover:bg-zinc-800'
             }`}
           >
-            {conv.avatarUrl ? (
-              <img
-                src={conv.avatarUrl}
-                className="w-10 h-10 rounded-full object-cover"
-                alt={conv.name}
-              />
-            ) : (
-              <UserCircle className="w-10 h-10 text-zinc-400" />
-            )}
+            <Avatar
+              src={conv.avatarUrl || null}
+              name={conv.name}
+              size="sm"
+              className="h-10 w-10"
+            />
             <div className="flex-1 min-w-0">
               <div className="text-white font-medium truncate">{conv.name}</div>
               <div className="text-sm text-zinc-400 truncate">

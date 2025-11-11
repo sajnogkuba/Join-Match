@@ -1,4 +1,3 @@
-import React, { useEffect, useRef } from 'react'
 import type { ChatMessage } from '../Context/ChatContext'
 import MessageBubble from './MessageBubble'
 import Avatar from './Avatar'
@@ -13,19 +12,13 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setInput, onSend, activeConversation }) => {
-	const bottomRef = useRef<HTMLDivElement>(null)
-
-	useEffect(() => {
-		bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-	}, [messages])
-
 	return (
 		<div className='flex flex-col flex-1 bg-zinc-950'>
 			{activeConversation && (
 				<div className='flex items-center gap-3 p-4 border-b border-zinc-800 bg-zinc-900'>
 					<Avatar
-						src={activeConversation?.avatarUrl ?? '/default-avatar.png'}
-						name={activeConversation?.name ?? ''}
+						src={activeConversation?.avatarUrl || messages.find(m => m.senderId !== myUserId)?.senderAvatarUrl}
+						name={activeConversation?.name || messages.find(m => m.senderId !== myUserId)?.senderName || ''}
 						size='sm'
 						className='h-10 w-10'
 					/>
@@ -36,7 +29,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setI
 				{messages.map((m, i) => (
 					<MessageBubble key={`${m.createdAt}-${i}`} message={m} isOwn={m.senderId === myUserId} />
 				))}
-				<div ref={bottomRef} />
 			</div>
 			<div className='flex gap-2 p-4 border-t border-zinc-800 bg-zinc-900'>
 				<input
