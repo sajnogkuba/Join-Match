@@ -31,6 +31,12 @@ public class TeamPostService {
         return getTeamPostResponseDto(teamPostRequestDto, teamPost);
     }
 
+    public TeamPostResponseDto update(Integer postId, TeamPostRequestDto teamPostRequestDto) {
+        var post = teamPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Team post with ID " + postId + " does not exist."));
+        return getTeamPostResponseDto(teamPostRequestDto, post);
+    }
+
 
     public Page<TeamPostResponseDto> findAllByTeamId(Pageable pageable, String sortBy, String direction, Integer teamId) {
         Sort sort = Sort.by(new Sort.Order(
@@ -55,8 +61,6 @@ public class TeamPostService {
         teamPost.setContentHtml(teamPostRequestDto.contentHtml());
         teamPost.setPostType(teamPostRequestDto.postType() != null ? teamPostRequestDto.postType() : PostType.TEXT);
         TeamPost savedPost = teamPostRepository.save(teamPost);
-        teamPost.setCreatedAt(LocalDateTime.now());
-        teamPost.setUpdatedAt(LocalDateTime.now());
         if (teamPostRequestDto.mentionedUserIds() != null && !teamPostRequestDto.mentionedUserIds().isEmpty()) {
             var mentions = teamPostRequestDto.mentionedUserIds().stream()
                     .map(userId -> {
@@ -65,7 +69,6 @@ public class TeamPostService {
                         var mention = new TeamPostMention();
                         mention.setPost(teamPost);
                         mention.setMentionedUser(mentionedUser);
-                        mention.setCreatedAt(LocalDateTime.now());
                         return mention;
                     })
                     .collect(Collectors.toList());
@@ -73,5 +76,11 @@ public class TeamPostService {
             teamPost.setMentions(mentions);
         }
         return TeamPostResponseDto.fromEntity(savedPost);
+    }
+
+    public void delete(Integer postId) {
+        var post = teamPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Team post with ID " + postId + " does not exist."));
+        teamPostRepository.delete(post);
     }
 }

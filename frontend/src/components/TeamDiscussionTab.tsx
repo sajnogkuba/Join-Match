@@ -11,6 +11,7 @@ import { PostEditorModal } from './PostEditorModal'
 import { PollModal } from './PollModal'
 import { EventLinkModal } from './EventLinkModal'
 import { PostList } from './PostList'
+import AlertModal from './AlertModal'
 
 interface TeamDiscussionTabProps {
 	teamMembers: TeamMember[]
@@ -33,6 +34,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	
 	const [editingPostId, setEditingPostId] = useState<number | null>(null)
 	const [editingPostContent, setEditingPostContent] = useState<string | null>(null)
+	const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+	const [postToDelete, setPostToDelete] = useState<number | null>(null)
+	const [deletingPost, setDeletingPost] = useState(false)
 
 	const {
 		editor,
@@ -52,6 +56,8 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 		fetchPosts,
 		createPost: createPostHook,
 		updatePost,
+		updatePostAPI,
+		deletePostAPI,
 	} = usePosts(teamId)
 
 	const {
@@ -213,18 +219,36 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 			return
 		}
 
-		// TODO: Backend integration - call API to update post
-		// For now, just close the modal
 		setPublishing(true)
 		try {
-			// Placeholder for future API call
-			// await updatePostAPI(editingPostId, editor.getHTML())
-			
-			setShowEditorModal(false)
-			setEditingPostId(null)
-			setEditingPostContent(null)
+			const success = await updatePostAPI(editingPostId, editor, currentUserId)
+			if (success) {
+				setShowEditorModal(false)
+				setEditingPostId(null)
+				setEditingPostContent(null)
+			}
 		} finally {
 			setPublishing(false)
+		}
+	}
+
+	const handleDeletePost = (postId: number) => {
+		setPostToDelete(postId)
+		setShowDeletePostModal(true)
+	}
+
+	const handleConfirmDelete = async () => {
+		if (!postToDelete) return
+
+		setDeletingPost(true)
+		try {
+			const success = await deletePostAPI(postToDelete)
+			if (success) {
+				setShowDeletePostModal(false)
+				setPostToDelete(null)
+			}
+		} finally {
+			setDeletingPost(false)
 		}
 	}
 
@@ -297,6 +321,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 					onUpdateReply={updateComment}
 					onUpdatePost={updatePost}
 					onEditPost={handleEditPost}
+					onDeletePost={handleDeletePost}
 				/>
 			</div>
 			
@@ -353,6 +378,22 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 				editor={editor}
 				events={events}
 				loadingEvents={loadingEvents}
+			/>
+
+			<AlertModal
+				isOpen={showDeletePostModal}
+				onClose={() => {
+					setShowDeletePostModal(false)
+					setPostToDelete(null)
+				}}
+				title='Usuń post'
+				message='Czy na pewno chcesz usunąć ten post? Post będzie widoczny jako usunięty dla innych użytkowników, ale nadal będziesz mógł go zobaczyć (wyszarzony).'
+				variant='warning'
+				showConfirm={true}
+				onConfirm={handleConfirmDelete}
+				confirmText='Usuń post'
+				cancelText='Anuluj'
+				isLoading={deletingPost}
 			/>
 		</div>
 	)

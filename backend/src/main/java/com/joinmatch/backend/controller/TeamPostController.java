@@ -21,6 +21,20 @@ public class TeamPostController {
         return ResponseEntity.status(201).body(createdPost);
     }
 
+    @PutMapping("/{postId}")
+    public ResponseEntity<TeamPostResponseDto> updateTeamPost(
+            @PathVariable Integer postId,
+            @RequestBody TeamPostRequestDto teamPostRequestDto) {
+        TeamPostResponseDto updatedPost = teamPostService.update(postId, teamPostRequestDto);
+        return ResponseEntity.ok(updatedPost);
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<Void> deleteTeamPost(@PathVariable Integer postId) {
+        teamPostService.delete(postId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{teamId}")
     public ResponseEntity<Page<TeamPostResponseDto>> getTeamPostById(
             @RequestParam(required = false, defaultValue = "0") Integer page,

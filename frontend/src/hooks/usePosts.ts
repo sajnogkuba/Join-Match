@@ -83,12 +83,93 @@ export const usePosts = (teamId: number) => {
 	}, [teamId, fetchPosts])
 
 	const updatePost = useCallback((postId: number, updates: Partial<TeamPostResponseDto>) => {
-		setPosts(prev => prev.map(post =>
-			post.postId === postId
-				? { ...post, ...updates }
-				: post
-		))
+		setPosts(prev => prev.map(post => {
+			if (post.postId === postId) {
+				// Jeśli updates jest pełnym obiektem TeamPostResponseDto, zastąp całkowicie
+				// W przeciwnym razie zaktualizuj tylko wskazane pola
+				const updated = { ...post, ...updates }
+				console.log('Updating post in state:', {
+					postId,
+					oldUpdatedAt: post.updatedAt,
+					newUpdatedAt: updated.updatedAt,
+					oldCreatedAt: post.createdAt,
+					newCreatedAt: updated.createdAt
+				})
+				return updated
+			}
+			return post
+		}))
 	}, [])
+
+	const updatePostAPI = useCallback(async (
+		postId: number,
+		editor: ReturnType<typeof useEditor>,
+		currentUserId: number
+	) => {
+		if (!editor || !currentUserId) {
+			alert('Musisz być zalogowany, aby edytować post')
+			return false
+		}
+
+		let htmlContent = editor.getHTML()
+		let textContent = editor.getText().trim()
+
+		if (!textContent || textContent === 'Wpisz swoją wiadomość tutaj...') {
+			alert('Post nie może być pusty')
+			return false
+		}
+
+		try {
+			const mentionedUserIds = extractMentionedUserIds(htmlContent)
+			
+			const postData: TeamPostRequestDto = {
+				teamId,
+				authorId: currentUserId,
+				content: textContent,
+				contentHtml: htmlContent,
+				postType: 'TEXT' as PostType,
+				mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+			}
+
+			const response = await api.put<TeamPostResponseDto>(`/team-post/${postId}`, postData)
+			const updatedPost = response.data
+			
+			// Debug: sprawdź czy updatedAt jest różne od createdAt
+			console.log('Updated post:', {
+				postId: updatedPost.postId,
+				createdAt: updatedPost.createdAt,
+				updatedAt: updatedPost.updatedAt,
+				isDifferent: new Date(updatedPost.updatedAt).getTime() > new Date(updatedPost.createdAt).getTime() + 1000
+			})
+			
+			// Aktualizuj post w liście - upewnij się że aktualizujemy cały obiekt
+			updatePost(postId, updatedPost)
+			return true
+		} catch (error: any) {
+			console.error('Błąd edycji posta:', error)
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Nie udało się zapisać zmian: ${errorMessage}`)
+			return false
+		}
+	}, [teamId, updatePost])
+
+	const deletePostAPI = useCallback(async (postId: number) => {
+		try {
+			await api.delete(`/team-post/${postId}`)
+			
+			// Aktualizuj post w liście - ustaw isDeleted na true i deletedAt
+			updatePost(postId, {
+				isDeleted: true,
+				deletedAt: new Date().toISOString(),
+			})
+			return true
+		} catch (error: any) {
+			console.error('Błąd usuwania posta:', error)
+			const errorMessage = error.response?.data?.message || error.message || 'Nieznany błąd'
+			alert(`Nie udało się usunąć posta: ${errorMessage}`)
+			return false
+		}
+	}, [updatePost])
 
 	return {
 		posts,
@@ -99,6 +180,8 @@ export const usePosts = (teamId: number) => {
 		fetchPosts,
 		createPost,
 		updatePost,
+		updatePostAPI,
+		deletePostAPI,
 	}
 }
 
