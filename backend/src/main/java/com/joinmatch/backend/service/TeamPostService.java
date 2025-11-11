@@ -16,7 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,6 +47,12 @@ public class TeamPostService {
                 .orElseThrow(() -> new IllegalArgumentException("Team with ID " + teamId + " does not exist."));
         Page<TeamPost> posts = teamPostRepository.findAllByTeam(team, sortedPageable);
         return posts.map(TeamPostResponseDto::fromEntity);
+    }
+
+    public TeamPostResponseDto findById(Integer postId) {
+        TeamPost post = teamPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Team post with ID " + postId + " does not exist."));
+        return TeamPostResponseDto.fromEntity(post);
     }
 
     private TeamPostResponseDto getTeamPostResponseDto(TeamPostRequestDto teamPostRequestDto, TeamPost teamPost) {

@@ -189,6 +189,16 @@ export const usePosts = (teamId: number) => {
 		}
 	}, [updatePost])
 
+	const fetchPostById = useCallback(async (postId: number): Promise<TeamPostResponseDto | null> => {
+		try {
+			const response = await api.get<TeamPostResponseDto>(`/team-post/post/${postId}`)
+			return response.data
+		} catch (error) {
+			console.error('Błąd pobierania posta:', error)
+			return null
+		}
+	}, [])
+
 	return {
 		posts,
 		loadingPosts,
@@ -201,6 +211,7 @@ export const usePosts = (teamId: number) => {
 		updatePostAPI,
 		deletePostAPI,
 		restorePostAPI,
+		fetchPostById,
 	}
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { TeamDetails } from '../Api/types/Team'
 import type { User } from '../Api/types/User'
 import type { SearchResult, Friend } from '../Api/types/Friends'
@@ -22,6 +22,7 @@ dayjs.locale('pl')
 const TeamPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const [searchParams] = useSearchParams()
 	const [team, setTeam] = useState<TeamDetails | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -64,6 +65,14 @@ const TeamPage: React.FC = () => {
 	const [saveError, setSaveError] = useState<string | null>(null)
 	const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 	const [activeTab, setActiveTab] = useState<'informacje' | 'dyskusja'>('informacje')
+
+	// Check URL query parameter for tab
+	useEffect(() => {
+		const tabParam = searchParams.get('tab')
+		if (tabParam === 'dyskusja') {
+			setActiveTab('dyskusja')
+		}
+	}, [searchParams])
 
 	useEffect(() => {
 		if (!id) {

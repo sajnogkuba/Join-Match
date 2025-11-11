@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Edit, Trash2, RotateCcw } from 'lucide-react'
+import { Edit, Trash2, RotateCcw, ExternalLink } from 'lucide-react'
 import Avatar from './Avatar'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
 import { CommentSection } from './CommentSection'
@@ -194,52 +194,61 @@ export const PostItem = ({
 					>
 						{post.authorName}
 					</Link>
-					<p className='text-xs text-zinc-400'>
-						{new Date(post.createdAt).toLocaleDateString('pl-PL', {
-							day: 'numeric',
-							month: 'long',
-							year: 'numeric',
-							hour: '2-digit',
-							minute: '2-digit',
-						})}
-						{(() => {
-							if (!post.updatedAt) return null
-							const createdAt = new Date(post.createdAt).getTime()
-							const updatedAt = new Date(post.updatedAt).getTime()
-							// Sprawdź czy updatedAt jest późniejsze niż createdAt (z tolerancją 1 sekundy na różnice w zapisie)
-							if (updatedAt > createdAt + 1000) {
-								return (
-									<>
-										<br />
-										<span className='text-zinc-500 italic'>
-											Edytowano - {new Date(post.updatedAt).toLocaleDateString('pl-PL', {
-												day: 'numeric',
-												month: 'long',
-												year: 'numeric',
-												hour: '2-digit',
-												minute: '2-digit',
-											})}
-										</span>
-									</>
-								)
-							}
-							return null
-						})()}
-						{isDeleted && post.deletedAt && (
-							<>
-								<br />
-								<span className='text-zinc-500 italic'>
-									Usunięto - {new Date(post.deletedAt).toLocaleDateString('pl-PL', {
-										day: 'numeric',
-										month: 'long',
-										year: 'numeric',
-										hour: '2-digit',
-										minute: '2-digit',
-									})}
-								</span>
-							</>
-						)}
-					</p>
+					<div className='flex items-center gap-2'>
+						<p className='text-xs text-zinc-400'>
+							{new Date(post.createdAt).toLocaleDateString('pl-PL', {
+								day: 'numeric',
+								month: 'long',
+								year: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit',
+							})}
+							{(() => {
+								if (!post.updatedAt) return null
+								const createdAt = new Date(post.createdAt).getTime()
+								const updatedAt = new Date(post.updatedAt).getTime()
+								// Sprawdź czy updatedAt jest późniejsze niż createdAt (z tolerancją 1 sekundy na różnice w zapisie)
+								if (updatedAt > createdAt + 1000) {
+									return (
+										<>
+											<br />
+											<span className='text-zinc-500 italic'>
+												Edytowano - {new Date(post.updatedAt).toLocaleDateString('pl-PL', {
+													day: 'numeric',
+													month: 'long',
+													year: 'numeric',
+													hour: '2-digit',
+													minute: '2-digit',
+												})}
+											</span>
+										</>
+									)
+								}
+								return null
+							})()}
+							{isDeleted && post.deletedAt && (
+								<>
+									<br />
+									<span className='text-zinc-500 italic'>
+										Usunięto - {new Date(post.deletedAt).toLocaleDateString('pl-PL', {
+											day: 'numeric',
+											month: 'long',
+											year: 'numeric',
+											hour: '2-digit',
+											minute: '2-digit',
+										})}
+									</span>
+								</>
+							)}
+						</p>
+						<Link
+							to={`/post/${post.postId}`}
+							className='p-1 rounded-lg text-zinc-500 hover:text-violet-400 hover:bg-zinc-800 transition-colors'
+							title='Otwórz post w nowej stronie'
+						>
+							<ExternalLink size={14} />
+						</Link>
+					</div>
 				</div>
 				{isAuthor && !isDeleted && (
 					<div className='flex items-center gap-1'>
