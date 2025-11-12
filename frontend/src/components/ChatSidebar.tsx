@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { useChat } from '../Context/ChatContext'
 import Avatar from './Avatar'
@@ -19,6 +19,7 @@ interface ChatSidebarProps {
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSelect }) => {
 	const { unreadCounts } = useChat()
+	const orderedConversations = useMemo(() => [...conversations].reverse(), [conversations])
 
 	return (
 		<div className='w-full md:w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col'>
@@ -27,7 +28,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSe
 				Twoje rozmowy
 			</div>
 			<div className='flex-1 overflow-y-auto dark-scrollbar'>
-				{conversations.map(conv => (
+				{orderedConversations.map(conv => (
 					<div
 						key={conv.id}
 						onClick={() => onSelect(conv.id)}
