@@ -8,12 +8,12 @@ import com.joinmatch.backend.enums.ConversationType;
 import com.joinmatch.backend.model.Conversation;
 import com.joinmatch.backend.model.Message;
 import com.joinmatch.backend.model.User;
-import com.joinmatch.backend.repository.ConversationRepository;
-import com.joinmatch.backend.repository.MessageRepository;
-import com.joinmatch.backend.repository.UserRepository;
+import com.joinmatch.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.joinmatch.backend.model.UserEvent;
+import com.joinmatch.backend.model.UserTeam;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +26,30 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+    private final EventRepository eventRepository;
+    private final TeamRepository teamRepository;
+
+    private ConversationDto mapToConversationDto(Conversation conversation) {
+        List<ParticipantDto> participants = conversation.getParticipants().stream()
+                .map(u -> new ParticipantDto(u.getId(), u.getName(), u.getUrlOfPicture()))
+                .toList();
+
+        Integer teamId = conversation.getTeam() != null ? conversation.getTeam().getId() : null;
+        String teamName = conversation.getTeam() != null ? conversation.getTeam().getName() : null;
+        Integer eventId = conversation.getEvent() != null ? conversation.getEvent().getEventId() : null;
+        String eventName = conversation.getEvent() != null ? conversation.getEvent().getEventName() : null;
+
+        return new ConversationDto(
+                conversation.getId(),
+                conversation.getType().name(),
+                participants,
+                teamId,
+                teamName,
+                eventId,
+                eventName
+        );
+    }
+
 
     @Transactional
     public ChatMessageDto saveMessage(ChatMessageDto dto) {
@@ -102,7 +126,7 @@ public class ChatService {
                 .map(u -> new ParticipantDto(u.getId(), u.getName(), u.getUrlOfPicture()))
                 .toList();
 
-        return new ConversationDto(conversation.getId(), conversation.getType().name(), participants);
+        return new ConversationDto(conversation.getId(), conversation.getType().name(), participants, null, null, null, null);
     }
     public List<Conversation> getUserConversations(Integer userId) {
         return conversationRepository.findByParticipantId(userId);
@@ -133,5 +157,54 @@ public class ChatService {
             );
         }).collect(Collectors.toList());
     }
+
+    @Transactional
+    public ConversationDto createTeamConversation(Integer teamId) {
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+
+        Optional<Conversation> existing = conversationRepository.findByTeamId(teamId);
+        if (existing.isPresent()) {
+            return mapToConversationDto(existing.get());
+        }
+
+        List<User> participants = team.getUserTeams().stream()
+                .map(UserTeam::getUser)
+                .toList();
+
+        Conversation conversation = Conversation.builder()
+                .type(ConversationType.TEAM)
+                .team(team)
+                .participants(participants)
+                .build();
+
+        Conversation saved = conversationRepository.save(conversation);
+        return mapToConversationDto(saved);
+    }
+
+    @Transactional
+    public ConversationDto createEventConversation(Integer eventId) {
+        var event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+
+        Optional<Conversation> existing = conversationRepository.findByEventId(eventId);
+        if (existing.isPresent()) {
+            return mapToConversationDto(existing.get());
+        }
+
+        List<User> participants = event.getUserEvents().stream()
+                .map(UserEvent::getUser)
+                .toList();
+
+        Conversation conversation = Conversation.builder()
+                .type(ConversationType.EVENT)
+                .event(event)
+                .participants(participants)
+                .build();
+
+        Conversation saved = conversationRepository.save(conversation);
+        return mapToConversationDto(saved);
+    }
+
 
 }

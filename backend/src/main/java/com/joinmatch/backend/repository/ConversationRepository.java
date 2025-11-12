@@ -28,5 +28,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, Inte
 """)
     List<Conversation> findByParticipantId(@Param("userId") Integer userId);
 
+    Optional<Conversation> findByTeamId(Integer teamId);
+    Optional<Conversation> findByEventId(Integer eventId);
+
 
 }
