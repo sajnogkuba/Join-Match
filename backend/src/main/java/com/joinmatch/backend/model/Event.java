@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name= "event")
@@ -71,4 +73,6 @@ public class Event {
 
     @OneToMany(mappedBy = "event")
     private List<Conversation> conversations;
+    @OneToMany(mappedBy = "reportedEvent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportEvent> reportEvents = new HashSet<>();
 }
