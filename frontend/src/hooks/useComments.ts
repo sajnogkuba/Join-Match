@@ -23,7 +23,7 @@ export const useComments = () => {
 				page: currentPage,
 				size: 12,
 				sort: 'createdAt',
-				direction: 'ASC' as const,
+				direction: 'DESC' as const,
 			}
 
 			const response = await api.get<TeamPostCommentPageResponse>(`/comment/${postId}`, { params })
@@ -33,7 +33,9 @@ export const useComments = () => {
 				setComments(prev => {
 					const newMap = new Map(prev)
 					const existingComments = newMap.get(postId) || []
-					newMap.set(postId, [...existingComments, ...(data.content || [])])
+					const existingIds = new Set(existingComments.map(c => c.commentId))
+					const newComments = (data.content || []).filter(c => !existingIds.has(c.commentId))
+					newMap.set(postId, [...existingComments, ...newComments])
 					return newMap
 				})
 			} else {

@@ -30,6 +30,8 @@ export interface TeamPostCommentReactionRequestDto {
 export interface TeamPostCommentReactionResponseDto {
 	id: number
 	userId: number
+	userName?: string
+	userAvatarUrl?: string | null
 	commentId: number
 	reactionType: {
 		id: number

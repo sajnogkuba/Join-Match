@@ -9,7 +9,7 @@ import UserRatingForm from '../components/UserRatingForm'
 import type { UsersResponse } from '../Api/types/User'
 import type { UserRatingResponse, OrganizerRatingResponse } from '../Api/types/Rating'
 import { toast } from 'sonner'
-import { UserPlus, UserMinus, Users, Trophy, Star } from 'lucide-react'
+import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare } from 'lucide-react'
 import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
@@ -455,7 +455,7 @@ const UserProfilePage = () => {
 										<button
 											onClick={handleOpenChat}
 											className='flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition'>
-											💬 Napisz wiadomość
+											<MessageSquare size={18} /> Napisz wiadomość
 										</button>
 									</div>
 								</section>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { MessageSquare } from 'lucide-react';
 import { useChat } from '../Context/ChatContext';
 import Avatar from './Avatar';
 
@@ -20,10 +21,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ conversations, activeId, onSe
 
   return (
     <div className="w-full md:w-80 bg-zinc-900 border-r border-zinc-800 flex flex-col">
-      <div className="p-4 text-lg font-semibold text-white border-b border-zinc-800">
-        💬 Twoje rozmowy
+      <div className="flex items-center gap-2 p-4 text-lg font-semibold text-white border-b border-zinc-800">
+        <MessageSquare size={20} className="text-violet-400" />
+        Twoje rozmowy
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto dark-scrollbar">
         {conversations.map(conv => (
           <div
             key={conv.id}

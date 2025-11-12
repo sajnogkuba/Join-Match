@@ -16,6 +16,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @AllArgsConstructor
@@ -24,11 +27,14 @@ public class TeamPostCommentReactionService {
     private final UserRepository userRepository;
     private final TeamPostCommentRepository teamPostCommentRepository;
     private final ReactionTypeRepository reactionTypeRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public TeamPostCommentReactionResponseDto create(TeamPostCommentReactionRequestDto dto) {
         TeamPostCommentReaction reaction = new TeamPostCommentReaction();
-        return getTeamPostCommentReaction(dto, reaction);
+        var responseDto = getTeamPostCommentReaction(dto, reaction);
+        notificationService.sendCommentReactionNotification(reaction);
+        return responseDto;
     }
 
     public Page<TeamPostCommentReactionResponseDto> findAllByCommentId(Pageable pageable, String sortBy, String direction, Integer commentId) {
@@ -51,7 +57,9 @@ public class TeamPostCommentReactionService {
                 .orElseThrow(() -> new IllegalArgumentException("Comment with id " + dto.commentId() + " not found"));
         var reaction = teamPostCommentReactionRepository.findByUserAndComment(user, comment)
                 .orElseThrow(() -> new IllegalArgumentException("Reaction by user with id " + dto.userId() + " on comment with id " + dto.commentId() + " not found"));
-        return getTeamPostCommentReaction(dto, reaction);
+        var responseDto = getTeamPostCommentReaction(dto, reaction);
+        notificationService.sendCommentReactionNotification(reaction);
+        return responseDto;
     }
 
     @Transactional
@@ -63,6 +71,22 @@ public class TeamPostCommentReactionService {
         var reaction = teamPostCommentReactionRepository.findByUserAndComment(user, comment)
                 .orElseThrow(() -> new IllegalArgumentException("Reaction by user with id " + dto.userId() + " on comment with id " + dto.commentId() + " not found"));
         teamPostCommentReactionRepository.delete(reaction);
+    }
+
+    public Map<Integer, Integer> getUserReactionsBatch(List<Integer> commentIds, Integer userId) {
+        if (commentIds == null || commentIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        
+        List<TeamPostCommentReaction> reactions = teamPostCommentReactionRepository
+                .findByComment_CommentIdInAndUser_Id(commentIds, userId);
+        
+        Map<Integer, Integer> result = new HashMap<>();
+        for (TeamPostCommentReaction reaction : reactions) {
+            result.put(reaction.getComment().getCommentId(), reaction.getReactionType().getId());
+        }
+        
+        return result;
     }
 
     private TeamPostCommentReactionResponseDto getTeamPostCommentReaction(TeamPostCommentReactionRequestDto dto, TeamPostCommentReaction reaction) {
