@@ -93,6 +93,20 @@ public class TeamService {
         teamRepository.delete(team);
     }
 
+    public TeamResponseDto updateTeam(Integer id, TeamRequestDto teamRequestDto) {
+        Team team = teamRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + id));
+        Sport sport = sportRepository.findById(teamRequestDto.sportTypeId())
+                .orElseThrow(() -> new IllegalArgumentException("Sport type not found with id: " + teamRequestDto.sportTypeId()));
+        team.setName(teamRequestDto.name());
+        team.setCity(teamRequestDto.city());
+        team.setSportType(sport);
+        team.setDescription(teamRequestDto.description());
+        team.setPhotoUrl(teamRequestDto.photoUrl());
+        Team updatedTeam = teamRepository.save(team);
+        return TeamResponseDto.fromTeam(updatedTeam);
+    }
+
 
     private TeamResponseDto getTeamResponseDto(TeamRequestDto teamRequestDto, Team team) {
         Sport sport = sportRepository.findById(teamRequestDto.sportTypeId())
@@ -112,19 +126,5 @@ public class TeamService {
         leader.getUserTeams().add(userTeam);
         userRepository.save(leader);
         return TeamResponseDto.fromTeam(savedTeam);
-    }
-
-    public TeamResponseDto updateTeam(Integer id, TeamRequestDto teamRequestDto) {
-        Team team = teamRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + id));
-        Sport sport = sportRepository.findById(teamRequestDto.sportTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("Sport type not found with id: " + teamRequestDto.sportTypeId()));
-        team.setName(teamRequestDto.name());
-        team.setCity(teamRequestDto.city());
-        team.setSportType(sport);
-        team.setDescription(teamRequestDto.description());
-        team.setPhotoUrl(teamRequestDto.photoUrl());
-        Team updatedTeam = teamRepository.save(team);
-        return TeamResponseDto.fromTeam(updatedTeam);
     }
 }

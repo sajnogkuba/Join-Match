@@ -4,6 +4,8 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-init-sql: SET timezone = 'Europe/Warsaw'
 #    jpa:
 #      hibernate:
 #        ddl-auto: none

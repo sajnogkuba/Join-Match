@@ -17,6 +17,7 @@ export const Footer: React.FC = () => (
             <li><a href="/" className="hover:text-purple-300 transition-colors">Strona główna</a></li>
             <li><a href="/events" className="hover:text-purple-300 transition-colors">Wydarzenia</a></li>
             <li><a href="/about" className="hover:text-purple-300 transition-colors">O nas</a></li>
+            <li><a href="/teams" className="hover:text-purple-300 transition-colors">Drużyny</a></li>
           </ul>
         </div>
         <div>

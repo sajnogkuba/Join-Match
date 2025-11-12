@@ -4,6 +4,12 @@ export type { SimpleUser, SidebarItemKey } from "./Profile";
 // Sports types
 export type { SportTypeOption, UserSport, UserSportsResponse } from "./Sports";
 
+// TeamPost types
+export type { TeamPostRequestDto, TeamPostResponseDto, PostType } from "./TeamPost";
+
+// TeamPostComment types
+export type { TeamPostCommentRequestDto, TeamPostCommentResponseDto, TeamPostCommentPageResponse } from "./TeamPostComment";
+
 // Events types
 export type { SavedEventRef, EventDetails } from "./Events";
 
@@ -27,3 +33,6 @@ export type { TeamRequestResponseDto, TeamRequestRequestDto, TeamRequestStatus }
 
 // TeamMember types
 export type { TeamMember } from "./TeamMember";
+
+// ReactionType types
+export type { ReactionTypeResponseDto } from "./ReactionType";
