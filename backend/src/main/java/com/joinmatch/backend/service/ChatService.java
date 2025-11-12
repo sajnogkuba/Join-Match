@@ -136,23 +136,35 @@ public class ChatService {
         List<Conversation> convos = conversationRepository.findByParticipantId(userId);
 
         return convos.stream().map(c -> {
-            User other = c.getParticipants().stream()
-                    .filter(u -> !u.getId().equals(userId))
-                    .findFirst()
-                    .orElse(null);
-
             Message last = messageRepository
                     .findTopByConversationIdOrderByCreatedAtDesc(c.getId())
                     .orElse(null);
-
             String lastMessage = (last != null)
                     ? last.getSender().getName() + ": " + last.getContent()
                     : "Brak wiadomości";
 
+            String name;
+            String avatarUrl;
+
+            if (c.getType() == ConversationType.EVENT) {
+                name = c.getEvent() != null ? c.getEvent().getEventName() : "Czat wydarzenia";
+                avatarUrl = c.getEvent() != null ? c.getEvent().getImageUrl() : null;
+            } else if (c.getType() == ConversationType.TEAM) {
+                name = c.getTeam() != null ? c.getTeam().getName() : "Czat drużyny";
+                avatarUrl = c.getTeam() != null ? c.getTeam().getPhotoUrl() : null;
+            } else {
+                User other = c.getParticipants().stream()
+                        .filter(u -> !u.getId().equals(userId))
+                        .findFirst()
+                        .orElse(null);
+                name = other != null ? other.getName() : "Rozmowa prywatna";
+                avatarUrl = other != null ? other.getUrlOfPicture() : null;
+            }
+
             return new ConversationPreviewDto(
                     c.getId(),
-                    other != null ? other.getName() : "Rozmowa prywatna",
-                    other != null ? other.getUrlOfPicture() : null,
+                    name,
+                    avatarUrl,
                     lastMessage
             );
         }).collect(Collectors.toList());
@@ -187,7 +199,7 @@ public class ChatService {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Event not found"));
 
-        Optional<Conversation> existing = conversationRepository.findByEventId(eventId);
+        Optional<Conversation> existing = conversationRepository.findByEventEventId(eventId);
         if (existing.isPresent()) {
             return mapToConversationDto(existing.get());
         }
@@ -205,6 +217,36 @@ public class ChatService {
         Conversation saved = conversationRepository.save(conversation);
         return mapToConversationDto(saved);
     }
+
+    @Transactional
+    public void addUserToEventChat(Integer eventId, Integer userId) {
+        var convOpt = conversationRepository.findByEventEventId(eventId);
+        if (convOpt.isEmpty()) return;
+
+        Conversation conv = convOpt.get();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!conv.getParticipants().contains(user)) {
+            conv.getParticipants().add(user);
+            conversationRepository.save(conv);
+        }
+    }
+
+    @Transactional
+    public void removeUserFromEventChat(Integer eventId, Integer userId) {
+        var convOpt = conversationRepository.findByEventEventId(eventId);
+        if (convOpt.isEmpty()) return;
+
+        Conversation conv = convOpt.get();
+        conv.setParticipants(
+                conv.getParticipants().stream()
+                        .filter(u -> !u.getId().equals(userId))
+                        .collect(Collectors.toList())
+        );
+        conversationRepository.save(conv);
+    }
+
 
 
 }

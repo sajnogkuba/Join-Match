@@ -27,15 +27,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setI
 						size='sm'
 						className='h-10 w-10'
 					/>
-					{otherUserId ? (
+					{activeConversation?.type === 'PRIVATE' && otherUserId ? (
 						<Link
 							to={`/profile/${otherUserId}`}
-							className='text-white font-semibold hover:text-violet-400 transition-colors cursor-pointer'
-						>
+							className='text-white font-semibold hover:text-violet-400 transition-colors cursor-pointer'>
 							{activeConversation.name}
 						</Link>
 					) : (
-						<div className='text-white font-semibold'>{activeConversation.name}</div>
+						<div className='text-white font-semibold'>
+							{activeConversation?.type === 'TEAM'
+								? `Czat drużyny: ${activeConversation.name}`
+								: activeConversation?.type === 'EVENT'
+								? `Czat wydarzenia: ${activeConversation.name}`
+								: activeConversation?.name}
+						</div>
 					)}
 				</div>
 			)}

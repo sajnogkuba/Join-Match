@@ -549,6 +549,33 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
+							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+								<h3 className='text-white text-lg font-semibold mb-3'>Czat wydarzenia</h3>
+								<p className='text-sm text-zinc-400 mb-4'>
+									Rozmawiaj z innymi uczestnikami wydarzenia w dedykowanym czacie grupowym.
+								</p>
+								<button
+									onClick={async () => {
+										if (!id) return
+										try {
+											const res = await axiosInstance.post(`/event/${id}`)
+											const conversationId = res.data?.id
+											if (conversationId) {
+												navigate('/chat', { state: { conversationId } })
+											} else {
+												toast.error('Nie udało się otworzyć czatu.')
+											}
+										} catch (e) {
+											console.error('❌ Błąd przy otwieraniu czatu wydarzenia:', e)
+											toast.error('Nie udało się otworzyć czatu wydarzenia.')
+										}
+									}}
+									className='w-full rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 text-sm font-medium transition flex items-center justify-center gap-2'>
+									<MessageCircle size={16} />
+									Przejdź do czatu wydarzenia
+								</button>
+							</div>
+
 							{/* Info grid */}
 							<div className='grid grid-cols-2 gap-4'>
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
