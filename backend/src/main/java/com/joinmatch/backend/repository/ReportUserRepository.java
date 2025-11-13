@@ -1,0 +1,7 @@
+package com.joinmatch.backend.repository;
+
+import com.joinmatch.backend.model.ReportUser;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ReportUserRepository extends JpaRepository<ReportUser, Integer> {
+}

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "event_rating")
@@ -36,6 +38,8 @@ public class EventRating {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+    @OneToMany(mappedBy = "eventRating", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportEventRating> reportEventRatings = new HashSet<>();
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

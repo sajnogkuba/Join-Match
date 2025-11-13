@@ -25,6 +25,7 @@ import TeamPage from './pages/TeamPage.tsx'
 import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
 import PostPage from './pages/PostPage.tsx'
+import ModeratorPanelPage from "./pages/ModeratorPanelPage.tsx";
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
@@ -66,6 +67,7 @@ const App: React.FC = () => (
 								/>
 								<Route path='chat' element={<ChatPage />} />
 								<Route path='*' element={<NotFoundPage />} />
+								<Route path='/moderator' element={<ModeratorPanelPage/>}/>
 							</Route>
 						</Routes>
 					</BrowserRouter>
