@@ -48,6 +48,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setDateOfBirth(LocalDate.parse(request.dateOfBirth()));
         user.setRole(Role.USER);
+        user.setIsBlocked(false);
         userRepository.save(user);
         // Można dodać logikę wysyłania e-maila weryfikacyjnego
     }
