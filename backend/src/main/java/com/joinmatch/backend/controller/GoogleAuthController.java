@@ -9,6 +9,7 @@ import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +44,7 @@ public class GoogleAuthController {
 
         // znajdź lub utwórz usera
         Optional<User> byEmail = userRepository.findByEmail(email);
+
         User user = byEmail.orElseGet(() -> {
             User u = new User();
             u.setEmail(email);
@@ -50,9 +52,12 @@ public class GoogleAuthController {
             u.setPassword("test");
             u.setDateOfBirth(LocalDate.now());// konto Google bez hasła
             u.setRole(Role.USER);
+            u.setIsBlocked(false);
             return userRepository.save(u);
         });
-
+        if(user.getIsBlocked()){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         // wystaw Twoje tokeny
         TokenSupportObject tokenSupportObject = userService.issueTokensFor(user);
 
