@@ -3,12 +3,18 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.config.JwtService;
 
 import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.dto.Auth.*;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
+import com.joinmatch.backend.dto.Moderator.GetUsersDto;
 import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +40,12 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
-        TokenSupportObject tokenSupportObject = userService.login(request);
+        TokenSupportObject tokenSupportObject;
+        try {
+            tokenSupportObject = userService.login(request);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         JwtResponse response = new JwtResponse(tokenSupportObject.getToken(), tokenSupportObject.getRefreshToken(), request.email());
         return ResponseEntity.ok(response);
     }
@@ -113,5 +124,40 @@ public class UserController {
     ) {
         UsersResponseDto user = userService.getUserById(id, viewerId);
         return ResponseEntity.ok(user);
+    }
+    @PatchMapping("/block/user")
+    public ResponseEntity<Void> blockUser(@RequestBody BlockUserDto blockUserDto){
+        try {
+            userService.changeStatusOfBlock(blockUserDto.email(),true);
+        }catch (
+                IllegalArgumentException e
+        ){
+            return ResponseEntity.notFound().build();
+        }catch (RuntimeException ex){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/unlock/user")
+    public ResponseEntity<Void> unlockUser(@RequestBody BlockUserDto blockUserDto){
+        try {
+            userService.changeStatusOfBlock(blockUserDto.email(),false);
+        }catch (
+                IllegalArgumentException e
+        ){
+            return ResponseEntity.notFound().build();
+        }catch (RuntimeException ex){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @GetMapping("/moderation")
+    public ResponseEntity<Page<GetUsersDto>> getUsersForModeration(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<GetUsersDto> result = userService.getUsersForModeration(pageable);
+        return ResponseEntity.ok(result);
     }
 }

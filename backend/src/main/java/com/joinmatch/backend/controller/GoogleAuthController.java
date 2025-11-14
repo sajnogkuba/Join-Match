@@ -1,9 +1,9 @@
 package com.joinmatch.backend.controller;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.joinmatch.backend.dto.GoogleAuthRequest;
+import com.joinmatch.backend.dto.Auth.GoogleAuthRequest;
 import com.joinmatch.backend.service.GoogleTokenVerifier;
-import com.joinmatch.backend.dto.JwtResponse;
+import com.joinmatch.backend.dto.Auth.JwtResponse;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.UserRepository;
@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
