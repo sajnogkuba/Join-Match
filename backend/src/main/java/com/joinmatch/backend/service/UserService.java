@@ -1,7 +1,10 @@
 package com.joinmatch.backend.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.joinmatch.backend.config.JwtService;
 import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.dto.Auth.GoogleAuthRequest;
+import com.joinmatch.backend.dto.Auth.JwtResponse;
 import com.joinmatch.backend.dto.Auth.LoginRequest;
 import com.joinmatch.backend.dto.Auth.RegisterRequest;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
@@ -19,6 +22,8 @@ import com.joinmatch.backend.supportObject.TokenSupportObject;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +40,7 @@ public class UserService {
     private final JwtService jwtService;
     private final JoinMatchTokenRepository joinMatchTokenRepository;
     private final FriendshipRepository friendshipRepository;
+    private final GoogleTokenVerifier tokenVerifier;
 
 
     public void register(RegisterRequest request) {
@@ -284,5 +290,29 @@ public class UserService {
                 user.getEmail(),
                 user.getIsBlocked()
         );
+    }
+    public JwtResponse loginByGoogle(GoogleAuthRequest req){
+        GoogleIdToken.Payload payload = tokenVerifier.verify(req.idToken());
+        if (payload == null) {
+            throw new IllegalArgumentException();
+        }
+        String email = payload.getEmail();
+        String name  = (String) payload.get("name");
+        Optional<User> byEmail = userRepository.findByEmail(email);
+        User user = byEmail.orElseGet(() -> {
+            User u = new User();
+            u.setEmail(email);
+            u.setName(name != null ? name : email);
+            u.setPassword("test");
+            u.setDateOfBirth(LocalDate.now());
+            u.setRole(Role.USER);
+            u.setIsBlocked(false);
+            return userRepository.save(u);
+        });
+        if(user.getIsBlocked()){
+            throw new RuntimeException("Is blocked");
+        }
+        TokenSupportObject tokenSupportObject = issueTokensFor(user);
+       return new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
     }
 }
