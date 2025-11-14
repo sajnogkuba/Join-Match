@@ -34,6 +34,8 @@ public class User {
 
     @Column(name = "url_of_picture", length = 255)
     private String urlOfPicture;
+    @Column(name= "is_blocked", nullable = false)
+    private Boolean isBlocked;
 
 
     @Enumerated(EnumType.STRING)

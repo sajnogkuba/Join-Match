@@ -1,8 +1,7 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.dto.Sport.*;
 import com.joinmatch.backend.service.SportService;
-import com.joinmatch.backend.service.SportTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

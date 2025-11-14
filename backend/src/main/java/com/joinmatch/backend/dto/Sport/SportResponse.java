@@ -1,6 +1,4 @@
-package com.joinmatch.backend.dto;
-
-import com.joinmatch.backend.model.SportUser;
+package com.joinmatch.backend.dto.Sport;
 
 import java.util.List;
 
