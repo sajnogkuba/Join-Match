@@ -56,6 +56,9 @@ const PAGE_SIZE = 20;
 const ModeratorPanelPage: React.FC = () => {
     const [tab, setTab] = useState<TabKey>("dashboard");
 
+    // email aktualnie zalogowanego użytkownika
+    const [loggedEmail, setLoggedEmail] = useState<string | null>(null);
+
     // ---------- USERS ----------
     const [qUsers, setQUsers] = useState("");
     const [users, setUsers] = useState<ModeratorUser[]>([]);
@@ -68,7 +71,15 @@ const ModeratorPanelPage: React.FC = () => {
     const currentUsersPageRef = useRef(0);
     const observerTargetUsers = useRef<HTMLDivElement | null>(null);
 
-    // Pobieranie użytkowników z BE (Page<GetUsersDto>)
+    useEffect(() => {
+        try {
+            const email = localStorage.getItem("email");
+            setLoggedEmail(email);
+        } catch {
+            setLoggedEmail(null);
+        }
+    }, []);
+
     const fetchUsers = useCallback(
         async (pageNum: number, append: boolean = false) => {
             try {
@@ -149,7 +160,6 @@ const ModeratorPanelPage: React.FC = () => {
         [qUsers, users]
     );
 
-    // PATCH /auth/block/user  { email }
     const blockUser = async (email: string) => {
         try {
             await axiosInstance.patch("/auth/block/user", { email });
@@ -163,7 +173,6 @@ const ModeratorPanelPage: React.FC = () => {
         }
     };
 
-    // PATCH /auth/unlock/user { email }
     const unlockUser = async (email: string) => {
         try {
             await axiosInstance.patch("/auth/unlock/user", { email });
@@ -339,7 +348,18 @@ const ModeratorPanelPage: React.FC = () => {
                                                         <Eye className="h-4 w-4" />
                                                     </button>
 
-                                                    {u.status ===
+                                                    {u.email ===
+                                                    loggedEmail ? (
+                                                        // nie można zablokować samego siebie
+                                                        <button
+                                                            disabled
+                                                            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 text-zinc-600 cursor-not-allowed"
+                                                            title="Nie możesz zablokować własnego konta"
+                                                        >
+                                                            <Ban className="h-4 w-4" />
+                                                            Nieaktywne
+                                                        </button>
+                                                    ) : u.status ===
                                                     "ACTIVE" ? (
                                                         <button
                                                             onClick={() =>

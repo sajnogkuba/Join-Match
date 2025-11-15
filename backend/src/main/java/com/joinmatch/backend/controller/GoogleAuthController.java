@@ -22,14 +22,14 @@ import java.util.Optional;
 @RequestMapping("/api/auth")
 public class GoogleAuthController {
 
-    private final UserRepository userRepository;
     private final UserService userService;
 
 
     @PostMapping("/google")
     public ResponseEntity<?> googleLogin(@RequestBody GoogleAuthRequest req) {
         JwtResponse jwtResponse;
-        try {jwtResponse = userService.loginByGoogle(req);
+        try {
+            jwtResponse = userService.loginByGoogle(req);
        }catch (IllegalArgumentException e){
            return ResponseEntity.badRequest().build();
        }catch (RuntimeException exception){
