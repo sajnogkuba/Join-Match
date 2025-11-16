@@ -247,6 +247,30 @@ public class ChatService {
         conversationRepository.save(conv);
     }
 
+    @Transactional
+    public void addUserToTeamChat(Integer teamId, Integer userId) {
+        var convOpt = conversationRepository.findByTeamId(teamId);
+        if (convOpt.isEmpty()) return;
 
+        Conversation conv = convOpt.get();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean already = conv.getParticipants().stream().anyMatch(u -> u.getId().equals(userId));
+        if (!already) {
+            conv.getParticipants().add(user);
+            conversationRepository.save(conv);
+        }
+    }
+
+    @Transactional
+    public void removeUserFromTeamChat(Integer teamId, Integer userId) {
+        var convOpt = conversationRepository.findByTeamId(teamId);
+        if (convOpt.isEmpty()) return;
+
+        Conversation conv = convOpt.get();
+        conv.getParticipants().removeIf(u -> u.getId().equals(userId));
+        conversationRepository.save(conv);
+    }
 
 }
