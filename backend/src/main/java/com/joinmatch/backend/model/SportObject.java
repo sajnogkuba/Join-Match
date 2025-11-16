@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Table(name = "sport_object")
 @Data
@@ -30,4 +33,7 @@ public class SportObject {
     private Double latitude;
 
     private Double longitude;
+
+    @OneToMany(mappedBy = "sportObject", orphanRemoval = true, cascade = CascadeType.ALL)
+    private Set<Competition> competitionSet = new HashSet<>();
 }

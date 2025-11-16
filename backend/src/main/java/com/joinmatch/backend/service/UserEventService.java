@@ -1,9 +1,7 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.EventRequestDto;
-import com.joinmatch.backend.dto.EventResponseDto;
-import com.joinmatch.backend.dto.UserEventRequestDto;
-import com.joinmatch.backend.dto.UserEventResponseDto;
+import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
+import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
 import com.joinmatch.backend.model.AttendanceStatus;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.model.User;
@@ -25,6 +23,7 @@ public class UserEventService {
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final AttendanceStatusRepository attendanceStatusRepository;
+    private final ChatService chatService;
 
     public List<UserEventResponseDto> getAllUserEvent() {
         return userEventRepository.findAll()
@@ -36,7 +35,13 @@ public class UserEventService {
     @Transactional
     public UserEventResponseDto create(UserEventRequestDto eventRequestDto) {
         UserEvent userEvent = new UserEvent();
-        return getUserEventResponseDto(eventRequestDto, userEvent);
+        UserEventResponseDto response = getUserEventResponseDto(eventRequestDto, userEvent);
+
+        User user = userRepository.findByEmail(eventRequestDto.userEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        chatService.addUserToEventChat(eventRequestDto.eventId(), user.getId());
+
+        return response;
     }
 
     private UserEventResponseDto getUserEventResponseDto(UserEventRequestDto eventRequestDto, UserEvent userEvent) {
@@ -72,11 +77,13 @@ public class UserEventService {
     @Transactional
     public void leaveEvent(String userEmail, Integer eventId) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User with email " + userEmail + " not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("Event with id " + eventId + " not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
         userEventRepository.deleteByUserAndEvent(user, event);
+
+        chatService.removeUserFromEventChat(eventId, user.getId());
     }
 
 }

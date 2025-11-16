@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import api from '../Api/axios'
-import type { SportType } from '../Api/types/SportType.ts'
 import type { User } from '../Api/types/User.ts'
 import { Upload, MapPin } from 'lucide-react'
+import SportTypeFilter from './SportTypeFilter'
 
 const inputBase =
 	'w-full px-4 py-3 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
@@ -19,11 +19,10 @@ type FormErrors = {
 export default function CreateTeamForm() {
 	const [name, setName] = useState('')
 	const [city, setCity] = useState('')
-	const [sportTypeId, setSportTypeId] = useState<number>(0)
+	const [sportTypeId, setSportTypeId] = useState<number | null>(null)
 	const [description, setDescription] = useState('')
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-	const [sportTypes, setSportTypes] = useState<SportType[]>([])
 	const [leaderId, setLeaderId] = useState<number | null>(null)
 	const [errors, setErrors] = useState<FormErrors>({})
 	const [submitting, setSubmitting] = useState(false)
@@ -37,11 +36,6 @@ export default function CreateTeamForm() {
 			setServerError('Brak tokenu autoryzacyjnego.')
 			return
 		}
-
-		// Pobierz sportTypes
-		api.get('/sport-type')
-			.then(({ data }) => setSportTypes(data))
-			.catch(() => setServerError('Nie udało się pobrać listy sportów.'))
 
 		// Pobierz leaderId
 		api.get<User>('/auth/user', { params: { token } })
@@ -61,7 +55,7 @@ export default function CreateTeamForm() {
 		} else if (city.trim().length > 100) {
 			newErrors.city = 'Nazwa miasta nie może przekraczać 100 znaków.'
 		}
-		if (!sportTypeId || sportTypeId === 0) {
+		if (!sportTypeId) {
 			newErrors.sportTypeId = 'Wybierz sport.'
 		}
 		if (description.trim().length > 500) {
@@ -105,7 +99,7 @@ export default function CreateTeamForm() {
 			setServerOk('🎉 Drużyna utworzona pomyślnie!')
 			setName('')
 			setCity('')
-			setSportTypeId(0)
+			setSportTypeId(null)
 			setDescription('')
 			setSelectedFile(null)
 		} catch (err: any) {
@@ -186,20 +180,15 @@ export default function CreateTeamForm() {
 					{/* Sport */}
 					<div className={card}>
 						<label className='block text-zinc-400 mb-2'>Rodzaj sportu</label>
-						<select
-							value={sportTypeId}
-							onChange={e => {
-								setSportTypeId(Number(e.target.value))
-								setErrors(prev => ({ ...prev, sportTypeId: undefined }))
-							}}
-							className={`${inputBase} ${errors.sportTypeId ? 'border-red-500' : ''}`}>
-							<option value={0}>Wybierz sport</option>
-							{sportTypes.map(s => (
-								<option key={s.id} value={s.id}>
-									{s.name}
-								</option>
-							))}
-						</select>
+						<div className={errors.sportTypeId ? 'border border-red-500 rounded-xl' : ''}>
+							<SportTypeFilter
+								value={sportTypeId}
+								onChange={(id) => {
+									setSportTypeId(id)
+									setErrors(prev => ({ ...prev, sportTypeId: undefined }))
+								}}
+							/>
+						</div>
 						{errors.sportTypeId && <p className='text-red-400 text-sm mt-1'>{errors.sportTypeId}</p>}
 					</div>
 

@@ -1,11 +1,11 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.EventRatingRequestDto;
-import com.joinmatch.backend.dto.EventRatingResponseDto;
-import com.joinmatch.backend.dto.UserRatingRequestDto;
-import com.joinmatch.backend.dto.UserRatingResponseDto;
-import com.joinmatch.backend.model.EventRating;
-import com.joinmatch.backend.model.UserRating;
+import com.joinmatch.backend.dto.EventRating.EventRatingRequestDto;
+import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
+import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingRequestDto;
+import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingResponseDto;
+import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
+import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.service.RatingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -49,4 +49,67 @@ public class RatingController {
         Double average = ratingService.getAverageUserRating(userId);
         return ResponseEntity.ok(average != null ? average : 0.0);
     }
+    @PutMapping("/user/{ratingId}")
+    public ResponseEntity<UserRatingResponseDto> updateUserRating(
+            @PathVariable Integer ratingId,
+            @RequestBody UserRatingRequestDto request,
+            @RequestParam Integer userId) {
+        UserRatingResponseDto response = ratingService.updateUserRating(ratingId, request, userId);
+        return ResponseEntity.ok(response);
+    }
+    @DeleteMapping("/user/{ratingId}")
+    public ResponseEntity<Void> deleteUserRating(
+            @PathVariable Integer ratingId,
+            @RequestParam Integer userId) {
+        ratingService.deleteUserRating(ratingId, userId);
+        return ResponseEntity.noContent().build();
+    }
+    @PutMapping("/event/{ratingId}")
+    public ResponseEntity<EventRatingResponseDto> updateEventRating(
+            @PathVariable Integer ratingId,
+            @RequestBody EventRatingRequestDto request,
+            @RequestParam Integer userId) {
+        EventRatingResponseDto response = ratingService.updateEventRating(ratingId, request, userId);
+        return ResponseEntity.ok(response);
+    }
+    @DeleteMapping("/event/{ratingId}")
+    public ResponseEntity<Void> deleteEventRating(
+            @PathVariable Integer ratingId,
+            @RequestParam Integer userId) {
+        ratingService.deleteEventRating(ratingId, userId);
+        return ResponseEntity.noContent().build();
+    }
+    @PostMapping
+    public ResponseEntity<OrganizerRatingResponseDto> addOrganizerRating(@RequestBody OrganizerRatingRequestDto request) {
+        OrganizerRatingResponseDto response = ratingService.addOrganizerRating(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{organizerId}")
+    public ResponseEntity<List<OrganizerRatingResponseDto>> getOrganizerRatings(@PathVariable Integer organizerId) {
+        List<OrganizerRatingResponseDto> ratings = ratingService.getRatingsByOrganizer(organizerId);
+        return ResponseEntity.ok(ratings);
+    }
+
+    @GetMapping("/{organizerId}/average")
+    public ResponseEntity<Double> getAverageOrganizerRating(@PathVariable Integer organizerId) {
+        Double avg = ratingService.getAverageOrganizerRating(organizerId);
+        return ResponseEntity.ok(avg != null ? avg : 0.0);
+    }
+    @PutMapping("/organizer/{ratingId}")
+    public ResponseEntity<OrganizerRatingResponseDto> updateOrganizerRating(
+            @PathVariable Integer ratingId,
+            @RequestBody OrganizerRatingRequestDto request,
+            @RequestParam Integer userId) {
+        OrganizerRatingResponseDto response = ratingService.updateOrganizerRating(ratingId, request, userId);
+        return ResponseEntity.ok(response);
+    }
+    @DeleteMapping("/organizer/{ratingId}")
+    public ResponseEntity<Void> deleteOrganizerRating(
+            @PathVariable Integer ratingId,
+            @RequestParam Integer userId) {
+        ratingService.deleteOrganizerRating(ratingId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
 }

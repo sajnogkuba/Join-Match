@@ -34,6 +34,8 @@ public class User {
 
     @Column(name = "url_of_picture", length = 255)
     private String urlOfPicture;
+    @Column(name= "is_blocked", nullable = false)
+    private Boolean isBlocked;
 
 
     @Enumerated(EnumType.STRING)
@@ -53,6 +55,7 @@ public class User {
     @EqualsAndHashCode.Exclude
     private Set<SportUser> sportUsers = new HashSet<>();
 
+
     @OneToMany(mappedBy = "rated", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -68,8 +71,25 @@ public class User {
     @EqualsAndHashCode.Exclude
     private List<EventRating> eventRatings = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserTeam> userTeams = new ArrayList<>();
 
+    @OneToMany(mappedBy = "userId", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportUser> suspectUser = new HashSet<>();
 
+    @OneToMany(mappedBy = "reporterUserId", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportUser> userReportSender = new HashSet<>();
+
+    @OneToMany(mappedBy = "teamReporterUserId",cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportTeam> teamReportSender = new HashSet<>();
+
+    @OneToMany(mappedBy = "reporterUser",cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportEventRating> reportEventRatings = new HashSet<>();
+
+    @OneToMany(mappedBy = "userRatingReported", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportUserRating> reportUserRatings = new HashSet<>();
+    @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL,orphanRemoval = true)
+    private Set<ReportCompetition> reportCompetitions = new HashSet<>();
     public List<JoinMatchToken> getTokens() {
         return Collections.unmodifiableList(tokens);
     }

@@ -4,9 +4,10 @@ import StarRatingInput from './StarRatingInput'
 interface Props {
   onSubmit: (rating: number, comment: string) => void
   disabled?: boolean
+  title?: string
 }
 
-export default function EventRatingForm({ onSubmit, disabled }: Props) {
+export default function EventRatingForm({ onSubmit, disabled, title = 'Oceń wydarzenie' }: Props) {
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
 
@@ -19,7 +20,7 @@ export default function EventRatingForm({ onSubmit, disabled }: Props) {
 
   return (
     <div className="rounded-2xl bg-zinc-900/60 p-5 ring-1 ring-zinc-800 space-y-3">
-      <h3 className="text-white font-semibold mb-3 text-lg">Oceń wydarzenie</h3>
+      <h3 className="text-white font-semibold mb-3 text-lg">{title}</h3>
       <StarRatingInput value={rating} onChange={setRating} label="Twoja ocena" />
       <textarea
         placeholder="Dodaj komentarz (opcjonalnie)"

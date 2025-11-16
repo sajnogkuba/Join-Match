@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -9,6 +9,7 @@ import MapView from '../components/MapView'
 import PlaceAutocomplete from '../components/PlaceAutocomplete'
 import type { UserSportsResponse } from '../Api/types/Sports'
 import AlertModal from '../components/AlertModal'
+import SportTypeFilter from '../components/SportTypeFilter'
 import { parseEventDate } from '../utils/formatDate'
 import {
 	Map as MapIcon,
@@ -30,27 +31,45 @@ import {
 dayjs.locale('pl')
 
 type SortKey = 'date_asc' | 'date_desc' | 'price_asc' | 'price_desc' | 'popularity'
+type SortBy = 'eventDate' | 'cost' | 'eventName' | 'bookedParticipants'
+type SortDirection = 'ASC' | 'DESC'
 const PAGE_SIZE = 12
+
+// --- NOWE: typ odpowiedzi z backendu /api/event (Spring Page) ---
+type EventsPageResponse = {
+	content: Event[]
+	totalElements: number
+	totalPages: number
+	number: number
+	size: number
+	first: boolean
+	last: boolean
+	numberOfElements: number
+	empty: boolean
+}
 
 const EventsPage = () => {
 	const navigate = useNavigate()
 	const [userEmail, setUserEmail] = useState<string | null>(null)
+
+	// --- ZMIANA: events będą akumulowane strona po stronie ---
 	const [events, setEvents] = useState<Event[]>([])
 	const [sportObjects, setSportObjects] = useState<SportObject[]>([])
+
 	const [loading, setLoading] = useState(true)
+	const [loadingMore, setLoadingMore] = useState(false) // dla przycisku „Załaduj więcej”
 	const [error, setError] = useState<string | null>(null)
+
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
 	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
-	const [alertModal, setAlertModal] = useState<{
-		isOpen: boolean;
-		title: string;
-		message: string;
-	}>({ isOpen: false, title: "", message: "" })
+	const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; }>({
+		isOpen: false, title: "", message: ""
+	})
 
 	const [view, setView] = useState<'grid' | 'map'>('grid')
 	const [search, setSearch] = useState('')
-	const [sportFilters, setSportFilters] = useState<string[]>([])
+	const [sportTypeId, setSportTypeId] = useState<number | null>(null)
 	const [city, setCity] = useState('')
 	const [onlyFree, setOnlyFree] = useState(false)
 	const [onlyAvailable, setOnlyAvailable] = useState(false)
@@ -59,27 +78,33 @@ const EventsPage = () => {
 	const [priceMin, setPriceMin] = useState<string>('')
 	const [priceMax, setPriceMax] = useState<string>('')
 	const [sort, setSort] = useState<SortKey>('date_asc')
-	const [page, setPage] = useState(1)
-	const [showMyEvents, setShowMyEvents] = useState(false)
+
+	// --- NOWE: stan paginacji z backendu ---
+	const [hasNext, setHasNext] = useState(false)
+	const observerTarget = useRef<HTMLDivElement>(null)
+	const currentPageRef = useRef(0)
 
 	useEffect(() => {
 		setUserEmail(localStorage.getItem('email'))
 	}, [])
 
+	// --- Pobieranie sport objects przy starcie ---
 	useEffect(() => {
-		setLoading(true)
-		Promise.all([axiosInstance.get<Event[]>('/event'), axiosInstance.get<SportObject[]>('/sport-object')])
-			.then(([evRes, soRes]) => {
-				setEvents(evRes.data || [])
+		let cancelled = false
+		const loadInitial = async () => {
+			try {
+				const soRes = await axiosInstance.get<SportObject[]>('/sport-object')
+				if (cancelled) return
 				setSportObjects(soRes.data || [])
-			})
-			.catch(e => {
+			} catch (e) {
 				console.error('Błąd pobierania danych:', e)
-				setError('Nie udało się pobrać wydarzeń.')
-			})
-			.finally(() => setLoading(false))
+			}
+		}
+		loadInitial()
+		return () => { cancelled = true }
 	}, [])
 
+	// --- reszta Twoich efektów bez zmian ---
 	useEffect(() => {
 		if (!userEmail) return
 		axiosInstance
@@ -94,8 +119,7 @@ const EventsPage = () => {
 			.get('/user-saved-event', { params: { userEmail } })
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
-		
-		// Fetch user's sports
+
 		const token = localStorage.getItem('accessToken')
 		if (token) {
 			axiosInstance.get<UserSportsResponse>('/sport-type/user', { params: { token } })
@@ -110,11 +134,113 @@ const EventsPage = () => {
 		}
 	}, [userEmail])
 
-	const sports = useMemo(() => {
-		const set = new Set(events.map(e => e.sportTypeName).filter(Boolean))
-		return Array.from(set).sort()
-	}, [events])
+	// Mapowanie SortKey na sortBy + direction
+	const getSortParams = (sortKey: SortKey): { sortBy: SortBy; direction: SortDirection } => {
+		switch (sortKey) {
+			case 'date_asc':
+				return { sortBy: 'eventDate', direction: 'ASC' }
+			case 'date_desc':
+				return { sortBy: 'eventDate', direction: 'DESC' }
+			case 'price_asc':
+				return { sortBy: 'cost', direction: 'ASC' }
+			case 'price_desc':
+				return { sortBy: 'cost', direction: 'DESC' }
+			case 'popularity':
+				return { sortBy: 'bookedParticipants', direction: 'DESC' }
+			default:
+				return { sortBy: 'eventDate', direction: 'ASC' }
+		}
+	}
 
+	// Funkcja pobierająca eventy z backendu
+	const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
+		try {
+			if (append) {
+				setLoadingMore(true)
+			} else {
+				setLoading(true)
+			}
+
+			const { sortBy: currentSortBy, direction: currentDirection } = getSortParams(sort)
+			const params: Record<string, any> = {
+				page: pageNum,
+				size: PAGE_SIZE,
+				sortBy: currentSortBy,
+				direction: currentDirection,
+			}
+
+			// Dodaj filtry
+			if (search.trim() !== '') {
+				params.name = search.trim()
+			}
+			if (sportTypeId !== null) {
+				params.sportTypeId = sportTypeId
+			}
+			if (city.trim() !== '') {
+				params.city = city.trim()
+			}
+			if (dateFrom) {
+				params.dateFrom = dateFrom
+			}
+			if (dateTo) {
+				params.dateTo = dateTo
+			}
+			if (onlyFree) {
+				params.free = true
+			}
+			if (onlyAvailable) {
+				params.available = true
+			}
+
+			const response = await axiosInstance.get<EventsPageResponse>('/event', { params })
+			const data = response.data
+
+			if (append) {
+				setEvents(prev => [...prev, ...(data.content || [])])
+			} else {
+				setEvents(data.content || [])
+			}
+			setHasNext(!data.last)
+		} catch (err) {
+			console.error('Błąd pobierania wydarzeń:', err)
+			setError('Nie udało się pobrać wydarzeń.')
+		} finally {
+			setLoading(false)
+			setLoadingMore(false)
+		}
+	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable])
+
+	// Reset page i pobieranie eventów przy zmianie filtrów/sortowania
+	useEffect(() => {
+		currentPageRef.current = 0
+		setEvents([])
+		fetchEvents(0, false)
+	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable, fetchEvents])
+
+	// Infinite scroll z IntersectionObserver
+	useEffect(() => {
+		const observer = new IntersectionObserver(
+			entries => {
+				if (entries[0].isIntersecting && hasNext && !loading && !loadingMore) {
+			const nextPage = currentPageRef.current + 1
+			currentPageRef.current = nextPage
+			fetchEvents(nextPage, true)
+				}
+			},
+			{ threshold: 0.1 }
+		)
+
+		const currentTarget = observerTarget.current
+		if (currentTarget) {
+			observer.observe(currentTarget)
+		}
+
+		return () => {
+			if (currentTarget) {
+				observer.unobserve(currentTarget)
+			}
+		}
+	}, [hasNext, loading, loadingMore, fetchEvents])
 
 	const eventsWithCoords = useMemo(() => {
 		const levelMap: Record<number, string> = {
@@ -124,7 +250,6 @@ const EventsPage = () => {
 			4: 'Zaawansowany',
 			5: 'Profesjonalny',
 		}
-
 		return events
 			.map(ev => {
 				const obj = sportObjects.find(o => o.name === ev.sportObjectName)
@@ -144,91 +269,9 @@ const EventsPage = () => {
 					skillLevel: 'Poziom: ' + levelMap[(ev as any).minLevel] || 'brak',
 				}
 			})
-			.filter(Boolean) as {
-			eventId: number
-			eventName: string
-			eventDate: string | Date
-			sportObjectName: string
-			latitude: number
-			longitude: number
-			city?: string
-			sportTypeName?: string
-			cost?: number
-			imageUrl?: string
-			skillLevel?: string
-		}[]
+			.filter(Boolean) as any[]
 	}, [events, sportObjects])
 
-	// 🔍 filtrowanie itd.
-	const filteredSorted = useMemo(() => {
-		let list = [...events]
-
-		if (search.trim()) {
-			const q = search.toLowerCase()
-			list = list.filter(e => e.eventName.toLowerCase().includes(q) || e.sportObjectName.toLowerCase().includes(q))
-		}
-
-		if (sportFilters.length > 0) list = list.filter(e => sportFilters.includes(e.sportTypeName))
-
-		if (city) list = list.filter((e: any) => (e.city || '').toLowerCase() === city.toLowerCase())
-
-		if (onlyFree) list = list.filter((e: any) => Number(e.cost) === 0)
-
-		if (onlyAvailable) list = list.filter(e => e.numberOfParticipants - (e as any).bookedParticipants > 0)
-
-		if (dateFrom)
-			list = list.filter(e => {
-            const eventDate = parseEventDate(e.eventDate)
-            return eventDate.isAfter(dayjs(dateFrom).startOf('day')) || eventDate.isSame(dayjs(dateFrom), 'day')
-        })
-
-		if (dateTo)
-			list = list.filter(e => {
-            const eventDate = parseEventDate(e.eventDate)
-            return eventDate.isBefore(dayjs(dateTo).endOf('day')) || eventDate.isSame(dayjs(dateTo), 'day')
-        })
-
-		if (priceMin) list = list.filter((e: any) => Number(e.cost) >= Number(priceMin))
-
-		if (priceMax) list = list.filter((e: any) => Number(e.cost) <= Number(priceMax))
-
-		if (showMyEvents && userEmail) list = list.filter(e => joinedEventIds.has(e.eventId))
-
-		list.sort((a, b) => {
-			switch (sort) {
-				case 'date_asc':
-					return parseEventDate(a.eventDate).valueOf() - parseEventDate(b.eventDate).valueOf()
-				case 'date_desc':
-					return parseEventDate(b.eventDate).valueOf() - parseEventDate(a.eventDate).valueOf()
-				case 'price_asc':
-					return (a as any).cost - (b as any).cost
-				case 'price_desc':
-					return (b as any).cost - (a as any).cost
-				case 'popularity':
-					return ((b as any).bookedParticipants || 0) - ((a as any).bookedParticipants || 0)
-				default:
-					return 0
-			}
-		})
-		return list
-	}, [
-		events,
-		search,
-		sportFilters,
-		city,
-		onlyFree,
-		onlyAvailable,
-		dateFrom,
-		dateTo,
-		priceMin,
-		priceMax,
-		sort,
-		showMyEvents,
-		joinedEventIds,
-	])
-
-	const paged = useMemo(() => filteredSorted.slice(0, page * PAGE_SIZE), [filteredSorted, page])
-	const canLoadMore = paged.length < filteredSorted.length
 
 	const handleSave = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
@@ -252,30 +295,26 @@ const EventsPage = () => {
 
 	const handleJoin = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
-		
 		const isJoined = joinedEventIds.has(eventId)
-		
+
 		try {
 			if (isJoined) {
-				// Leave the event
 				await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
 				setJoinedEventIds(prev => {
 					const s = new Set(prev)
 					s.delete(eventId)
 					return s
 				})
-				// Decrease booked participants count
-				setEvents(prev => prev.map(ev => 
-					ev.eventId === eventId 
+				setEvents(prev => prev.map(ev =>
+					ev.eventId === eventId
 						? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
 						: ev
 				))
 			} else {
-				// Check if event has available places
 				const event = events.find(ev => ev.eventId === eventId)
 				const bookedParticipants = (event as any)?.bookedParticipants || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
-				
+
 				if (bookedParticipants >= numberOfParticipants) {
 					setAlertModal({
 						isOpen: true,
@@ -284,31 +323,23 @@ const EventsPage = () => {
 					})
 					return
 				}
-				
-				// Check if user has required skill level
+
 				if (event?.minLevel) {
 					const userLevel = userSports.get(event.sportTypeName)
 					const requiredLevel = event.minLevel
-					
 					if (userLevel === undefined || userLevel < requiredLevel) {
-						const modalMessage = userLevel === undefined 
+						const modalMessage = userLevel === undefined
 							? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
 							: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
-						setAlertModal({
-							isOpen: true,
-							title: "Niewystarczający poziom",
-							message: modalMessage
-						})
+						setAlertModal({ isOpen: true, title: "Niewystarczający poziom", message: modalMessage })
 						return
 					}
 				}
-				
-				// Join the event
+
 				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
 				setJoinedEventIds(prev => new Set([...prev, eventId]))
-				// Increase booked participants count
-				setEvents(prev => prev.map(ev => 
-					ev.eventId === eventId 
+				setEvents(prev => prev.map(ev =>
+					ev.eventId === eventId
 						? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
 						: ev
 				))
@@ -320,7 +351,7 @@ const EventsPage = () => {
 
 	const clearFilters = () => {
 		setSearch('')
-		setSportFilters([])
+		setSportTypeId(null)
 		setCity('')
 		setOnlyFree(false)
 		setOnlyAvailable(false)
@@ -329,8 +360,7 @@ const EventsPage = () => {
 		setPriceMin('')
 		setPriceMax('')
 		setSort('date_asc')
-		setShowMyEvents(false)
-		setPage(1)
+		// Reset page zostanie wykonany przez useEffect przy zmianie filtrów
 	}
 
 	return (
@@ -338,10 +368,7 @@ const EventsPage = () => {
 			<header className='relative h-[140px] w-full overflow-hidden'>
 				<div
 					className='absolute inset-0 bg-cover bg-center'
-					style={{
-						backgroundImage:
-							'url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)',
-					}}
+					style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)' }}
 				/>
 				<div className='absolute inset-0 bg-black/60' />
 				<div className='relative z-10 mx-auto flex h-full max-w-7xl items-end justify-between px-4 pb-6 md:px-8'>
@@ -362,185 +389,120 @@ const EventsPage = () => {
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
 					{/* Pasek wyszukiwania i sortowania */}
-					<div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-						<div className='flex flex-1 items-stretch gap-3'>
-							<div className='relative flex-1'>
-								<Search className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' size={18} />
-								<input
-									value={search}
-									onChange={e => {
-										setSearch(e.target.value)
-										setPage(1)
-									}}
-									placeholder='Szukaj po nazwie lub obiekcie…'
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-600'
-								/>
-							</div>
+					<div className='flex flex-col gap-4'>
+						{/* Wyszukiwanie */}
+						<div className='relative flex-1'>
+							<Search className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2' size={18} />
+							<input
+								value={search}
+								onChange={e => setSearch(e.target.value)}
+								placeholder='Szukaj po nazwie lub obiekcie…'
+								className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-600'
+							/>
+						</div>
 
-							<div className='hidden md:flex items-center gap-2'>
+						{/* Przyciski widoku, sortowania i akcji */}
+						<div className='flex flex-wrap items-center gap-3'>
+							{/* Przyciski widoku - Lista/Mapa */}
+							<div className='flex items-center gap-2'>
 								<button
 									onClick={() => setView('grid')}
-									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
-										view === 'grid' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-									}`}>
-									<GridIcon size={16} /> Lista
+									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'grid' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>
+									<GridIcon size={16} /> <span className='hidden sm:inline'>Lista</span>
 								</button>
 								<button
 									onClick={() => setView('map')}
-									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
-										view === 'map' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-									}`}>
-									<MapIcon size={16} /> Mapa
+									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'map' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>
+									<MapIcon size={16} /> <span className='hidden sm:inline'>Mapa</span>
 								</button>
 							</div>
-						</div>
 
-						<div className='flex items-center gap-3'>
-							<div className='relative'>
+							{/* Sortowanie */}
+							<div className='relative flex-1 min-w-[140px]'>
 								<select
 									value={sort}
 									onChange={e => setSort(e.target.value as SortKey)}
-									className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'>
+									className='w-full appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'>
 									<option value='date_asc'>Data rosnąco</option>
 									<option value='date_desc'>Data malejąco</option>
 									<option value='price_asc'>Cena rosnąco</option>
 									<option value='price_desc'>Cena malejąco</option>
 									<option value='popularity'>Popularność</option>
 								</select>
-								<ArrowUpDown
-									className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
-									size={16}
-								/>
+								<ArrowUpDown className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60' size={16} />
 							</div>
-							<button
-								onClick={() => setShowMyEvents(p => !p)}
-								className={`rounded-xl border px-3 py-2 text-sm ${
-									showMyEvents ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-								}`}>
-								Moje wydarzenia
-							</button>
+
+							{/* Przycisk wyczyść */}
 							<button
 								onClick={clearFilters}
-								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800'>
-								<FilterX size={16} /> Wyczyść
+								className='inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 whitespace-nowrap'>
+								<FilterX size={16} /> <span className='hidden sm:inline'>Wyczyść</span>
 							</button>
 						</div>
 					</div>
 
 					{/* Filtry */}
 					<div className='mt-4 grid grid-cols-1 gap-3 md:grid-cols-4'>
-						{/* Sport */}
 						<div>
 							<label className='mb-1 block text-xs text-zinc-400'>Sport</label>
-							<div className='flex flex-wrap gap-2'>
-								{sports.map(s => {
-									const active = sportFilters.includes(s)
-									return (
-										<button
-											key={s}
-											onClick={() => setSportFilters(prev => (active ? prev.filter(x => x !== s) : [...prev, s]))}
-											className={`rounded-full px-3 py-1 text-xs ring-1 ${
-												active
-													? 'bg-violet-600 text-white ring-violet-700'
-													: 'bg-zinc-900/60 text-zinc-200 ring-zinc-700 hover:bg-zinc-800'
-											}`}>
-											{s}
-										</button>
-									)
-								})}
-							</div>
+							<SportTypeFilter value={sportTypeId} onChange={setSportTypeId} />
 						</div>
 
-						{/* Miasto */}
 						<div>
 							<label className='mb-1 block text-xs text-zinc-400'>Miasto</label>
-							{/* Używamy własnego PlaceAutocomplete; po wyborze ustawiamy city */}
 							<PlaceAutocomplete
 								onSelect={(place: google.maps.places.PlaceResult) => {
-									// helper do pobrania komponentu adresowego
-									const getAddr = (types: string[]) => {
-										return (place.address_components || []).find((c: any) =>
-											c.types.some((t: string) => types.includes(t))
-										)?.long_name
-									}
+									const getAddr = (types: string[]) =>
+										(place.address_components || []).find((c: any) => c.types.some((t: string) => types.includes(t)))?.long_name
 									const cityName =
-										getAddr([
-											'locality',
-											'postal_town',
-											'administrative_area_level_2',
-											'administrative_area_level_1',
-										]) ||
-										place.formatted_address ||
-										place.name ||
-										''
+										getAddr(['locality', 'postal_town', 'administrative_area_level_2', 'administrative_area_level_1']) ||
+										place.formatted_address || place.name || ''
 									setCity(cityName)
-									setPage(1)
 								}}
 								placeholder='Miasto lub adres'
 							/>
 						</div>
 
-						{/* Daty */}
 						<div className='grid grid-cols-2 gap-2'>
 							<div>
 								<label className='mb-1 block text-xs text-zinc-400'>Od</label>
-								<input
-									type='date'
-									value={dateFrom}
-									onChange={e => setDateFrom(e.target.value)}
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
-								/>
+								<input type='date' value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+									   className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200' />
 							</div>
 							<div>
 								<label className='mb-1 block text-xs text-zinc-400'>Do</label>
-								<input
-									type='date'
-									value={dateTo}
-									onChange={e => setDateTo(e.target.value)}
-									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
-								/>
+								<input type='date' value={dateTo} onChange={e => setDateTo(e.target.value)}
+									   className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200' />
 							</div>
 						</div>
 
-						{/* Cena i opcje */}
 						<div className='grid grid-cols-2 gap-2'>
 							<label className='flex items-center gap-2 text-sm'>
 								<input type='checkbox' checked={onlyFree} onChange={e => setOnlyFree(e.target.checked)} /> Darmowe
 							</label>
 							<label className='flex items-center gap-2 text-sm'>
-								<input type='checkbox' checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} />{' '}
-								Dostępne
+								<input type='checkbox' checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} /> Dostępne
 							</label>
-							<input
-								placeholder='Cena od'
-								value={priceMin}
-								onChange={e => setPriceMin(e.target.value)}
-								className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1'
-							/>
-							<input
-								placeholder='Cena do'
-								value={priceMax}
-								onChange={e => setPriceMax(e.target.value)}
-								className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1'
-							/>
+							<input placeholder='Cena od' value={priceMin} onChange={e => setPriceMin(e.target.value)}
+								   className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1' />
+							<input placeholder='Cena do' value={priceMax} onChange={e => setPriceMax(e.target.value)}
+								   className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1' />
 						</div>
 					</div>
 
-					{/* Lista wyników / mapa */}
+					{/* Lista / Mapa */}
 					<div className='mt-6'>
 						{view === 'map' ? (
 							<MapView events={eventsWithCoords} selectedCity={city} />
 						) : loading ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
-								<div className='flex items-center gap-2 text-zinc-300'>
-									<Loader2 className='animate-spin' /> Ładowanie…
-								</div>
+								<div className='flex items-center gap-2 text-zinc-300'><Loader2 className='animate-spin' /> Ładowanie…</div>
 							</div>
 						) : error ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-rose-500/10 p-10 text-rose-200'>
 								{error}
 							</div>
-						) : filteredSorted.length === 0 ? (
+						) : events.length === 0 ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10 text-center'>
 								<div className='text-5xl mb-2'>🔍</div>
 								<div className='text-white text-lg font-semibold'>Brak wyników</div>
@@ -549,10 +511,8 @@ const EventsPage = () => {
 						) : (
 							<>
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-									{paged.map(ev => (
-										<article
-											key={ev.eventId}
-											className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
+									{events.map(ev => (
+										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
 											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
 												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
 													<img
@@ -568,9 +528,7 @@ const EventsPage = () => {
 													/>
 												) : null}
 												<div
-													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${
-														ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'
-													}`}
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
 													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}>
 													<div className='text-center text-zinc-400'>
 														<div className='text-4xl mb-2'>JoinMatch</div>
@@ -588,9 +546,7 @@ const EventsPage = () => {
 															{ev.eventName}
 														</Link>
 													</h3>
-													<button
-														onClick={() => handleSave(ev.eventId)}
-														className='rounded-full p-2 ring-1 bg-zinc-800 hover:bg-zinc-700'>
+													<button onClick={() => handleSave(ev.eventId)} className='rounded-full p-2 ring-1 bg-zinc-800 hover:bg-zinc-700'>
 														{savedEventIds.has(ev.eventId) ? (
 															<BookmarkCheck size={18} className='text-violet-400' />
 														) : (
@@ -609,7 +565,7 @@ const EventsPage = () => {
 														<Users size={16} /> {(ev as any).bookedParticipants}/{ev.numberOfParticipants}
 													</div>
 													<div className='flex items-center gap-2'>
-														<Ticket size={16} />{' '}
+														<Ticket size={16} />
 														{new Intl.NumberFormat('pl-PL', {
 															style: 'currency',
 															currency: (ev as any).currency || 'PLN',
@@ -617,30 +573,24 @@ const EventsPage = () => {
 													</div>
 												</div>
 												<div className='mt-4 flex justify-between'>
-{(() => {
-	const isJoined = joinedEventIds.has(ev.eventId)
-	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
-	return (
-		<button 
-			onClick={() => handleJoin(ev.eventId)} 
-			disabled={isFull}
-			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
-				isJoined 
-					? 'bg-red-600 text-white hover:bg-red-500' 
-					: isFull 
-					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed' 
-					: 'bg-violet-600 text-white hover:bg-violet-500'
-			}`}
-		>
-			{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
-		</button>
-	)
-})()}
-<Link 
-	to={`/event/${ev.eventId}`} 
-	className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'
->
-
+													{(() => {
+														const isJoined = joinedEventIds.has(ev.eventId)
+														const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+														return (
+															<button
+																onClick={() => handleJoin(ev.eventId)}
+																disabled={isFull}
+																className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${isJoined
+																	? 'bg-red-600 text-white hover:bg-red-500'
+																	: isFull
+																		? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																		: 'bg-violet-600 text-white hover:bg-violet-500'
+																}`}>
+																{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+															</button>
+														)
+													})()}
+													<Link to={`/event/${ev.eventId}`} className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
 														Szczegóły <ChevronRight size={16} />
 													</Link>
 												</div>
@@ -649,13 +599,15 @@ const EventsPage = () => {
 									))}
 								</div>
 
-								{canLoadMore && (
-									<div className='mt-8 grid place-items-center'>
-										<button
-											onClick={() => setPage(p => p + 1)}
-											className='rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
-											Załaduj więcej
-										</button>
+								{/* Infinite scroll trigger */}
+								{hasNext && (
+									<div ref={observerTarget} className='mt-8 grid place-items-center py-4'>
+										{loadingMore && (
+											<div className='flex items-center gap-2 text-zinc-400'>
+												<Loader2 className='animate-spin' size={20} />
+												<span className='text-sm'>Ładowanie kolejnych wydarzeń...</span>
+											</div>
+										)}
 									</div>
 								)}
 							</>
@@ -663,6 +615,7 @@ const EventsPage = () => {
 					</div>
 				</div>
 			</main>
+
 			<AlertModal
 				isOpen={alertModal.isOpen}
 				onClose={() => setAlertModal({ isOpen: false, title: "", message: "" })}

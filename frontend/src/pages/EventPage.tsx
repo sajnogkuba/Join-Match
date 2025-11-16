@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
 import type { Participant } from '../Api/types/Participant'
@@ -8,7 +8,9 @@ import 'dayjs/locale/pl'
 import Avatar from '../components/Avatar'
 import EventRatingForm from '../components/EventRatingForm'
 import StarRatingDisplay from '../components/StarRatingDisplay'
-import { formatEventDate, parseEventDate, parseLocalDate } from '../utils/formatDate'
+import RatingCard from '../components/RatingCard'
+import StarRatingInput from '../components/StarRatingInput'
+import { formatEventDate, parseEventDate } from '../utils/formatDate'
 import type { EventRatingResponse } from '../Api/types/Rating'
 import {
 	Share2,
@@ -24,6 +26,7 @@ import {
 	CalendarDays,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { showRatingToast } from '../components/RatingToast'
 
 dayjs.locale('pl')
 
@@ -52,12 +55,34 @@ const EventPage: React.FC = () => {
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
 	const isEventPast = event && parseEventDate(event.eventDate).isBefore(dayjs())
+	const [editingRatingId, setEditingRatingId] = useState<number | null>(null)
+	const [editRatingValue, setEditRatingValue] = useState<number>(0)
+	const [editRatingComment, setEditRatingComment] = useState<string>('')
+	const [hasRatedOrganizer, setHasRatedOrganizer] = useState(false)
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+
+	useEffect(() => {
+		const checkOrganizerRated = async () => {
+			if (!currentUserId || !event?.ownerId || !id) return
+			try {
+				const { data } = await axiosInstance.get(`/ratings/${event.ownerId}`)
+				const eventIdNum = parseInt(id)
+				const already = Array.isArray(data)
+					? data.some((r: any) => Number(r.eventId) === eventIdNum && Number(r.raterId) === Number(currentUserId))
+					: false
+				setHasRatedOrganizer(already)
+			} catch (e) {
+				console.error('❌ Błąd sprawdzania oceny organizatora:', e)
+			}
+		}
+
+		checkOrganizerRated()
+	}, [currentUserId, event?.ownerId, id])
 
 	// fetch user email from backend based on stored access token (similar to ProfilePage)
 	useEffect(() => {
@@ -84,10 +109,10 @@ const EventPage: React.FC = () => {
 			const token = localStorage.getItem('accessToken')
 			if (!token) return
 			try {
-					const { data } = await axiosInstance.get('/auth/user', { params: { token } })
-					setCurrentUserId(data.id)
-					setCurrentUserName(data.name)
-					setUserEmail(data.email)
+				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
+				setCurrentUserId(data.id)
+				setCurrentUserName(data.name)
+				setUserEmail(data.email)
 			} catch (err) {
 				console.error('❌ Błąd pobierania usera:', err)
 			}
@@ -127,12 +152,111 @@ const EventPage: React.FC = () => {
 				rating,
 				comment,
 			})
-			toast.success('Dziękujemy za ocenę wydarzenia!')
+			showRatingToast({ type: 'add', target: 'wydarzenia' })
 			fetchEventRatings()
-		} catch {
-			toast.error('Nie możesz ocenić tego wydarzenia.')
+		} catch (e: any) {
+			const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? ''
+			const msg = typeof raw === 'string' ? raw.toLowerCase() : ''
+			if (msg.includes('already rated')) {
+				setHasRatedOrganizer(true)
+				toast.info('Już oceniłeś tego organizatora — ukrywam formularz.')
+			} else {
+				toast.error('Nie możesz ocenić tego organizatora.')
+			}
 		} finally {
 			setIsSending(false)
+		}
+	}
+
+	const handleOpenInMaps = () => {
+		if (!event) return
+
+		const { latitude, longitude, street, number, city } = event
+
+		if (street && city) {
+			const address = encodeURIComponent(`${street} ${number ?? ''}, ${city}`)
+			const url = `https://www.google.com/maps/search/?api=1&query=${address}`
+			window.open(url, '_blank')
+		} else if (latitude && longitude) {
+			const url = `https://www.google.com/maps?q=${latitude},${longitude}`
+			window.open(url, '_blank')
+		} else {
+			toast.error('Brak danych lokalizacji dla tego obiektu')
+		}
+	}
+
+	const startEditEventRating = (r: EventRatingResponse) => {
+		setEditingRatingId(r.id)
+		setEditRatingValue(r.rating)
+		setEditRatingComment(r.comment || '')
+	}
+
+	const cancelEditEventRating = () => {
+		setEditingRatingId(null)
+		setEditRatingValue(0)
+		setEditRatingComment('')
+	}
+
+	const handleSystemShare = async () => {
+		if (!event) return
+		const shareData = {
+			title: event.eventName,
+			text: `Dołącz do mojego wydarzenia "${event.eventName}"!\n📅 ${formatEventDate(
+				event.eventDate
+			)}\n\nSprawdź szczegóły:`,
+			url: window.location.href,
+		}
+
+		try {
+			if (navigator.share) {
+				await navigator.share(shareData)
+			} else {
+				await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
+				toast.info('Link do wydarzenia został skopiowany 📋')
+			}
+		} catch (err) {
+			console.error('❌ Nie udało się udostępnić wydarzenia:', err)
+			toast.error('Nie udało się udostępnić wydarzenia')
+		}
+	}
+
+	const saveEditEventRating = async (ratingId: number) => {
+		if (!currentUserId || !id) return
+		try {
+			const token = localStorage.getItem('accessToken')
+			await axiosInstance.put(
+				`/ratings/event/${ratingId}`,
+				{
+					userId: currentUserId,
+					eventId: parseInt(id),
+					rating: editRatingValue,
+					comment: editRatingComment,
+				},
+				{
+					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+					params: { userId: currentUserId },
+				}
+			)
+			showRatingToast({ type: 'update', target: 'wydarzenia' })
+			cancelEditEventRating()
+			fetchEventRatings()
+		} catch (e) {
+			toast.error('Nie udało się zaktualizować oceny')
+		}
+	}
+
+	const deleteEventRating = async (ratingId: number) => {
+		try {
+			const token = localStorage.getItem('accessToken')
+			await axiosInstance.delete(`/ratings/event/${ratingId}`, {
+				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+				params: { userId: currentUserId ?? undefined },
+			})
+			showRatingToast({ type: 'delete', target: 'wydarzenia' })
+			if (editingRatingId === ratingId) cancelEditEventRating()
+			fetchEventRatings()
+		} catch (e) {
+			toast.error('Nie udało się usunąć oceny')
 		}
 	}
 
@@ -236,6 +360,25 @@ const EventPage: React.FC = () => {
 		}
 	}
 
+	const handleMessageOrganizer = async () => {
+		if (!currentUserId || !event?.ownerId) return
+		try {
+			const token = localStorage.getItem('accessToken')
+			const res = await axiosInstance.post(
+				`/conversations/direct?user1Id=${currentUserId}&user2Id=${event.ownerId}`,
+				null,
+				{
+					headers: token ? { Authorization: `Bearer ${token}` } : {},
+				}
+			)
+			const conversationId = res.data?.id || res.data?.conversationId
+			navigate('/chat', { state: { conversationId, targetUserId: event.ownerId } })
+		} catch (err) {
+			console.error('❌ Błąd przy otwieraniu czatu z organizatorem:', err)
+			toast.error('Nie udało się otworzyć czatu z organizatorem.')
+		}
+	}
+
 	// ---------------- UTILS ----------------
 	const formatPrice = (cost: number, currency: string) =>
 		new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(cost)
@@ -314,15 +457,19 @@ const EventPage: React.FC = () => {
 								</div>
 							)}
 
+							{joined && isEventPast && hasRatedOrganizer && (
+								<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego organizatora.</p>
+							)}
+
 							{/* Tytuł i szczegóły */}
 							<div>
-									<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
-									{isEventPast && averageRating && (
-										<div className='flex items-center gap-2 mt-2'>
-											<StarRatingDisplay value={averageRating} size={16} />
-											<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
-										</div>
-									)}
+								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
+								{isEventPast && averageRating && (
+									<div className='flex items-center gap-2 mt-2'>
+										<StarRatingDisplay value={averageRating} size={16} />
+										<span className='text-sm text-zinc-300'>({averageRating.toFixed(1)})</span>
+									</div>
+								)}
 								<p className='text-sm text-zinc-400 mt-1'>{formatEventDate(event.eventDate)}</p>
 								<p className='text-sm text-zinc-400'>{event.sportObjectName}</p>
 							</div>
@@ -421,6 +568,39 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
+							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+								<h3 className='text-white text-lg font-semibold mb-3'>Czat wydarzenia</h3>
+								<p className='text-sm text-zinc-400 mb-4'>
+									Rozmawiaj z innymi uczestnikami wydarzenia w dedykowanym czacie grupowym.
+								</p>
+								{joined ? (
+									<button
+										onClick={async () => {
+											if (!id) return
+											try {
+												const res = await axiosInstance.post(`/event/${id}`)
+												const conversationId = res.data?.id
+												if (conversationId) {
+													navigate('/chat', { state: { conversationId } })
+												} else {
+													toast.error('Nie udało się otworzyć czatu.')
+												}
+											} catch (e) {
+												console.error('❌ Błąd przy otwieraniu czatu wydarzenia:', e)
+												toast.error('Nie udało się otworzyć czatu wydarzenia.')
+											}
+										}}
+										className='w-full rounded-xl bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 text-sm font-medium transition flex items-center justify-center gap-2'>
+										<MessageCircle size={16} />
+										Przejdź do czatu wydarzenia
+									</button>
+								) : (
+									<p className='text-sm text-zinc-400 italic'>
+										Musisz najpierw dołączyć do wydarzenia, aby zobaczyć czat.
+									</p>
+								)}
+							</div>
+
 							{/* Info grid */}
 							<div className='grid grid-cols-2 gap-4'>
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
@@ -450,8 +630,10 @@ const EventPage: React.FC = () => {
 										<span>{formatAddress(event.street, event.number, event.secondNumber, event.city)}</span>
 									</div>
 								</div>
-								<button className='mt-4 w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
-									Pokaż na mapie
+								<button
+									onClick={handleOpenInMaps}
+									className='mt-4 w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
+									Wyznacz trasę
 								</button>
 							</div>
 
@@ -498,36 +680,100 @@ const EventPage: React.FC = () => {
 								{/* Lista ocen */}
 								{eventRatings.length ? (
 									<ul className='space-y-3 mt-6'>
-										{eventRatings.map(r => (
-											<li key={r.id} className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
-													<div className='flex items-center justify-between mb-1'>
-														{(() => {
-															const participant = participants.find(p => p.userName === r.userName)
-															return (
-																<div className='flex items-center gap-3'>
-																	<Avatar src={participant?.userAvatarUrl || null} name={r.userName} size='sm' className='ring-1 ring-zinc-700' />
-																	<div className='leading-tight'>
-																		<div className='text-white text-sm font-medium'>{r.userName}</div>
-																		{participant?.userEmail && <div className='text-xs text-zinc-400'>{participant.userEmail}</div>}
-																	</div>
-																</div>
-														)
-														})()}
-														<span className='text-xs text-zinc-500'>
-															{parseLocalDate(r.createdAt).format('DD.MM.YYYY HH:mm')}
-														</span>
-													</div>
-													<div className='mb-2'>
-														<StarRatingDisplay value={r.rating} size={18} />
-													</div>
-													{r.comment && <p className='text-sm text-zinc-300'>{r.comment}</p>}
-											</li>
-										))}
+										{eventRatings.map(r => {
+											const participant = participants.find(p => p.userName === r.userName)
+											const isMine = currentUserName && r.userName === currentUserName
+											const isEditing = editingRatingId === r.id
+											return (
+												<li key={r.id}>
+													{isEditing ? (
+														<div className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700 mt-2 space-y-2'>
+															<StarRatingInput value={editRatingValue} onChange={setEditRatingValue} />
+															<textarea
+																className='w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm text-zinc-200'
+																value={editRatingComment}
+																onChange={e => setEditRatingComment(e.target.value)}
+																placeholder='Komentarz (opcjonalnie)'
+															/>
+															<div className='flex gap-2'>
+																<button
+																	className='px-3 py-1 rounded-md bg-violet-600 text-white text-sm hover:bg-violet-500'
+																	onClick={() => saveEditEventRating(r.id)}>
+																	Zapisz
+																</button>
+																<button
+																	className='px-3 py-1 rounded-md bg-zinc-700 text-zinc-200 text-sm hover:bg-zinc-600'
+																	onClick={cancelEditEventRating}>
+																	Anuluj
+																</button>
+															</div>
+														</div>
+													) : (
+														<RatingCard
+															rating={r.rating}
+															comment={r.comment}
+															raterName={r.userName}
+															raterAvatarUrl={participant?.userAvatarUrl || undefined}
+															raterEmail={participant?.userEmail}
+															createdAt={r.createdAt}
+															isMine={!!isMine}
+															onEdit={() => startEditEventRating(r)}
+															onDelete={() => deleteEventRating(r.id)}
+														/>
+													)}
+												</li>
+											)
+										})}
 									</ul>
 								) : (
 									<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego wydarzenia.</p>
 								)}
 							</div>
+							{/* --- Ocena organizatora --- */}
+							{joined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
+								<EventRatingForm
+									title='Oceń organizatora'
+									onSubmit={async (rating, comment) => {
+										if (!currentUserId || !event?.ownerId) return
+										setIsSending(true)
+										try {
+											await axiosInstance.post('/ratings', {
+												raterId: currentUserId,
+												organizerId: event.ownerId,
+												rating,
+												comment,
+												eventId: parseInt(id!),
+											})
+											showRatingToast({ type: 'add', target: 'organizatora' })
+											setHasRatedOrganizer(true)
+										} catch (e: any) {
+											const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? ''
+											const msg = typeof raw === 'string' ? raw.toLowerCase() : ''
+											if (msg.includes('already rated')) {
+												setHasRatedOrganizer(true)
+												toast.info('Już oceniłeś tego organizatora — ukrywam formularz.')
+											} else {
+												toast.error('Nie możesz ocenić tego organizatora.')
+											}
+										} finally {
+											setIsSending(false)
+										}
+									}}
+									disabled={isSending}
+								/>
+							)}
+
+							{!joined && (
+								<p className='text-sm text-zinc-400 italic mt-3'>
+									Możesz ocenić organizatora tylko, jeśli uczestniczyłeś w wydarzeniu.
+								</p>
+							)}
+
+							{joined && !isEventPast && (
+								<p className='text-sm text-zinc-400 italic mt-3'>
+									Ocenić organizatora możesz dopiero po zakończeniu wydarzenia.
+								</p>
+							)}
 						</section>
 
 						{/* Sidebar */}
@@ -572,9 +818,14 @@ const EventPage: React.FC = () => {
 								</div>
 
 								<div className='mt-4 space-y-2'>
-									<button className='w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 inline-flex items-center justify-center gap-2'>
-										<MessageCircle size={16} /> Wyślij wiadomość
-									</button>
+									{currentUserId !== event.ownerId && (
+										<button
+											onClick={handleMessageOrganizer}
+											className='w-full rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 inline-flex items-center justify-center gap-2'>
+											<MessageCircle size={16} /> Wyślij wiadomość
+										</button>
+									)}
+
 									<Link
 										to={`/profile/${event.ownerId}`}
 										className='w-full rounded-xl bg-transparent px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 ring-1 ring-zinc-700 inline-flex items-center justify-center gap-2'>
@@ -637,18 +888,15 @@ const EventPage: React.FC = () => {
 								href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
 								target='_blank'
 								rel='noreferrer'
-								className='grid place-items-center rounded-xl bg-[#1877F2] px-4 py-2 text-sm font-medium text-white hover:opacity-90'>
+								className='grid place-items-center rounded-xl bg-[#1877F2] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition'>
 								Facebook
 							</a>
-							<a
-								href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
-									window.location.href
-								)}&text=${encodeURIComponent(event.eventName)}`}
-								target='_blank'
-								rel='noreferrer'
-								className='grid place-items-center rounded-xl bg-[#1DA1F2] px-4 py-2 text-sm font-medium text-white hover:opacity-90'>
-								Twitter
-							</a>
+
+							<button
+								onClick={handleSystemShare}
+								className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition'>
+								<Share2 size={16} /> Udostępnij wydarzenie
+							</button>
 						</div>
 					</div>
 				</div>

@@ -1,17 +1,25 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.EventDetailsResponseDto;
-import com.joinmatch.backend.dto.EventRequestDto;
-import com.joinmatch.backend.dto.EventResponseDto;
+import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
+import com.joinmatch.backend.dto.Event.EventRequestDto;
+import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
+import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -23,11 +31,38 @@ public class EventService {
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
 
-    public List<EventResponseDto> getAllEvents() {
-        return eventRepository.findAll()
-                .stream()
-                .map(EventResponseDto::fromEvent)
-                .toList();
+    public Page<EventResponseDto> getAll(
+            Pageable pageable,
+            String sortBy,
+            String direction,
+            String name,
+            Integer sportTypeId,
+            String city,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Boolean free,
+            Boolean available
+    ) {
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        Specification<Event> spec = EventSpecificationBuilder.build(
+                name,
+                sportTypeId,
+                city,
+                dateFrom,
+                dateTo,
+                free,
+                available
+        );
+
+        Page<Event> events = eventRepository.findAll(spec, sortedPageable);
+
+        return events.map(EventResponseDto::fromEvent);
     }
 
     @Transactional(readOnly = true)
@@ -67,6 +102,8 @@ public class EventService {
                 .skillLevel("Amator")
                 .paymentMethod("Gotówka")
                 .imageUrl(e.getImageUrl())
+                .latitude(e.getSportObject().getLatitude())
+                .longitude(e.getSportObject().getLongitude())
                 .build();
     }
 
@@ -103,4 +140,16 @@ public class EventService {
         return EventResponseDto.fromEvent(saved);
     }
 
+    public List<EventResponseDto> getEventsForUser(String token){
+        return eventRepository.findAllOwnedByUserToken(token)
+                .stream()
+                .map(EventResponseDto::fromEvent)
+                .toList();
+    }
+    public List<EventResponseDto> getMutualEvents(Integer idLoggedUser, Integer idViewedUser){
+        return eventRepository.findMutualEvents(idLoggedUser,idViewedUser)
+                .stream()
+                .map(EventResponseDto::fromEvent)
+                .toList();
+    }
 }

@@ -1,9 +1,15 @@
 package com.joinmatch.backend.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.joinmatch.backend.config.JwtService;
 import com.joinmatch.backend.dto.*;
+import com.joinmatch.backend.dto.Auth.GoogleAuthRequest;
+import com.joinmatch.backend.dto.Auth.JwtResponse;
+import com.joinmatch.backend.dto.Auth.LoginRequest;
+import com.joinmatch.backend.dto.Auth.RegisterRequest;
+import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
+import com.joinmatch.backend.dto.Moderator.GetUsersDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
-import com.joinmatch.backend.model.FriendRequest;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
@@ -15,9 +21,12 @@ import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -31,6 +40,7 @@ public class UserService {
     private final JwtService jwtService;
     private final JoinMatchTokenRepository joinMatchTokenRepository;
     private final FriendshipRepository friendshipRepository;
+    private final GoogleTokenVerifier tokenVerifier;
 
 
     public void register(RegisterRequest request) {
@@ -44,54 +54,62 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setDateOfBirth(LocalDate.parse(request.dateOfBirth()));
         user.setRole(Role.USER);
+        user.setIsBlocked(false);
         userRepository.save(user);
         // Można dodać logikę wysyłania e-maila weryfikacyjnego
     }
+
     public TokenSupportObject login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
+        if (user.getIsBlocked()) {
+            throw new IllegalArgumentException("User is blocked");
+        }
         return generateAndSaveTokens(user);
     }
-    public RefreshSupportObject refreshToken(String refreshToken){
+
+    public RefreshSupportObject refreshToken(String refreshToken) {
         Optional<List<JoinMatchToken>> joinMatchTokenByRefreshToken = joinMatchTokenRepository.getJoinMatchTokenByRefreshToken(refreshToken);
-        if(joinMatchTokenByRefreshToken.isEmpty()){
+        if (joinMatchTokenByRefreshToken.isEmpty()) {
             throw new RuntimeException("Wrong refresh token");
         }
         List<JoinMatchToken> joinMatchTokens = joinMatchTokenByRefreshToken.get();
         JoinMatchToken joinMatchToken = null;
-        for(int i = 0 ; i <joinMatchTokens.size();i++){
-            if(LocalDateTime.now().isBefore(joinMatchTokens.get(i).getExpireDate()) && (!joinMatchTokens.get(i).getRevoked())){
+        for (int i = 0; i < joinMatchTokens.size(); i++) {
+            if (LocalDateTime.now().isBefore(joinMatchTokens.get(i).getExpireDate()) && (!joinMatchTokens.get(i).getRevoked())) {
                 joinMatchToken = joinMatchTokens.get(i);
             }
         }
-        if(joinMatchToken ==null){
+        if (joinMatchToken == null) {
             throw new RuntimeException("You have to login");
         }
         joinMatchToken.setRevoked(true);
         User user = joinMatchToken.getUser();
-        return new RefreshSupportObject(user,generateAndSaveTokens(user));
+        return new RefreshSupportObject(user, generateAndSaveTokens(user));
     }
-    public void logoutUser(String email){
+
+    public void logoutUser(String email) {
         Optional<User> byEmail = userRepository.findByEmail(email);
-        if(byEmail.isEmpty()){
+        if (byEmail.isEmpty()) {
             throw new RuntimeException("Nie ma takiego usera");
         }
         User user = byEmail.get();
-        for(int i = 0 ; i < user.getTokens().size();i++){
-            if(!user.getTokens().get(i).getRevoked()){
+        for (int i = 0; i < user.getTokens().size(); i++) {
+            if (!user.getTokens().get(i).getRevoked()) {
                 user.getTokens().get(i).setRevoked(true);
             }
         }
         userRepository.save(user);
 
     }
-    private TokenSupportObject generateAndSaveTokens(User user){
+
+    private TokenSupportObject generateAndSaveTokens(User user) {
         String token = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-        TokenSupportObject supportObject = new TokenSupportObject(token,refreshToken);
+        TokenSupportObject supportObject = new TokenSupportObject(token, refreshToken);
         JoinMatchToken joinMatchToken = new JoinMatchToken();
         joinMatchToken.setToken(token);
         joinMatchToken.setRefreshToken(refreshToken);
@@ -105,10 +123,11 @@ public class UserService {
     public TokenSupportObject issueTokensFor(User user) {
         return generateAndSaveTokens(user);
     }
+
     @Transactional
-    public void changePassword(ChangePassDto changePassDto){
+    public void changePassword(ChangePassDto changePassDto) {
         Optional<User> byTokenValue = userRepository.findByTokenValue(changePassDto.token());
-        if(!byTokenValue.isPresent()){
+        if (!byTokenValue.isPresent()) {
             throw new IllegalArgumentException("No users found");
         }
         User user = byTokenValue.get();
@@ -119,9 +138,10 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(changePassDto.newPassword()));
         userRepository.save(user);
     }
-    public UserResponseDto getSimpleInfo(String token){
+
+    public UserResponseDto getSimpleInfo(String token) {
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
-        if(byTokenValue.isEmpty()){
+        if (byTokenValue.isEmpty()) {
             throw new IllegalArgumentException("User Not Found");
         }
         User user = byTokenValue.get();
@@ -130,7 +150,7 @@ public class UserService {
 
     public void updateUserPhoto(String token, String photoUrl) {
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
-        if(byTokenValue.isEmpty()){
+        if (byTokenValue.isEmpty()) {
             throw new IllegalArgumentException("User Not Found");
         }
         User user = byTokenValue.get();
@@ -249,4 +269,50 @@ public class UserService {
         );
     }
 
+    public void changeStatusOfBlock(String email, boolean endStateOfBlocking) {
+        User user = userRepository.findByEmail(email).orElseThrow(IllegalArgumentException::new);
+        if (user.getIsBlocked() && endStateOfBlocking) {
+            throw new RuntimeException();
+        }
+        user.setIsBlocked(endStateOfBlocking);
+        userRepository.save(user);
+    }
+
+    public Page<GetUsersDto> getUsersForModeration(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(this::toUserDto);
+    }
+
+    private GetUsersDto toUserDto(User user) {
+        return new GetUsersDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getIsBlocked()
+        );
+    }
+    public JwtResponse loginByGoogle(GoogleAuthRequest req){
+        GoogleIdToken.Payload payload = tokenVerifier.verify(req.idToken());
+        if (payload == null) {
+            throw new IllegalArgumentException();
+        }
+        String email = payload.getEmail();
+        String name  = (String) payload.get("name");
+        Optional<User> byEmail = userRepository.findByEmail(email);
+        User user = byEmail.orElseGet(() -> {
+            User u = new User();
+            u.setEmail(email);
+            u.setName(name != null ? name : email);
+            u.setPassword("test");
+            u.setDateOfBirth(LocalDate.now());
+            u.setRole(Role.USER);
+            u.setIsBlocked(false);
+            return userRepository.save(u);
+        });
+        if(user.getIsBlocked()){
+            throw new RuntimeException("Is blocked");
+        }
+        TokenSupportObject tokenSupportObject = issueTokensFor(user);
+       return new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
+    }
 }

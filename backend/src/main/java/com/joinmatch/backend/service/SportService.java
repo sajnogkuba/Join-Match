@@ -1,13 +1,11 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.RemoveSportDto;
-import com.joinmatch.backend.dto.SportTypeResponseDto;
-import com.joinmatch.backend.dto.SportWithRatingDto;
-import com.joinmatch.backend.model.JoinMatchToken;
+import com.joinmatch.backend.dto.Sport.RemoveSportDto;
+import com.joinmatch.backend.dto.Sport.SportTypeResponseDto;
+import com.joinmatch.backend.dto.Sport.SportWithRatingDto;
 import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.SportUser;
 import com.joinmatch.backend.model.User;
-import com.joinmatch.backend.repository.JoinMatchTokenRepository;
 import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.SportUserRepository;
 import com.joinmatch.backend.repository.UserRepository;
@@ -15,10 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 @AllArgsConstructor

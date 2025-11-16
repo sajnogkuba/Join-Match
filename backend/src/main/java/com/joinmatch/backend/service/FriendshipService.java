@@ -1,6 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.FriendResponseDto;
+import com.joinmatch.backend.dto.FriendRequest.FriendResponseDto;
 import com.joinmatch.backend.repository.FriendRequestRepository;
 import com.joinmatch.backend.repository.FriendshipRepository;
 import com.joinmatch.backend.repository.UserRepository;
@@ -18,13 +18,13 @@ public class FriendshipService {
     private final UserRepository userRepository;
 
 
-    public List<FriendResponseDto> getFriendsByUserId(Integer userId) {
+    public List<FriendResponseDto> getFriendsByUserId(Integer userId, String query) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
 
-        return friendshipRepository.findByUserOneOrUserTwo(user, user)
+        var friends = friendshipRepository.findByUserOneOrUserTwo(user, user)
                 .stream()
-                .map((friendship) -> {
+                .map(friendship -> {
                     if (friendship.getUserOne().getId().equals(userId)) {
                         return FriendResponseDto.fromUser(friendship.getUserTwo(), friendship.getFriendshipId());
                     } else {
@@ -32,6 +32,18 @@ public class FriendshipService {
                     }
                 })
                 .toList();
+
+        if (query != null && !query.isBlank()) {
+            String lowerQuery = query.toLowerCase();
+            friends = friends.stream()
+                    .filter(f ->
+                            f.name().toLowerCase().contains(lowerQuery) ||
+                                    f.email().toLowerCase().contains(lowerQuery)
+                    )
+                    .toList();
+        }
+
+        return friends;
     }
 
     @Transactional

@@ -6,6 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "team")
@@ -41,5 +45,15 @@ public class Team {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserTeam> userTeams = new ArrayList<>();
+
+    @OneToMany(mappedBy = "team")
+    private List<Conversation> conversations;
+    @OneToMany(mappedBy = "teamId", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportTeam> reportTeamSet;
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CompetitionTeam> competitionTeams = new HashSet<>();
 
 }

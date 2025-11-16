@@ -9,3 +9,4 @@ export type SidebarItemKey =
     | "Hasło"
     | "Znajomi"
     | "Oceny"
+    | "Moje wydarzenia"

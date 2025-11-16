@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import api from '../Api/axios'
 import type { Team } from '../Api/types/Team'
+import type { TeamFilters } from './TeamFilters'
 import TeamCard from './TeamCard'
 import { Loader2, Users, ArrowUpDown } from 'lucide-react'
 
@@ -21,9 +22,11 @@ type SortDirection = 'ASC' | 'DESC'
 
 interface TeamsListProps {
 	leaderId?: number
+	userId?: number
+	filters?: TeamFilters
 }
 
-const TeamsList: React.FC<TeamsListProps> = ({ leaderId }) => {
+const TeamsList: React.FC<TeamsListProps> = ({ leaderId, userId, filters }) => {
 	const [teams, setTeams] = useState<Team[]>([])
 	const [loading, setLoading] = useState(true)
 	const [loadingMore, setLoadingMore] = useState(false)
@@ -35,6 +38,9 @@ const TeamsList: React.FC<TeamsListProps> = ({ leaderId }) => {
 	const observerTarget = useRef<HTMLDivElement>(null)
 	const currentPageRef = useRef(0)
 
+	const defaultFilters: TeamFilters = { name: '', sportTypeId: null, leaderName: '' }
+	const activeFilters = filters || defaultFilters
+
 	const fetchTeams = useCallback(async (pageNum: number, append: boolean = false) => {
 		try {
 			if (append) {
@@ -42,15 +48,29 @@ const TeamsList: React.FC<TeamsListProps> = ({ leaderId }) => {
 			} else {
 				setLoading(true)
 			}
-			const endpoint = leaderId !== undefined ? '/team/by-leader' : '/team'
+			let endpoint = '/team'
 			const params: Record<string, any> = {
 				page: pageNum,
 				size: pageSize,
 				sort: sortBy,
 				direction: sortDirection,
 			}
+			
 			if (leaderId !== undefined) {
+				endpoint = '/team/by-leader'
 				params.leaderId = leaderId
+			} else if (userId !== undefined) {
+				endpoint = '/team/by-user'
+				params.userId = userId
+			}
+			if (activeFilters.name.trim() !== '') {
+				params.name = activeFilters.name.trim()
+			}
+			if (activeFilters.sportTypeId !== null) {
+				params.sportTypeId = activeFilters.sportTypeId
+			}
+			if (activeFilters.leaderName.trim() !== '') {
+				params.leaderName = activeFilters.leaderName.trim()
 			}
 			const response = await api.get<TeamsPageResponse>(endpoint, { params })
 			const data = response.data
@@ -66,13 +86,13 @@ const TeamsList: React.FC<TeamsListProps> = ({ leaderId }) => {
 			setLoading(false)
 			setLoadingMore(false)
 		}
-	}, [pageSize, sortBy, sortDirection, leaderId])
+	}, [pageSize, sortBy, sortDirection, leaderId, userId, activeFilters.name, activeFilters.sportTypeId, activeFilters.leaderName])
 
 	useEffect(() => {
 		currentPageRef.current = 0
 		setTeams([])
 		fetchTeams(0, false)
-	}, [sortBy, sortDirection, leaderId, fetchTeams])
+	}, [sortBy, sortDirection, leaderId, userId, activeFilters.name, activeFilters.sportTypeId, activeFilters.leaderName, fetchTeams])
 
 	useEffect(() => {
 		const observer = new IntersectionObserver(
