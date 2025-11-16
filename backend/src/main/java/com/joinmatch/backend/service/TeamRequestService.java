@@ -24,6 +24,7 @@ public class TeamRequestService {
     private final UserRepository userRepository;
     private final UserTeamRepository userTeamRepository;
     private final NotificationService notificationService;
+    private final ChatService chatService;
 
     public Page<TeamRequestResponseDto> findAll(Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
@@ -79,6 +80,12 @@ public class TeamRequestService {
         userTeam.setUser(teamRequest.getReceiver());
         userTeam.setTeam(teamRequest.getTeam());
         userTeamRepository.save(userTeam);
+
+        chatService.addUserToTeamChat(
+                teamRequest.getTeam().getId(),
+                teamRequest.getReceiver().getId()
+        );
+
         notificationService.sendTeamRequestAcceptedNotification(teamRequest);
         teamRequestRepository.delete(teamRequest);
     }
