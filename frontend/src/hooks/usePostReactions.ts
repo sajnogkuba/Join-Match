@@ -44,24 +44,22 @@ export const usePostReactions = () => {
 				postId,
 				reactionTypeId,
 			}
-
-			let response: TeamPostReactionResponseDto
 			
 			if (existingReactionTypeId !== null) {
-				response = await api.patch<TeamPostReactionResponseDto>(
+				await api.patch<TeamPostReactionResponseDto>(
 					'/reaction/team-post',
 					requestDto
 				).then(res => res.data)
 			} else {
 				try {
-					response = await api.post<TeamPostReactionResponseDto>(
+					await api.post<TeamPostReactionResponseDto>(
 						'/reaction/team-post',
 						requestDto
 					).then(res => res.data)
 				} catch (postError: any) {
 					const errorMessage = postError.response?.data?.message || ''
 					if (errorMessage.includes('duplicate key') || errorMessage.includes('unique_post_reaction')) {
-						response = await api.patch<TeamPostReactionResponseDto>(
+						await api.patch<TeamPostReactionResponseDto>(
 							'/reaction/team-post',
 							requestDto
 						).then(res => res.data)

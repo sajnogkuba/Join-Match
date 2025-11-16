@@ -22,7 +22,6 @@ interface PostEditorModalProps {
 	emojiPickerRef: React.RefObject<HTMLDivElement | null>
 	onPublish: () => void
 	mode?: 'create' | 'edit'
-	initialContent?: string
 }
 
 export const PostEditorModal = ({
@@ -44,7 +43,6 @@ export const PostEditorModal = ({
 	emojiPickerRef,
 	onPublish,
 	mode = 'create',
-	initialContent,
 }: PostEditorModalProps) => {
 	if (!isOpen || !editor) return null
 
