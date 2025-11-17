@@ -10,6 +10,7 @@ import api from '../Api/axios'
 import Avatar from '../components/Avatar'
 import SportTypeFilter from '../components/SportTypeFilter'
 import TeamInfoTab from '../components/TeamInfoTab'
+import TeamDiscussionTab from '../components/TeamDiscussionTab'
 import { MapPin, Users, Loader2, AlertTriangle, Search, X, UserPlus, Clock, Pencil, Camera, Check } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -840,6 +841,12 @@ const TeamPage: React.FC = () => {
 								alert('Nie udało się otworzyć czatu drużyny.')
 							}
 						}}
+					/>
+				)}
+				{activeTab === 'dyskusja' && (
+					<TeamDiscussionTab
+						teamMembers={teamMembers}
+						teamId={team.idTeam}
 					/>
 				)}
 			</div>
