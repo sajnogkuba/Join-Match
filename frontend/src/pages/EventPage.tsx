@@ -124,10 +124,10 @@ const EventPage: React.FC = () => {
 		try {
 			setIsSendingRatingReport(true)
 
-			// TU DOSTOSUJ ENDPOINT I BODY DO SWOJEGO BACKENDU
-			await axiosInstance.post('/ratings/report', {
+			// /api/ratings/report/eventRating + DTO: (String token, Integer idEventRating, String description)
+			await axiosInstance.post('/ratings/report/eventRating', {
 				token,
-				eventRatingId: ratingToReport.id,
+				idEventRating: ratingToReport.id,
 				description: message,
 			})
 
@@ -587,8 +587,8 @@ const EventPage: React.FC = () => {
 								<div className='mb-3 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Zapełnienie wydarzenia</h3>
 									<span className='text-violet-300 font-semibold'>
-                    {participants.length}/{event.numberOfParticipants}
-                  </span>
+										{participants.length}/{event.numberOfParticipants}
+									</span>
 								</div>
 								<div className='h-3 w-full overflow-hidden rounded-full bg-zinc-800'>
 									<div

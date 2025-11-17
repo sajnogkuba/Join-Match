@@ -2,9 +2,7 @@ package com.joinmatch.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,14 +33,20 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_object_object_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private SportObject sportObject;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_visibility_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private EventVisibility eventVisibility;
 
     @Column(name = "status", length = 50, nullable = false)
@@ -66,13 +70,21 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_type_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Sport sportEv;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<UserEvent> userEvents = new ArrayList<>();
 
     @OneToMany(mappedBy = "event")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Conversation> conversations;
     @OneToMany(mappedBy = "reportedEvent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportEvent> reportEvents = new HashSet<>();
 }

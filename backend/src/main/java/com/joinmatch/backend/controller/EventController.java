@@ -90,8 +90,5 @@ public class EventController {
         }
         return ResponseEntity.ok().build();
     }
-    @PostMapping("report/eventRating")
-    public ResponseEntity<Void> reportEventRating(){
-        return ResponseEntity.ok().build();
-    }
+
 }

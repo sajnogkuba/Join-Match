@@ -3,9 +3,7 @@ package com.joinmatch.backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -30,8 +28,12 @@ public class Sport {
 
 
     @OneToMany(mappedBy = "sport", cascade = CascadeType.REMOVE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<SportUser> sportUsers;
 
     @OneToMany(mappedBy = "sportEv", cascade = CascadeType.REMOVE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<Event> events = new HashSet<>();
 }

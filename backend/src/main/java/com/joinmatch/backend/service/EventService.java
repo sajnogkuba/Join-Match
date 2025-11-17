@@ -33,6 +33,7 @@ public class EventService {
     private final EventVisibilityRepository eventVisibilityRepository;
     private final ReportEventRepository reportEventRepository;
 
+
     public Page<EventResponseDto> getAll(
             Pageable pageable,
             String sortBy,
@@ -154,6 +155,7 @@ public class EventService {
                 .map(EventResponseDto::fromEvent)
                 .toList();
     }
+    @Transactional
     public void reportEvent(EventReportDto eventReportDto){
         User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         Event referenceById = eventRepository.getReferenceById(eventReportDto.idEvent());
