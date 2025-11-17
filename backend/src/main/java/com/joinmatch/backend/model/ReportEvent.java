@@ -26,8 +26,9 @@ public class ReportEvent {
     @Column(nullable = false)
     private Boolean active;
 
-    @Column(name = "reporter_user_id", nullable = false)
-    private Integer reporterUserId;
+    @ManyToOne
+    @JoinColumn (name = "reporter_user_id", nullable = false)
+    private User reporterUser;
 
     @Column(nullable = false)
     private Boolean reviewed;
