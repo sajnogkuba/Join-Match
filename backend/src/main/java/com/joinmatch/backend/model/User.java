@@ -90,6 +90,8 @@ public class User {
     private Set<ReportUserRating> reportUserRatings = new HashSet<>();
     @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL,orphanRemoval = true)
     private Set<ReportCompetition> reportCompetitions = new HashSet<>();
+    @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReportEvent> reportEvents = new HashSet<>();
     public List<JoinMatchToken> getTokens() {
         return Collections.unmodifiableList(tokens);
     }

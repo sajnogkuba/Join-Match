@@ -3,6 +3,7 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
@@ -30,6 +31,7 @@ public class EventService {
     private final SportRepository sportRepository;
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
+    private final ReportEventRepository reportEventRepository;
 
     public Page<EventResponseDto> getAll(
             Pageable pageable,
@@ -151,5 +153,20 @@ public class EventService {
                 .stream()
                 .map(EventResponseDto::fromEvent)
                 .toList();
+    }
+    public void reportEvent(EventReportDto eventReportDto){
+        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+        Event referenceById = eventRepository.getReferenceById(eventReportDto.idEvent());
+        ReportEvent reportEvent = new ReportEvent();
+        reportEvent.setReportedEvent(referenceById);
+        reportEvent.setReporterUser(user);
+        reportEvent.setReviewed(false);
+        reportEvent.setActive(false);
+        reportEvent.setDescription(eventReportDto.description());
+        user.getReportEvents().add(reportEvent);
+        referenceById.getReportEvents().add(reportEvent);
+        userRepository.save(user);
+        eventRepository.save(referenceById);
+        reportEventRepository.save(reportEvent);
     }
 }

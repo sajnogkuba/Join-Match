@@ -12,6 +12,8 @@ import RatingCard from '../components/RatingCard'
 import StarRatingInput from '../components/StarRatingInput'
 import { formatEventDate, parseEventDate } from '../utils/formatDate'
 import type { EventRatingResponse } from '../Api/types/Rating'
+import ReportEventModal from '../components/ReportEventModal'
+import ReportRatingModal from '../components/ReportRatingModal'
 import {
 	Share2,
 	Shield,
@@ -24,6 +26,7 @@ import {
 	AlertTriangle,
 	MessageCircle,
 	CalendarDays,
+	Flag,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
@@ -33,6 +36,15 @@ dayjs.locale('pl')
 const EventPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+
+	// --- MODAL ZGŁOSZENIA WYDARZENIA ---
+	const [showReportModal, setShowReportModal] = useState(false)
+	const [isSendingReport, setIsSendingReport] = useState(false)
+
+	// --- MODAL ZGŁOSZENIA OCENY WYDARZENIA ---
+	const [showRatingReportModal, setShowRatingReportModal] = useState(false)
+	const [ratingToReport, setRatingToReport] = useState<EventRatingResponse | null>(null)
+	const [isSendingRatingReport, setIsSendingRatingReport] = useState(false)
 
 	const [event, setEvent] = useState<EventDetails | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -65,6 +77,79 @@ const EventPage: React.FC = () => {
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+
+	// --- HANDLER: ZGŁOSZENIE WYDARZENIA ---
+	const handleSubmitReport = async (message: string) => {
+		if (!id) return
+
+		const token = localStorage.getItem('accessToken')
+		if (!token) {
+			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.')
+			return
+		}
+
+		try {
+			setIsSendingReport(true)
+
+			await axiosInstance.post('/event/report/event', {
+				token,
+				idEvent: Number(id),
+				description: message,
+			})
+
+			toast.success('Dziękujemy, zgłoszenie zostało wysłane do moderacji.')
+			setShowReportModal(false)
+		} catch (e: any) {
+			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e)
+			if (e?.response?.status === 400) {
+				toast.error('Nie udało się wysłać zgłoszenia (400).')
+			} else {
+				toast.error('Nie udało się wysłać zgłoszenia.')
+			}
+		} finally {
+			setIsSendingReport(false)
+		}
+	}
+
+	// --- HANDLER: ZGŁOSZENIE KONKRETNEJ OCENY WYDARZENIA ---
+	const handleSubmitRatingReport = async (message: string) => {
+		if (!ratingToReport) return
+
+		const token = localStorage.getItem('accessToken')
+		if (!token) {
+			toast.error('Musisz być zalogowany, aby zgłosić ocenę.')
+			return
+		}
+
+		try {
+			setIsSendingRatingReport(true)
+
+			// TU DOSTOSUJ ENDPOINT I BODY DO SWOJEGO BACKENDU
+			await axiosInstance.post('/ratings/report', {
+				token,
+				eventRatingId: ratingToReport.id,
+				description: message,
+			})
+
+			toast.success('Dziękujemy, zgłoszenie oceny zostało wysłane do moderacji.')
+			setShowRatingReportModal(false)
+			setRatingToReport(null)
+		} catch (e: any) {
+			console.error('❌ Błąd wysyłania zgłoszenia oceny wydarzenia:', e)
+			if (e?.response?.status === 400) {
+				toast.error('Nie udało się wysłać zgłoszenia (400).')
+			} else {
+				toast.error('Nie udało się wysłać zgłoszenia oceny.')
+			}
+		} finally {
+			setIsSendingRatingReport(false)
+		}
+	}
+
+	const openRatingReportModal = (rating: EventRatingResponse) => {
+		setRatingToReport(rating)
+		setShowRatingReportModal(true)
+	}
 
 	useEffect(() => {
 		const checkOrganizerRated = async () => {
@@ -502,8 +587,8 @@ const EventPage: React.FC = () => {
 								<div className='mb-3 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Zapełnienie wydarzenia</h3>
 									<span className='text-violet-300 font-semibold'>
-										{participants.length}/{event.numberOfParticipants}
-									</span>
+                    {participants.length}/{event.numberOfParticipants}
+                  </span>
 								</div>
 								<div className='h-3 w-full overflow-hidden rounded-full bg-zinc-800'>
 									<div
@@ -658,6 +743,7 @@ const EventPage: React.FC = () => {
 									</div>
 								)}
 							</div>
+
 							{/* --- Oceny wydarzenia --- */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-8'>
 								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
@@ -709,17 +795,28 @@ const EventPage: React.FC = () => {
 															</div>
 														</div>
 													) : (
-														<RatingCard
-															rating={r.rating}
-															comment={r.comment}
-															raterName={r.userName}
-															raterAvatarUrl={participant?.userAvatarUrl || undefined}
-															raterEmail={participant?.userEmail}
-															createdAt={r.createdAt}
-															isMine={!!isMine}
-															onEdit={() => startEditEventRating(r)}
-															onDelete={() => deleteEventRating(r.id)}
-														/>
+														<>
+															<RatingCard
+																rating={r.rating}
+																comment={r.comment}
+																raterName={r.userName}
+																raterAvatarUrl={participant?.userAvatarUrl || undefined}
+																raterEmail={participant?.userEmail}
+																createdAt={r.createdAt}
+																isMine={!!isMine}
+																onEdit={() => startEditEventRating(r)}
+																onDelete={() => deleteEventRating(r.id)}
+															/>
+															<div className='mt-2 flex justify-end'>
+																<button
+																	type='button'
+																	onClick={() => openRatingReportModal(r)}
+																	className='inline-flex items-center gap-1 text-xs text-rose-300 hover:text-rose-200'>
+																	<Flag size={12} />
+																	Zgłoś ocenę
+																</button>
+															</div>
+														</>
 													)}
 												</li>
 											)
@@ -729,6 +826,7 @@ const EventPage: React.FC = () => {
 									<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego wydarzenia.</p>
 								)}
 							</div>
+
 							{/* --- Ocena organizatora --- */}
 							{joined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
 								<EventRatingForm
@@ -838,13 +936,18 @@ const EventPage: React.FC = () => {
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Akcje</h3>
 								<div className='mt-4 space-y-3'>
-									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
-										<Bookmark size={16} /> Zapisz wydarzenie
+									<button
+										onClick={handleSaveEvent}
+										className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
+										{saved ? <BookmarkCheck size={16} className='text-violet-400' /> : <Bookmark size={16} />}
+										{saved ? 'Zapisano wydarzenie' : 'Zapisz wydarzenie'}
 									</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
 										<CalendarDays size={16} /> Dodaj do kalendarza
 									</button>
-									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
+									<button
+										onClick={() => setShowReportModal(true)}
+										className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
 										<AlertTriangle size={16} /> Zgłoś wydarzenie
 									</button>
 								</div>
@@ -902,12 +1005,36 @@ const EventPage: React.FC = () => {
 				</div>
 			)}
 
-			{/* Share toast */}
-			{showShareToast && (
-				<div className='fixed bottom-4 right-4 z-50 inline-flex items-center gap-2 rounded-lg bg-black/70 px-3 py-2 text-sm text-emerald-200 ring-1 ring-emerald-700/40'>
-					<span className='h-2 w-2 rounded-full bg-emerald-400' />
-					Link skopiowany do schowka!
-				</div>
+			{/* Modal zgłoszenia wydarzenia */}
+			{showReportModal && event && (
+				<ReportEventModal
+					isOpen={showReportModal}
+					onClose={() => setShowReportModal(false)}
+					event={event}
+					onSubmit={handleSubmitReport}
+					isSubmitting={isSendingReport}
+				/>
+			)}
+
+			{/* Modal zgłoszenia OCENY wydarzenia */}
+			{showRatingReportModal && ratingToReport && (
+				<ReportRatingModal
+					isOpen={showRatingReportModal}
+					onClose={() => {
+						setShowRatingReportModal(false)
+						setRatingToReport(null)
+					}}
+					rating={{
+						id: ratingToReport.id,
+						userName: ratingToReport.userName,
+						raterAvatarUrl:
+							participants.find(p => p.userName === ratingToReport.userName)?.userAvatarUrl ?? undefined,
+						rating: ratingToReport.rating,
+						comment: ratingToReport.comment,
+					}}
+					onSubmit={handleSubmitRatingReport}
+					isSubmitting={isSendingRatingReport}
+				/>
 			)}
 		</>
 	)
