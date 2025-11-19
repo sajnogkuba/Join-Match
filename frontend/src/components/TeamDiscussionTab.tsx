@@ -33,7 +33,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [pollOptions, setPollOptions] = useState(['', ''])
 	
 	const [editingPostId, setEditingPostId] = useState<number | null>(null)
-	const [editingPostContent, setEditingPostContent] = useState<string | null>(null)
+	const [_editingPostContent, setEditingPostContent] = useState<string | null>(null)
 	const [showDeletePostModal, setShowDeletePostModal] = useState(false)
 	const [postToDelete, setPostToDelete] = useState<number | null>(null)
 	const [deletingPost, setDeletingPost] = useState(false)
@@ -401,7 +401,6 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 				emojiPickerRef={emojiPickerRef}
 				onPublish={editingPostId ? handleSaveEdit : handleCreatePost}
 				mode={editingPostId ? 'edit' : 'create'}
-				initialContent={editingPostContent || undefined}
 			/>
 
 			<PollModal

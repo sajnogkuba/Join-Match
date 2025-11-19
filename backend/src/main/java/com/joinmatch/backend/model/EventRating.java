@@ -22,10 +22,14 @@ public class EventRating {
 
     @ManyToOne
     @JoinColumn(name = "event_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Event event;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @Column(nullable = false)
@@ -39,6 +43,8 @@ public class EventRating {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     @OneToMany(mappedBy = "eventRating", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportEventRating> reportEventRatings = new HashSet<>();
     @PrePersist
     protected void onCreate() {

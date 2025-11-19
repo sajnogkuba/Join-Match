@@ -72,24 +72,42 @@ public class User {
     private List<EventRating> eventRatings = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<UserTeam> userTeams = new ArrayList<>();
 
     @OneToMany(mappedBy = "userId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportUser> suspectUser = new HashSet<>();
 
     @OneToMany(mappedBy = "reporterUserId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportUser> userReportSender = new HashSet<>();
 
     @OneToMany(mappedBy = "teamReporterUserId",cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportTeam> teamReportSender = new HashSet<>();
 
     @OneToMany(mappedBy = "reporterUser",cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportEventRating> reportEventRatings = new HashSet<>();
 
     @OneToMany(mappedBy = "userRatingReported", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportUserRating> reportUserRatings = new HashSet<>();
     @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL,orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportCompetition> reportCompetitions = new HashSet<>();
+    @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<ReportEvent> reportEvents = new HashSet<>();
     public List<JoinMatchToken> getTokens() {
         return Collections.unmodifiableList(tokens);
     }

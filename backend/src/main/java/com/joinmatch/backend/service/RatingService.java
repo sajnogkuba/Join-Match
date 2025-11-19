@@ -4,6 +4,7 @@ import com.joinmatch.backend.dto.EventRating.EventRatingRequestDto;
 import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingRequestDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingResponseDto;
+import com.joinmatch.backend.dto.Reports.EventRatingReportDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.model.*;
@@ -25,6 +26,7 @@ public class RatingService {
     private final EventRatingRepository eventRatingRepository;
     private final UserEventRepository userEventRepository;
     private final OrganizerRatingRepository organizerRatingRepository;
+    private final ReportEventRatingRepository reportEventRatingRepository;
 
     @Transactional
     public UserRatingResponseDto addUserRating(UserRatingRequestDto request) {
@@ -306,6 +308,22 @@ public class RatingService {
         }
 
         organizerRatingRepository.delete(rating);
+    }
+    @Transactional
+    public void reportEventRating(EventRatingReportDto eventReportDto){
+        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+        EventRating referenceById = eventRatingRepository.getReferenceById(eventReportDto.idEventRating());
+        ReportEventRating reportEventRating = new ReportEventRating();
+        reportEventRating.setDescription(eventReportDto.description());
+        reportEventRating.setActive(false);
+        reportEventRating.setReviewed(false);
+        reportEventRating.setReporterUser(user);
+        reportEventRating.setEventRating(referenceById);
+        user.getReportEventRatings().add(reportEventRating);
+        referenceById.getReportEventRatings().add(reportEventRating);
+        userRepository.save(user);
+        eventRatingRepository.save(referenceById);
+        reportEventRatingRepository.save(reportEventRating);
     }
 
 }

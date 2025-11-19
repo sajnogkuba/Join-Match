@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
 import StarRatingDisplay from '../components/StarRatingDisplay'
@@ -13,9 +13,8 @@ import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare } from 'lucide-
 import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
-import { useNavigate } from 'react-router-dom'
-
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
+import UserReportForm from '../components/UserReportForm'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -24,6 +23,7 @@ interface FriendStatus {
 
 const UserProfilePage = () => {
 	const { id } = useParams<{ id: string }>()
+	const navigate = useNavigate()
 
 	const [user, setUser] = useState<UsersResponse | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -37,6 +37,7 @@ const UserProfilePage = () => {
 	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
 	const [viewerEvents, setViewerEvents] = useState<any[]>([])
 	const [isSending, setIsSending] = useState(false)
+	const [isSendingReport, setIsSendingReport] = useState(false)
 	const [friendsCount, setFriendsCount] = useState<number>(0)
 	const [mainSportName, setMainSportName] = useState<string>('')
 	const [editingRatingId, setEditingRatingId] = useState<number | null>(null)
@@ -45,7 +46,6 @@ const UserProfilePage = () => {
 	const [editingOrganizerRatingId, setEditingOrganizerRatingId] = useState<number | null>(null)
 	const [editOrganizerRatingValue, setEditOrganizerRatingValue] = useState<number>(0)
 	const [editOrganizerRatingComment, setEditOrganizerRatingComment] = useState<string>('')
-	const navigate = useNavigate()
 
 	const levelToNumber = (lvl: any): number => {
 		if (typeof lvl === 'number') return lvl
@@ -268,7 +268,6 @@ const UserProfilePage = () => {
 				})
 				setEvents(targetEventsRes.data || [])
 
-				// liczba znajomych
 				try {
 					const friendsRes = await api.get(`/friends/${profileRes.data.id}`)
 					setFriendsCount((friendsRes.data || []).length)
@@ -276,7 +275,6 @@ const UserProfilePage = () => {
 					setFriendsCount(0)
 				}
 
-				// główny sport (heurystyka)
 				try {
 					const sports = profileRes.data.sports || []
 					const best = [...sports].sort((a: any, b: any) => levelToNumber(b.level) - levelToNumber(a.level))[0]
@@ -308,9 +306,8 @@ const UserProfilePage = () => {
 			try {
 				const mutualRes = await api.get('/event/mutualEvents', {
 					params: {
-						idLogUser: currentUserId, // zalogowany
-						idViewedUser: user.id, // oglądany profil
-						// token: localStorage.getItem('accessToken'), // odkomentuj, jeśli BE wymaga tokenu w query
+						idLogUser: currentUserId,
+						idViewedUser: user.id,
 					},
 				})
 				setMutualEvents(Array.isArray(mutualRes.data) ? mutualRes.data : [])
@@ -355,6 +352,33 @@ const UserProfilePage = () => {
 			setErrorMsg('Nie udało się usunąć znajomego.')
 		}
 	}
+
+	const handleSubmitUserReport = async (message: string) => {
+		if (!id) return
+
+		const token = localStorage.getItem('accessToken')
+		if (!token) {
+			toast.error("Brak tokenu – zaloguj się ponownie.")
+			return
+		}
+
+		setIsSendingReport(true)
+		try {
+			await api.post("/auth/report/user", {
+				token: token,
+				reportedUserId: parseInt(id),
+				description: message
+			})
+
+			toast.success("Zgłoszenie zostało wysłane do moderatorów.")
+		} catch (e) {
+			toast.error("Nie udało się wysłać zgłoszenia.")
+			console.error(e)
+		} finally {
+			setIsSendingReport(false)
+		}
+	}
+
 
 	if (loading) return <div className='p-10 text-center text-zinc-400'>Ładowanie profilu...</div>
 	if (errorMsg) return <div className='p-10 text-center text-red-400'>{errorMsg}</div>
@@ -434,7 +458,7 @@ const UserProfilePage = () => {
 										))}
 									</ul>
 
-									<div className='mt-6 flex gap-3'>
+									<div className='mt-6 flex gap-3 flex-wrap'>
 										{!friendStatus.isFriend && friendStatus.pendingRequestId !== -1 && (
 											<button
 												onClick={handleAddFriend}
@@ -504,9 +528,7 @@ const UserProfilePage = () => {
 								) : (
 									<section>
 										{mutualEvents.length ? (
-											<>
-												<MutualEventsUserProfile events={mutualEvents} previewCount={3} />
-											</>
+											<MutualEventsUserProfile events={mutualEvents} previewCount={3} />
 										) : (
 											<p className='text-sm text-zinc-500 italic'>Brak wspólnych wydarzeń.</p>
 										)}
@@ -657,6 +679,20 @@ const UserProfilePage = () => {
 									) : (
 										<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen jako organizator.</p>
 									)}
+								</section>
+							)}
+
+							{activeTab === 'Zgłoś użytkownika' && (
+								<section>
+									<h3 className='text-lg font-semibold text-white mb-3'>Zgłoś tego użytkownika</h3>
+									<p className='text-sm text-zinc-400 mb-4'>
+										To zgłoszenie zostanie przesłane do moderatorów Join Match. Używaj tej opcji tylko w uzasadnionych
+										przypadkach (np. obraźliwe zachowanie, spam, oszustwo).
+									</p>
+									<UserReportForm
+										onSubmit={handleSubmitUserReport}
+										disabled={isSendingReport || !currentUserId || !id}
+									/>
 								</section>
 							)}
 						</div>

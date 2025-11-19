@@ -843,6 +843,12 @@ const TeamPage: React.FC = () => {
 						}}
 					/>
 				)}
+				{activeTab === 'dyskusja' && (
+					<TeamDiscussionTab
+						teamMembers={teamMembers}
+						teamId={team.idTeam}
+					/>
+				)}
 			</div>
 
 			{showInvitePopup && (
