@@ -9,14 +9,13 @@ import com.joinmatch.backend.dto.Auth.LoginRequest;
 import com.joinmatch.backend.dto.Auth.RegisterRequest;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
 import com.joinmatch.backend.dto.Moderator.GetUsersDto;
+import com.joinmatch.backend.dto.Reports.UserReportDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.JoinMatchToken;
+import com.joinmatch.backend.model.ReportUser;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
-import com.joinmatch.backend.repository.FriendRequestRepository;
-import com.joinmatch.backend.repository.FriendshipRepository;
-import com.joinmatch.backend.repository.JoinMatchTokenRepository;
-import com.joinmatch.backend.repository.UserRepository;
+import com.joinmatch.backend.repository.*;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
 import jakarta.transaction.Transactional;
@@ -41,6 +40,7 @@ public class UserService {
     private final JoinMatchTokenRepository joinMatchTokenRepository;
     private final FriendshipRepository friendshipRepository;
     private final GoogleTokenVerifier tokenVerifier;
+    private final ReportUserRepository reportUserRepository;
 
 
     public void register(RegisterRequest request) {
@@ -314,5 +314,20 @@ public class UserService {
         }
         TokenSupportObject tokenSupportObject = issueTokensFor(user);
        return new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
+    }
+
+    public void reportUser(UserReportDto userReportDto) {
+        User user = userRepository.findByTokenValue(userReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
+        User suspect = userRepository.findById(userReportDto.reportedUserId()).orElseThrow(() -> new IllegalArgumentException("Brak usera"));
+        ReportUser reportUser = new ReportUser();
+        reportUser.setUserId(suspect);
+        reportUser.setReporterUserId(user);
+        reportUser.setActive(false);
+        reportUser.setDescription(userReportDto.description());
+        suspect.getSuspectUser().add(reportUser);
+        user.getUserReportSender().add(reportUser);
+        userRepository.save(user);
+        userRepository.save(suspect);
+        reportUserRepository.save(reportUser);
     }
 }

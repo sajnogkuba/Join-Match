@@ -31,10 +31,16 @@ public class Competition {
 
     @ManyToOne
     @JoinColumn(name = "sport_object_object_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private SportObject sportObject;
     @OneToMany(mappedBy = "competition", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<CompetitionTeam> competitionTeams = new HashSet<>();
     @OneToMany(mappedBy = "competition", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ReportCompetition> reportCompetitions = new HashSet<>();
 
 }
