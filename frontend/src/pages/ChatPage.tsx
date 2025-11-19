@@ -160,8 +160,7 @@ const ChatPage: React.FC = () => {
 								{otherUserId ? (
 									<Link
 										to={`/profile/${otherUserId}`}
-										className='font-semibold text-white hover:text-violet-400 transition-colors cursor-pointer'
-									>
+										className='font-semibold text-white hover:text-violet-400 transition-colors cursor-pointer'>
 										{conversations.find(c => c.id === conversationId)?.name || 'Rozmowa'}
 									</Link>
 								) : (
@@ -176,6 +175,7 @@ const ChatPage: React.FC = () => {
 								input={input}
 								setInput={setInput}
 								onSend={handleSend}
+								activeConversation={conversations.find(c => c.id === conversationId)}
 							/>
 						</div>
 					)}

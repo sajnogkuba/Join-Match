@@ -4,5 +4,7 @@ public record ConversationPreviewDto(
         Integer id,
         String name,
         String avatarUrl,
-        String lastMessage
+        String lastMessage,
+        Integer unreadCount
 ) {}
+

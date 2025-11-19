@@ -11,6 +11,7 @@ interface ConversationPreview {
 	name: string
 	avatarUrl?: string | null
 	lastMessage?: string | null
+	unreadCount?: number
 }
 
 const ChatBell: React.FC = () => {
@@ -22,6 +23,7 @@ const ChatBell: React.FC = () => {
 	const [loading, setLoading] = useState(false)
 	const { accessToken } = useAuth()
 	const [myUserId, setMyUserId] = useState<number | null>(null)
+	const { totalUnreadConversations } = useChat()
 
 	useEffect(() => {
 		const fetchUserId = async () => {
@@ -59,20 +61,10 @@ const ChatBell: React.FC = () => {
 		return () => document.removeEventListener('mousedown', handleClickOutside)
 	}, [])
 
-	// Pobieranie listy rozmów
-	useEffect(() => {
-		if (!isOpen) return
-		setLoading(true)
-		const token = localStorage.getItem('accessToken')
-		if (!token) return
-		api
-			.get('/conversations/preview', { params: { token } })
-			.then(res => setConversations(res.data))
-			.catch(() => setConversations([]))
-			.finally(() => setLoading(false))
-	}, [isOpen])
+	const { markConversationRead } = useChat()
 
 	const handleOpenConversation = (id: number) => {
+		markConversationRead(id)
 		setIsOpen(false)
 		navigate('/chat', { state: { conversationId: id } })
 	}
@@ -130,7 +122,16 @@ const ChatBell: React.FC = () => {
 											className='w-10 h-10 rounded-full object-cover'
 										/>
 										<div className='flex-1 min-w-0'>
-											<div className='text-white font-medium truncate'>{conv.name}</div>
+											<div className='flex items-center justify-between'>
+												<div className='text-white font-medium truncate'>{conv.name}</div>
+
+												{conv.unreadCount && conv.unreadCount > 0 && (
+													<span className='ml-2 bg-violet-600 text-white text-xs rounded-full h-5 min-w-5 px-2 flex items-center justify-center'>
+														{conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+													</span>
+												)}
+											</div>
+
 											<div className='text-sm text-zinc-400 truncate'>{conv.lastMessage || 'Brak wiadomości'}</div>
 										</div>
 									</motion.div>
