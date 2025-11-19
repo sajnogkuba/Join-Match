@@ -19,11 +19,10 @@ const ChatBell: React.FC = () => {
 	const [conversations, setConversations] = useState<ConversationPreview[]>([])
 	const dropdownRef = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
-	const { totalUnreadCount } = useChat()
 	const [loading, setLoading] = useState(false)
 	const { accessToken } = useAuth()
 	const [myUserId, setMyUserId] = useState<number | null>(null)
-	const { totalUnreadConversations } = useChat()
+	const { totalUnreadConversations, markConversationRead } = useChat()
 
 	useEffect(() => {
 		const fetchUserId = async () => {
@@ -43,7 +42,11 @@ const ChatBell: React.FC = () => {
 		setLoading(true)
 		api
 			.get('/conversations/preview', { params: { userId: myUserId } })
-			.then(res => setConversations(res.data))
+			.then(res => {
+				console.log('📥 /conversations/preview data', res.data)
+				setConversations(res.data)
+
+			})
 			.catch(err => {
 				console.error('❌ /conversations/preview error:', err)
 				setConversations([])
@@ -61,9 +64,13 @@ const ChatBell: React.FC = () => {
 		return () => document.removeEventListener('mousedown', handleClickOutside)
 	}, [])
 
-	const { markConversationRead } = useChat()
+	const handleOpenConversation = async (id: number) => {
+		if (myUserId) {
+			await api.post(`/conversations/${id}/read`, null, {
+				params: { userId: myUserId },
+			})
+		}
 
-	const handleOpenConversation = (id: number) => {
 		markConversationRead(id)
 		setIsOpen(false)
 		navigate('/chat', { state: { conversationId: id } })
@@ -77,9 +84,9 @@ const ChatBell: React.FC = () => {
 				className='relative p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors'
 				title='Wiadomości'>
 				<MessageSquare size={20} className='text-zinc-300' />
-				{totalUnreadCount > 0 && (
+				{totalUnreadConversations > 0 && (
 					<span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium'>
-						{totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+						{totalUnreadConversations > 99 ? '99+' : totalUnreadConversations}
 					</span>
 				)}
 			</button>

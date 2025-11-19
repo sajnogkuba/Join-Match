@@ -75,7 +75,20 @@ const ChatPage: React.FC = () => {
 	}, [myUserId])
 
 	useEffect(() => {
-		if (!conversationId) return
+		if (!conversationId || !myUserId) return
+
+		const markReadBackend = async () => {
+			try {
+				await api.post(`/conversations/${conversationId}/read`, null, {
+					params: { userId: myUserId },
+				})
+				console.log('✔ Backend: conversation marked as read')
+			} catch (err) {
+				console.error('❌ Błąd markReadBackend', err)
+			}
+		}
+
+		markReadBackend()
 
 		setActiveConversation(conversationId)
 		markConversationRead(conversationId)
@@ -88,7 +101,7 @@ const ChatPage: React.FC = () => {
 				addMessages(conversationId, res.data)
 			})
 			.catch(err => console.error('❌ Błąd ładowania wiadomości', err))
-	}, [conversationId])
+	}, [conversationId, myUserId])
 
 	useEffect(() => {
 		const resolve = async () => {
