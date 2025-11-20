@@ -5,6 +5,7 @@ import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingRequestDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingResponseDto;
 import com.joinmatch.backend.dto.Reports.EventRatingReportDto;
+import com.joinmatch.backend.dto.Reports.UserRatingReportDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.model.*;
@@ -27,6 +28,7 @@ public class RatingService {
     private final UserEventRepository userEventRepository;
     private final OrganizerRatingRepository organizerRatingRepository;
     private final ReportEventRatingRepository reportEventRatingRepository;
+    private final ReportUserRatingRepository reportUserRatingRepository;
 
     @Transactional
     public UserRatingResponseDto addUserRating(UserRatingRequestDto request) {
@@ -326,4 +328,16 @@ public class RatingService {
         reportEventRatingRepository.save(reportEventRating);
     }
 
+    public void reportUserRating(UserRatingReportDto userRatingReportDto) {
+        User user = userRepository.findByTokenValue(userRatingReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+        UserRating referenceById = userRatingRepository.getReferenceById(userRatingReportDto.idUserRating());
+        ReportUserRating reportUserRating = new ReportUserRating();
+        reportUserRating.setUserRating(referenceById);
+        reportUserRating.setUserRatingReported(user);
+        reportUserRating.setActive(false);
+        reportUserRating.setDescription(userRatingReportDto.description());
+        reportUserRating.setReviewed(false);
+        reportUserRatingRepository.save(reportUserRating);
+        userRepository.save(user);
+    }
 }
