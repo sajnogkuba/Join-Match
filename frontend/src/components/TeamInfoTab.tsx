@@ -3,7 +3,19 @@ import type { TeamDetails } from '../Api/types/Team'
 import type { TeamMember } from '../Api/types/TeamMember'
 import Avatar from './Avatar'
 import ContextMenu from './ContextMenu'
-import { MapPin, Users, Crown, UserRound, Loader2, ChevronDown, UserPlus, UserMinus, LogOut, Trash2 } from 'lucide-react'
+import {
+	MapPin,
+	Users,
+	Crown,
+	UserRound,
+	Loader2,
+	ChevronDown,
+	UserPlus,
+	UserMinus,
+	LogOut,
+	Trash2,
+	Flag,
+} from 'lucide-react'
 import { parseLocalDate } from '../utils/formatDate'
 
 interface TeamInfoTabProps {
@@ -19,29 +31,35 @@ interface TeamInfoTabProps {
 	onRemoveMember: (member: TeamMember) => void
 	onLeaveTeam: () => void
 	onDeleteTeam: () => void
+	onOpenTeamChat: () => void
+	onReportTeam: () => void
 }
 
 const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
-	team,
-	teamMembers,
-	membersLoading,
-	showAllMembers,
-	setShowAllMembers,
-	isLeader,
-	currentUserId,
-	userEmail,
-	onInviteClick,
-	onRemoveMember,
-	onLeaveTeam,
-	onDeleteTeam
-}) => {
+													 team,
+													 teamMembers,
+													 membersLoading,
+													 showAllMembers,
+													 setShowAllMembers,
+													 isLeader,
+													 currentUserId,
+													 userEmail,
+													 onInviteClick,
+													 onRemoveMember,
+													 onLeaveTeam,
+													 onDeleteTeam,
+													 onOpenTeamChat,
+													 onReportTeam,
+												 }) => {
 	return (
 		<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
 			<section className='lg:col-span-2 space-y-6'>
 				{team.description && (
 					<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 						<h3 className='text-white text-lg font-semibold mb-3'>Opis drużyny</h3>
-						<p className='text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap break-words overflow-wrap-anywhere'>{team.description}</p>
+						<p className='text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap break-words overflow-wrap-anywhere'>
+							{team.description}
+						</p>
 					</div>
 				)}
 
@@ -51,8 +69,7 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 						{teamMembers.length > 8 && (
 							<button
 								onClick={() => setShowAllMembers(s => !s)}
-								className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'
-							>
+								className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
 								{showAllMembers ? 'Ukryj' : 'Zobacz wszystkich'}
 								<ChevronDown size={16} className={`transition-transform ${showAllMembers ? 'rotate-180' : ''}`} />
 							</button>
@@ -62,8 +79,7 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 						<div className='mb-4'>
 							<button
 								onClick={onInviteClick}
-								className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors'
-							>
+								className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors'>
 								<UserPlus size={16} />
 								Zaproś użytkowników
 							</button>
@@ -85,12 +101,8 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 							{teamMembers.slice(0, showAllMembers ? teamMembers.length : 8).map(member => (
 								<div
 									key={member.id}
-									className='group flex items-center justify-between gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'
-								>
-									<Link
-										to={`/profile/${member.userId}`}
-										className='flex items-center gap-3 flex-1'
-									>
+									className='group flex items-center justify-between gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
+									<Link to={`/profile/${member.userId}`} className='flex items-center gap-3 flex-1'>
 										<Avatar
 											src={member.userAvatarUrl || null}
 											name={member.userName}
@@ -116,8 +128,8 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 													label: 'Usuń z drużyny',
 													icon: <UserMinus size={16} />,
 													onClick: () => onRemoveMember(member),
-													variant: 'danger'
-												}
+													variant: 'danger',
+												},
 											]}
 										/>
 									)}
@@ -133,11 +145,10 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 			</section>
 
 			<aside className='space-y-6 lg:sticky lg:top-6'>
-				<div className={`rounded-2xl border p-5 ${
-					isLeader 
-						? 'border-violet-500/50 bg-zinc-900/80' 
-						: 'border-zinc-800 bg-zinc-900/60'
-				}`}>
+				<div
+					className={`rounded-2xl border p-5 ${
+						isLeader ? 'border-violet-500/50 bg-zinc-900/80' : 'border-zinc-800 bg-zinc-900/60'
+					}`}>
 					<h3 className='text-white text-lg font-semibold flex items-center gap-2 mb-4'>
 						<Crown size={20} className='text-violet-400' /> Lider
 					</h3>
@@ -187,13 +198,34 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 					</div>
 				</div>
 
+				{/* 🔴 Zgłaszanie drużyny – POD informacjami */}
+				<div className='rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5'>
+					<button
+						onClick={onReportTeam}
+						className='w-full rounded-xl bg-rose-600/20 border border-rose-500/40 px-4 py-3 text-sm font-medium text-rose-200 hover:bg-rose-600/30 transition-colors inline-flex items-center justify-center gap-2'>
+						<Flag size={16} />
+						Zgłoś drużynę
+					</button>
+
+				</div>
+
+				{currentUserId && teamMembers.some(m => m.userId === currentUserId) && (
+					<div className='rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5'>
+						<button
+							onClick={onOpenTeamChat}
+							className='w-full rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-3 text-sm font-medium text-white transition-colors inline-flex items-center justify-center gap-2'>
+							<Users size={16} />
+							Przejdź do czatu drużyny
+						</button>
+					</div>
+				)}
+
 				{/* Przycisk opuszczania drużyny - tylko dla zwykłych członków */}
 				{currentUserId && !isLeader && teamMembers.some(m => m.userId === currentUserId) && (
 					<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 						<button
 							onClick={onLeaveTeam}
-							className='w-full rounded-xl bg-red-600/20 border border-red-500/30 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-600/30 transition-colors inline-flex items-center justify-center gap-2'
-						>
+							className='w-full rounded-xl bg-red-600/20 border border-red-500/30 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-600/30 transition-colors inline-flex items-center justify-center gap-2'>
 							<LogOut size={16} />
 							Opuść drużynę
 						</button>
@@ -205,8 +237,7 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 					<div className='rounded-2xl border border-red-500/30 bg-red-500/10 p-5'>
 						<button
 							onClick={onDeleteTeam}
-							className='w-full rounded-xl bg-red-600/20 border border-red-500/30 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-600/30 transition-colors inline-flex items-center justify-center gap-2'
-						>
+							className='w-full rounded-xl bg-red-600/20 border border-red-500/30 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-600/30 transition-colors inline-flex items-center justify-center gap-2'>
 							<Trash2 size={16} />
 							Usuń drużynę
 						</button>
@@ -218,4 +249,3 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 }
 
 export default TeamInfoTab
-

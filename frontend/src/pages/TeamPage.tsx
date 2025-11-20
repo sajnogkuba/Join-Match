@@ -11,6 +11,7 @@ import Avatar from '../components/Avatar'
 import SportTypeFilter from '../components/SportTypeFilter'
 import TeamInfoTab from '../components/TeamInfoTab'
 import TeamDiscussionTab from '../components/TeamDiscussionTab'
+import ReportTeamModal from '../components/ReportTeamModal'
 import { MapPin, Users, Loader2, AlertTriangle, Search, X, UserPlus, Clock, Pencil, Camera, Check } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -51,7 +52,10 @@ const TeamPage: React.FC = () => {
 	const [showDeleteTeamModal, setShowDeleteTeamModal] = useState(false)
 	const [deletingTeam, setDeletingTeam] = useState(false)
 	const [deleteTeamReason, setDeleteTeamReason] = useState('')
-	
+
+	// 🔴 Zgłaszanie drużyny – modal
+	const [showReportTeamModal, setShowReportTeamModal] = useState(false)
+
 	// States for team editing
 	const [isEditing, setIsEditing] = useState(false)
 	const [editedName, setEditedName] = useState('')
@@ -100,7 +104,8 @@ const TeamPage: React.FC = () => {
 		if (isAuthenticated) {
 			const token = localStorage.getItem('accessToken')
 			if (token) {
-				api.get<User>('/auth/user', { params: { token } })
+				api
+					.get<User>('/auth/user', { params: { token } })
 					.then(({ data }) => {
 						setCurrentUserId(data.id)
 						setUserEmail(data.email)
@@ -116,30 +121,33 @@ const TeamPage: React.FC = () => {
 		}
 	}, [isAuthenticated])
 
-	const searchUsers = useCallback(async (query: string) => {
-		if (!query.trim()) {
-			setSearchResults([])
-			return
-		}
+	const searchUsers = useCallback(
+		async (query: string) => {
+			if (!query.trim()) {
+				setSearchResults([])
+				return
+			}
 
-		if (!currentUserId) {
-			setSearchResults([])
-			return
-		}
+			if (!currentUserId) {
+				setSearchResults([])
+				return
+			}
 
-		setSearchLoading(true)
-		try {
-			const response = await api.get<SearchResult[]>(
-				`/auth/search?query=${encodeURIComponent(query)}&senderId=${currentUserId}`
-			)
-			setSearchResults(response.data)
-		} catch (error) {
-			console.error('Error searching users:', error)
-			setSearchResults([])
-		} finally {
-			setSearchLoading(false)
-		}
-	}, [currentUserId])
+			setSearchLoading(true)
+			try {
+				const response = await api.get<SearchResult[]>(
+					`/auth/search?query=${encodeURIComponent(query)}&senderId=${currentUserId}`
+				)
+				setSearchResults(response.data)
+			} catch (error) {
+				console.error('Error searching users:', error)
+				setSearchResults([])
+			} finally {
+				setSearchLoading(false)
+			}
+		},
+		[currentUserId]
+	)
 
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
@@ -155,7 +163,7 @@ const TeamPage: React.FC = () => {
 		try {
 			const response = await api.post<TeamRequestResponseDto>('/team-request', {
 				receiverId: userId,
-				teamId: team.idTeam
+				teamId: team.idTeam,
 			})
 
 			// Zaktualizuj mapę zaproszeń
@@ -166,7 +174,6 @@ const TeamPage: React.FC = () => {
 			})
 		} catch (error: any) {
 			console.error('Error sending team request:', error)
-			// Można dodać toast notification tutaj
 			if (error.response?.status === 400 || error.response?.status === 409) {
 				alert('Nie można wysłać zaproszenia. Użytkownik może już mieć zaproszenie do tej drużyny.')
 			} else {
@@ -185,21 +192,24 @@ const TeamPage: React.FC = () => {
 	}
 
 	// Funkcja do pobierania znajomych z filtrowaniem
-	const fetchFriends = useCallback(async (query: string = '') => {
-		if (!currentUserId) return
+	const fetchFriends = useCallback(
+		async (query: string = '') => {
+			if (!currentUserId) return
 
-		setFriendsLoading(true)
-		try {
-			const url = `/friends/${currentUserId}${query ? `?query=${encodeURIComponent(query)}` : ''}`
-			const { data } = await api.get<Friend[]>(url)
-			setFriends(data)
-		} catch (error) {
-			console.error('Error fetching friends:', error)
-			setFriends([])
-		} finally {
-			setFriendsLoading(false)
-		}
-	}, [currentUserId])
+			setFriendsLoading(true)
+			try {
+				const url = `/friends/${currentUserId}${query ? `?query=${encodeURIComponent(query)}` : ''}`
+				const { data } = await api.get<Friend[]>(url)
+				setFriends(data)
+			} catch (error) {
+				console.error('Error fetching friends:', error)
+				setFriends([])
+			} finally {
+				setFriendsLoading(false)
+			}
+		},
+		[currentUserId]
+	)
 
 	// Pobierz znajomych gdy modal się otwiera (bez query)
 	useEffect(() => {
@@ -233,9 +243,10 @@ const TeamPage: React.FC = () => {
 				numberOfElements: number
 				empty: boolean
 			}
-			api.get<TeamRequestPageResponse>(`/team-request/by-team`, {
-				params: { teamId: team.idTeam, page: 0, size: 100 }
-			})
+			api
+				.get<TeamRequestPageResponse>(`/team-request/by-team`, {
+					params: { teamId: team.idTeam, page: 0, size: 100 },
+				})
 				.then(({ data }) => {
 					const requestsMap = new Map<number, TeamRequestResponseDto>()
 					data.content.forEach(request => {
@@ -243,7 +254,7 @@ const TeamPage: React.FC = () => {
 					})
 					setTeamRequests(requestsMap)
 				})
-				.catch((error) => {
+				.catch(error => {
 					console.error('Error fetching team requests:', error)
 					setTeamRequests(new Map())
 				})
@@ -264,21 +275,19 @@ const TeamPage: React.FC = () => {
 				numberOfElements: number
 				empty: boolean
 			}
-			api.get<TeamRequestPageResponse>(`/team-request/by-receiver`, {
-				params: { receiverId: currentUserId, page: 0, size: 100 }
-			})
+			api
+				.get<TeamRequestPageResponse>(`/team-request/by-receiver`, {
+					params: { receiverId: currentUserId, page: 0, size: 100 },
+				})
 				.then(({ data }) => {
-					// Znajdź zaproszenie dla tej drużyny ze statusem PENDING
 					if (data && data.content && Array.isArray(data.content)) {
-						const pendingRequest = data.content.find(
-							req => req.teamId === team.idTeam && req.status === 'PENDING'
-						)
+						const pendingRequest = data.content.find(req => req.teamId === team.idTeam && req.status === 'PENDING')
 						setUserTeamRequest(pendingRequest || null)
 					} else {
 						setUserTeamRequest(null)
 					}
 				})
-				.catch((error) => {
+				.catch(error => {
 					console.error('Error fetching user team request:', error)
 					setUserTeamRequest(null)
 				})
@@ -305,7 +314,7 @@ const TeamPage: React.FC = () => {
 		}
 		try {
 			const { data } = await api.get<TeamMembersPageResponse>(`/user-team/${team.idTeam}/members`, {
-				params: { page: 0, size: 100, sort: 'userName', direction: 'ASC' }
+				params: { page: 0, size: 100, sort: 'userName', direction: 'ASC' },
 			})
 			setTeamMembers(data.content || [])
 		} catch (error) {
@@ -326,9 +335,7 @@ const TeamPage: React.FC = () => {
 	const handleAcceptTeamRequest = async (requestId: number) => {
 		try {
 			await api.patch(`/team-request/${requestId}/accept`)
-			// Po akceptacji usunąć zaproszenie i odświeżyć listę członków
 			setUserTeamRequest(null)
-			// Odśwież listę członków
 			await fetchTeamMembers()
 		} catch (error: any) {
 			console.error('Error accepting team request:', error)
@@ -339,7 +346,6 @@ const TeamPage: React.FC = () => {
 	const handleRejectTeamRequest = async (requestId: number) => {
 		try {
 			await api.delete(`/team-request/${requestId}`)
-			// Po odrzuceniu usunąć zaproszenie
 			setUserTeamRequest(null)
 		} catch (error: any) {
 			console.error('Error rejecting team request:', error)
@@ -353,7 +359,6 @@ const TeamPage: React.FC = () => {
 		setLeavingTeam(true)
 		try {
 			await api.delete(`/user-team/${team.idTeam}/members/${currentUserId}/quit`)
-			// Po sukcesie przekieruj do strony drużyn
 			navigate('/teams')
 		} catch (error: any) {
 			console.error('Error leaving team:', error)
@@ -373,10 +378,9 @@ const TeamPage: React.FC = () => {
 		try {
 			await api.delete(`/user-team/${team.idTeam}/members/${memberToRemove.userId}`, {
 				data: {
-					reason: removeMemberReason.trim() || null
-				}
+					reason: removeMemberReason.trim() || null,
+				},
 			})
-			// Po sukcesie odśwież listę członków
 			await fetchTeamMembers()
 			setShowRemoveMemberModal(false)
 			setMemberToRemove(null)
@@ -400,11 +404,9 @@ const TeamPage: React.FC = () => {
 			await api.delete(`/team/${team.idTeam}`, {
 				data: {
 					teamId: team.idTeam,
-					reason: deleteTeamReason.trim() || null
-				}
+					reason: deleteTeamReason.trim() || null,
+				},
 			})
-			
-			// Po sukcesie przekieruj do strony drużyn
 			navigate('/teams')
 		} catch (error: any) {
 			console.error('Error deleting team:', error)
@@ -420,18 +422,15 @@ const TeamPage: React.FC = () => {
 	// Functions for team editing
 	const handleEnterEditMode = async () => {
 		if (!team) return
-		
-		// Fetch sport types to find current sport ID
+
 		try {
 			const { data } = await api.get<SportType[]>('/sport-type')
-			// Find sport ID by name
 			const currentSport = data.find(s => s.name === team.sportType)
 			setEditedSportTypeId(currentSport?.id || null)
 		} catch (error) {
 			console.error('Error fetching sport types:', error)
 		}
-		
-		// Initialize edit values
+
 		setEditedName(team.name)
 		setEditedDescription(team.description || '')
 		setEditedCity(team.city)
@@ -462,11 +461,9 @@ const TeamPage: React.FC = () => {
 	const handleSaveTeam = async () => {
 		if (!team) return
 
-		// Clear previous messages
 		setSaveError(null)
 		setSaveSuccess(null)
 
-		// Validation
 		if (!editedName.trim() || editedName.trim().length < 2) {
 			setSaveError('Nazwa drużyny musi mieć co najmniej 2 znaki.')
 			return
@@ -496,36 +493,31 @@ const TeamPage: React.FC = () => {
 		try {
 			let photoUrl = team.photoUrl
 
-			// Upload new photo if selected
 			if (selectedFile) {
 				setUploadingImage(true)
 				const formData = new FormData()
 				formData.append('file', selectedFile)
 				const uploadResponse = await api.post('/images/upload/team', formData, {
-					headers: { 'Content-Type': 'multipart/form-data' }
+					headers: { 'Content-Type': 'multipart/form-data' },
 				})
 				photoUrl = uploadResponse.data
 				setUploadingImage(false)
 			}
 
-			// Call PUT endpoint to update team
 			await api.put(`/team/${team.idTeam}`, {
 				name: editedName.trim(),
 				city: editedCity.trim(),
 				description: editedDescription.trim() || null,
 				sportTypeId: editedSportTypeId,
 				leaderId: team.leaderId,
-				photoUrl
+				photoUrl,
 			})
 
-			// Refresh team data from server
 			const { data: teamDetails } = await api.get<TeamDetails>(`/team/${team.idTeam}`)
 			setTeam(teamDetails)
 
-			// Show success message
 			setSaveSuccess('Zmiany zostały zapisane pomyślnie!')
 
-			// Exit edit mode after a short delay
 			setTimeout(() => {
 				handleCancelEdit()
 				setSaveSuccess(null)
@@ -598,8 +590,7 @@ const TeamPage: React.FC = () => {
 										<button
 											onClick={handleEnterEditMode}
 											className='p-2 rounded-xl hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-violet-400'
-											title='Edytuj drużynę'
-										>
+											title='Edytuj drużynę'>
 											<Pencil size={20} />
 										</button>
 									)}
@@ -641,8 +632,7 @@ const TeamPage: React.FC = () => {
 								<label
 									htmlFor='team-photo-upload'
 									className='absolute bottom-2 right-2 p-2 rounded-lg bg-violet-600 hover:bg-violet-500 transition-colors cursor-pointer'
-									title='Zmień zdjęcie'
-								>
+									title='Zmień zdjęcie'>
 									<Camera size={18} className='text-white' />
 								</label>
 							</div>
@@ -654,7 +644,7 @@ const TeamPage: React.FC = () => {
 									<input
 										type='text'
 										value={editedName}
-										onChange={(e) => setEditedName(e.target.value)}
+										onChange={e => setEditedName(e.target.value)}
 										className='w-full px-4 py-2 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
 										placeholder='np. Mistrzowie Piłki'
 										maxLength={100}
@@ -669,7 +659,7 @@ const TeamPage: React.FC = () => {
 									<input
 										type='text'
 										value={editedCity}
-										onChange={(e) => setEditedCity(e.target.value)}
+										onChange={e => setEditedCity(e.target.value)}
 										className='w-full px-4 py-2 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
 										placeholder='np. Warszawa'
 										maxLength={100}
@@ -681,10 +671,7 @@ const TeamPage: React.FC = () => {
 									<label className='block text-zinc-400 text-sm mb-2 flex items-center gap-2'>
 										<Users size={16} /> Sport
 									</label>
-									<SportTypeFilter
-										value={editedSportTypeId}
-										onChange={setEditedSportTypeId}
-									/>
+									<SportTypeFilter value={editedSportTypeId} onChange={setEditedSportTypeId} />
 								</div>
 							</div>
 						</div>
@@ -694,14 +681,12 @@ const TeamPage: React.FC = () => {
 							<label className='block text-zinc-400 text-sm mb-2'>Opis drużyny</label>
 							<textarea
 								value={editedDescription}
-								onChange={(e) => setEditedDescription(e.target.value)}
+								onChange={e => setEditedDescription(e.target.value)}
 								className='w-full px-4 py-3 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition min-h-[100px] resize-y'
 								placeholder='Opisz swoją drużynę...'
 								maxLength={500}
 							/>
-							<p className='text-zinc-500 text-xs mt-1'>
-								{editedDescription.length}/500 znaków
-							</p>
+							<p className='text-zinc-500 text-xs mt-1'>{editedDescription.length}/500 znaków</p>
 						</div>
 
 						{/* Error/Success messages */}
@@ -723,8 +708,7 @@ const TeamPage: React.FC = () => {
 							<button
 								onClick={handleSaveTeam}
 								disabled={saving || uploadingImage}
-								className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-white'
-							>
+								className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-white'>
 								{saving || uploadingImage ? (
 									<>
 										<Loader2 size={16} className='animate-spin' />
@@ -744,8 +728,7 @@ const TeamPage: React.FC = () => {
 									handleCancelEdit()
 								}}
 								disabled={saving || uploadingImage}
-								className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-white'
-							>
+								className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium text-white'>
 								<X size={16} />
 								Anuluj
 							</button>
@@ -768,16 +751,14 @@ const TeamPage: React.FC = () => {
 								<button
 									onClick={() => handleAcceptTeamRequest(userTeamRequest.requestId)}
 									className='inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-sm font-medium text-white'
-									title='Zaakceptuj zaproszenie'
-								>
+									title='Zaakceptuj zaproszenie'>
 									<span>✓</span>
 									<span className='hidden sm:inline'>Zaakceptuj</span>
 								</button>
 								<button
 									onClick={() => handleRejectTeamRequest(userTeamRequest.requestId)}
 									className='inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-zinc-600 hover:bg-zinc-500 transition-colors text-sm font-medium text-white'
-									title='Odrzuć zaproszenie'
-								>
+									title='Odrzuć zaproszenie'>
 									<span>✗</span>
 									<span className='hidden sm:inline'>Odrzuć</span>
 								</button>
@@ -796,8 +777,7 @@ const TeamPage: React.FC = () => {
 							activeTab === 'informacje'
 								? 'bg-violet-600 text-white'
 								: 'text-zinc-400 hover:text-white hover:bg-zinc-700/50'
-						}`}
-					>
+						}`}>
 						Informacje
 					</button>
 					{currentUserId && teamMembers.some(m => m.userId === currentUserId) && (
@@ -807,8 +787,7 @@ const TeamPage: React.FC = () => {
 								activeTab === 'dyskusja'
 									? 'bg-violet-600 text-white'
 									: 'text-zinc-400 hover:text-white hover:bg-zinc-700/50'
-							}`}
-						>
+							}`}>
 							Dyskusja
 						</button>
 					)}
@@ -825,34 +804,47 @@ const TeamPage: React.FC = () => {
 						currentUserId={currentUserId}
 						userEmail={userEmail}
 						onInviteClick={() => setShowInvitePopup(true)}
-						onRemoveMember={(member) => {
+						onRemoveMember={member => {
 							setMemberToRemove(member)
 							setShowRemoveMemberModal(true)
 						}}
 						onLeaveTeam={() => setShowLeaveTeamModal(true)}
 						onDeleteTeam={() => setShowDeleteTeamModal(true)}
+						onOpenTeamChat={async () => {
+							try {
+								const res = await api.post(`/team/${team.idTeam}`)
+								const conversationId = res.data?.id
+
+								if (!conversationId) {
+									alert('Nie udało się otworzyć czatu drużyny')
+									return
+								}
+
+								navigate('/chat', { state: { conversationId } })
+							} catch (e) {
+								console.error('❌ Błąd otwierania czatu drużyny:', e)
+								alert('Nie udało się otworzyć czatu drużyny.')
+							}
+						}}
+						onReportTeam={() => setShowReportTeamModal(true)}
 					/>
 				)}
-
-				{activeTab === 'dyskusja' && team && (
-					<TeamDiscussionTab teamMembers={teamMembers} teamId={team.idTeam} />
+				{activeTab === 'dyskusja' && (
+					<TeamDiscussionTab
+						teamMembers={teamMembers}
+						teamId={team.idTeam}
+					/>
 				)}
 			</div>
 
 			{showInvitePopup && (
 				<div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
-					<div 
-						className='absolute inset-0 bg-black/60 backdrop-blur-sm'
-						onClick={handleCloseInvitePopup}
-					/>
-					
+					<div className='absolute inset-0 bg-black/60 backdrop-blur-sm' onClick={handleCloseInvitePopup} />
+
 					<div className='relative w-full max-w-5xl bg-zinc-900 rounded-2xl border border-zinc-800 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200'>
 						<div className='flex items-center justify-between p-6 border-b border-zinc-800'>
 							<h3 className='text-white text-xl font-semibold'>Zaproś użytkowników do drużyny</h3>
-							<button
-								onClick={handleCloseInvitePopup}
-								className='p-2 rounded-xl hover:bg-zinc-800 transition-colors'
-							>
+							<button onClick={handleCloseInvitePopup} className='p-2 rounded-xl hover:bg-zinc-800 transition-colors'>
 								<X size={20} className='text-zinc-400 hover:text-white' />
 							</button>
 						</div>
@@ -866,8 +858,7 @@ const TeamPage: React.FC = () => {
 										inviteActiveTab === 'search'
 											? 'bg-violet-600 text-white'
 											: 'text-zinc-400 hover:text-white hover:bg-zinc-700/50'
-									}`}
-								>
+									}`}>
 									Wyszukaj
 								</button>
 								<button
@@ -876,8 +867,7 @@ const TeamPage: React.FC = () => {
 										inviteActiveTab === 'friends'
 											? 'bg-violet-600 text-white'
 											: 'text-zinc-400 hover:text-white hover:bg-zinc-700/50'
-									}`}
-								>
+									}`}>
 									Znajomi
 								</button>
 							</div>
@@ -891,7 +881,7 @@ const TeamPage: React.FC = () => {
 											type='text'
 											placeholder='Szukaj użytkowników...'
 											value={searchQuery}
-											onChange={(e) => setSearchQuery(e.target.value)}
+											onChange={e => setSearchQuery(e.target.value)}
 											className='w-full rounded-xl border border-zinc-700 bg-zinc-800/60 px-10 py-3 text-white placeholder-zinc-400 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
 										/>
 									</div>
@@ -915,16 +905,13 @@ const TeamPage: React.FC = () => {
 												const isPending = teamRequest?.status === 'PENDING'
 
 												return (
-													<div key={user.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
-														<Link 
+													<div
+														key={user.id}
+														className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+														<Link
 															to={`/profile/${user.id}`}
-															className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
-														>
-															<Avatar 
-																src={user.urlOfPicture} 
-																name={user.name}
-																size='sm'
-															/>
+															className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'>
+															<Avatar src={user.urlOfPicture} name={user.name} size='sm' />
 															<div>
 																<p className='text-white font-medium'>{user.name}</p>
 																<p className='text-sm text-zinc-400'>{user.email}</p>
@@ -935,8 +922,7 @@ const TeamPage: React.FC = () => {
 																<button
 																	disabled
 																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-xs sm:text-sm font-medium'
-																	title='Zaproszenie oczekuje na odpowiedź'
-																>
+																	title='Zaproszenie oczekuje na odpowiedź'>
 																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
 																	<span className='hidden sm:inline'>Oczekuje na odpowiedź</span>
 																	<span className='sm:hidden'>Oczekuje</span>
@@ -945,8 +931,7 @@ const TeamPage: React.FC = () => {
 																<button
 																	onClick={() => handleInviteUser(user.id)}
 																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
-																	title='Zaproś do drużyny'
-																>
+																	title='Zaproś do drużyny'>
 																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
 																	<span className='hidden sm:inline'>Zaproś do drużyny</span>
 																	<span className='sm:hidden'>Zaproś</span>
@@ -970,7 +955,7 @@ const TeamPage: React.FC = () => {
 											type='text'
 											placeholder='Szukaj znajomych...'
 											value={friendsSearchQuery}
-											onChange={(e) => setFriendsSearchQuery(e.target.value)}
+											onChange={e => setFriendsSearchQuery(e.target.value)}
 											className='w-full rounded-xl border border-zinc-700 bg-zinc-800/60 px-10 py-3 text-white placeholder-zinc-400 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
 										/>
 									</div>
@@ -990,10 +975,9 @@ const TeamPage: React.FC = () => {
 													{friendsSearchQuery.trim() ? 'Nie znaleziono znajomych' : 'Brak znajomych'}
 												</p>
 												<p className='text-sm text-zinc-500 mt-1'>
-													{friendsSearchQuery.trim() 
+													{friendsSearchQuery.trim()
 														? 'Spróbuj innej frazy wyszukiwania'
-														: 'Dodaj znajomych, aby móc ich zaprosić do drużyny'
-													}
+														: 'Dodaj znajomych, aby móc ich zaprosić do drużyny'}
 												</p>
 											</div>
 										) : (
@@ -1002,16 +986,13 @@ const TeamPage: React.FC = () => {
 												const isPending = teamRequest?.status === 'PENDING'
 
 												return (
-													<div key={friend.id} className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
-														<Link 
+													<div
+														key={friend.id}
+														className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+														<Link
 															to={`/profile/${friend.id}`}
-															className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'
-														>
-															<Avatar 
-																src={friend.urlOfPicture} 
-																name={friend.name}
-																size='sm'
-															/>
+															className='flex items-center gap-3 flex-1 hover:bg-zinc-800/30 rounded-lg p-2 -m-2 transition-colors'>
+															<Avatar src={friend.urlOfPicture} name={friend.name} size='sm' />
 															<div>
 																<p className='text-white font-medium'>{friend.name}</p>
 																<p className='text-sm text-zinc-400'>{friend.email}</p>
@@ -1022,8 +1003,7 @@ const TeamPage: React.FC = () => {
 																<button
 																	disabled
 																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-zinc-600 text-zinc-400 cursor-not-allowed text-xs sm:text-sm font-medium'
-																	title='Zaproszenie oczekuje na odpowiedź'
-																>
+																	title='Zaproszenie oczekuje na odpowiedź'>
 																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
 																	<span className='hidden sm:inline'>Oczekuje na odpowiedź</span>
 																	<span className='sm:hidden'>Oczekuje</span>
@@ -1032,8 +1012,7 @@ const TeamPage: React.FC = () => {
 																<button
 																	onClick={() => handleInviteUser(friend.id)}
 																	className='inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors text-xs sm:text-sm font-medium text-white'
-																	title='Zaproś do drużyny'
-																>
+																	title='Zaproś do drużyny'>
 																	<UserPlus size={14} className='sm:w-4 sm:h-4' />
 																	<span className='hidden sm:inline'>Zaproś do drużyny</span>
 																	<span className='sm:hidden'>Zaproś</span>
@@ -1052,21 +1031,19 @@ const TeamPage: React.FC = () => {
 				</div>
 			)}
 
-			{/* Modal potwierdzenia opuszczania drużyny */}
 			<AlertModal
 				isOpen={showLeaveTeamModal}
 				onClose={() => setShowLeaveTeamModal(false)}
-				title="Opuść drużynę"
-				message="Czy na pewno chcesz opuścić tę drużynę? Tej akcji nie można cofnąć."
-				variant="warning"
+				title='Opuść drużynę'
+				message='Czy na pewno chcesz opuścić tę drużynę? Tej akcji nie można cofnąć.'
+				variant='warning'
 				showConfirm={true}
 				onConfirm={handleLeaveTeam}
-				confirmText="Opuść drużynę"
-				cancelText="Anuluj"
+				confirmText='Opuść drużynę'
+				cancelText='Anuluj'
 				isLoading={leavingTeam}
 			/>
 
-			{/* Modal potwierdzenia usunięcia członka */}
 			<AlertModal
 				isOpen={showRemoveMemberModal}
 				onClose={() => {
@@ -1074,47 +1051,60 @@ const TeamPage: React.FC = () => {
 					setMemberToRemove(null)
 					setRemoveMemberReason('')
 				}}
-				title="Usuń członka drużyny"
-				message={memberToRemove ? `Czy na pewno chcesz usunąć ${memberToRemove.userName} z drużyny? Tej akcji nie można cofnąć.` : ''}
-				variant="warning"
+				title='Usuń członka drużyny'
+				message={
+					memberToRemove
+						? `Czy na pewno chcesz usunąć ${memberToRemove.userName} z drużyny? Tej akcji nie można cofnąć.`
+						: ''
+				}
+				variant='warning'
 				showConfirm={true}
 				onConfirm={handleRemoveMember}
-				confirmText="Usuń z drużyny"
-				cancelText="Anuluj"
+				confirmText='Usuń z drużyny'
+				cancelText='Anuluj'
 				isLoading={removingMember}
 				showTextInput={true}
-				textInputLabel="Powód usunięcia (opcjonalnie)"
-				textInputPlaceholder="Podaj powód usunięcia członka z drużyny..."
+				textInputLabel='Powód usunięcia (opcjonalnie)'
+				textInputPlaceholder='Podaj powód usunięcia członka z drużyny...'
 				textInputValue={removeMemberReason}
 				onTextInputChange={setRemoveMemberReason}
 				textInputRequired={false}
 			/>
 
-			{/* Modal potwierdzenia usunięcia drużyny */}
 			<AlertModal
 				isOpen={showDeleteTeamModal}
 				onClose={() => {
 					setShowDeleteTeamModal(false)
 					setDeleteTeamReason('')
 				}}
-				title="Usuń drużynę"
-				message={team ? `Czy na pewno chcesz usunąć drużynę "${team.name}"? Ta akcja jest nieodwracalna i spowoduje usunięcie wszystkich danych związanych z drużyną.` : ''}
-				variant="error"
+				title='Usuń drużynę'
+				message={
+					team
+						? `Czy na pewno chcesz usunąć drużynę "${team.name}"? Ta akcja jest nieodwracalna i spowoduje usunięcie wszystkich danych związanych z drużyną.`
+						: ''
+				}
+				variant='error'
 				showConfirm={true}
 				onConfirm={handleDeleteTeam}
-				confirmText="Usuń drużynę"
-				cancelText="Anuluj"
+				confirmText='Usuń drużynę'
+				cancelText='Anuluj'
 				isLoading={deletingTeam}
 				showTextInput={true}
-				textInputLabel="Powód usunięcia (opcjonalnie)"
-				textInputPlaceholder="Podaj powód usunięcia drużyny..."
+				textInputLabel='Powód usunięcia (opcjonalnie)'
+				textInputPlaceholder='Podaj powód usunięcia drużyny...'
 				textInputValue={deleteTeamReason}
 				onTextInputChange={setDeleteTeamReason}
 				textInputRequired={false}
+			/>
+
+			<ReportTeamModal
+				isOpen={showReportTeamModal}
+				onClose={() => setShowReportTeamModal(false)}
+				teamId={team.idTeam}
+				teamName={team.name}
 			/>
 		</main>
 	)
 }
 
 export default TeamPage
-
