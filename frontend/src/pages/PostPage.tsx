@@ -23,7 +23,7 @@ const PostPage: React.FC = () => {
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
 	const [editingPostId, setEditingPostId] = useState<number | null>(null)
-	const [editingPostContent, setEditingPostContent] = useState<string | null>(null)
+	const [_editingPostContent, setEditingPostContent] = useState<string | null>(null)
 	const [showEditorModal, setShowEditorModal] = useState(false)
 	const [publishing, setPublishing] = useState(false)
 	const [showDeletePostModal, setShowDeletePostModal] = useState(false)
@@ -520,7 +520,6 @@ const PostPage: React.FC = () => {
 				emojiPickerRef={emojiPickerRef}
 				onPublish={editingPostId ? handleSaveEdit : () => {}}
 				mode={editingPostId ? 'edit' : 'create'}
-				initialContent={editingPostContent || undefined}
 			/>
 
 			<AlertModal

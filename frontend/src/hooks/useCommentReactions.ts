@@ -44,24 +44,22 @@ export const useCommentReactions = () => {
 				commentId,
 				reactionTypeId,
 			}
-
-			let response: TeamPostCommentReactionResponseDto
 			
 			if (existingReactionTypeId !== null) {
-				response = await api.patch<TeamPostCommentReactionResponseDto>(
+				await api.patch<TeamPostCommentReactionResponseDto>(
 					'/reaction/team-post-comment',
 					requestDto
 				).then(res => res.data)
 			} else {
 				try {
-					response = await api.post<TeamPostCommentReactionResponseDto>(
+					await api.post<TeamPostCommentReactionResponseDto>(
 						'/reaction/team-post-comment',
 						requestDto
 					).then(res => res.data)
 				} catch (postError: any) {
 					const errorMessage = postError.response?.data?.message || ''
 					if (errorMessage.includes('duplicate key') || errorMessage.includes('unique_comment_reaction')) {
-						response = await api.patch<TeamPostCommentReactionResponseDto>(
+						await api.patch<TeamPostCommentReactionResponseDto>(
 							'/reaction/team-post-comment',
 							requestDto
 						).then(res => res.data)

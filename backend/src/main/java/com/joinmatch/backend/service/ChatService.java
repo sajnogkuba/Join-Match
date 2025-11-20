@@ -5,15 +5,11 @@ import com.joinmatch.backend.dto.Message.ConversationDto;
 import com.joinmatch.backend.dto.Message.ConversationPreviewDto;
 import com.joinmatch.backend.dto.Message.ParticipantDto;
 import com.joinmatch.backend.enums.ConversationType;
-import com.joinmatch.backend.model.Conversation;
-import com.joinmatch.backend.model.Message;
-import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import com.joinmatch.backend.model.UserEvent;
-import com.joinmatch.backend.model.UserTeam;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +24,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final TeamRepository teamRepository;
+    private final MessageReadRepository messageReadRepository;
 
     private ConversationDto mapToConversationDto(Conversation conversation) {
         List<ParticipantDto> participants = conversation.getParticipants().stream()
@@ -69,6 +66,7 @@ public class ChatService {
         Message saved = messageRepository.save(message);
 
         return new ChatMessageDto(
+                message.getId(),
                 conversation.getId(),
                 sender.getId(),
                 sender.getName(),
@@ -85,6 +83,7 @@ public class ChatService {
         return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId)
                 .stream()
                 .map(m -> new ChatMessageDto(
+                        m.getId(),
                         m.getConversation().getId(),
                         m.getSender().getId(),
                         m.getSender().getName(),
@@ -161,11 +160,14 @@ public class ChatService {
                 avatarUrl = other != null ? other.getUrlOfPicture() : null;
             }
 
+            long unread = messageRepository.countUnreadMessages(c.getId(), userId);
+
             return new ConversationPreviewDto(
                     c.getId(),
                     name,
                     avatarUrl,
-                    lastMessage
+                    lastMessage,
+                    (int) unread
             );
         }).collect(Collectors.toList());
     }
@@ -247,6 +249,64 @@ public class ChatService {
         conversationRepository.save(conv);
     }
 
+    @Transactional
+    public void addUserToTeamChat(Integer teamId, Integer userId) {
+        var convOpt = conversationRepository.findByTeamId(teamId);
+        if (convOpt.isEmpty()) return;
 
+        Conversation conv = convOpt.get();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean already = conv.getParticipants().stream().anyMatch(u -> u.getId().equals(userId));
+        if (!already) {
+            conv.getParticipants().add(user);
+            conversationRepository.save(conv);
+        }
+    }
+
+    @Transactional
+    public void removeUserFromTeamChat(Integer teamId, Integer userId) {
+        var convOpt = conversationRepository.findByTeamId(teamId);
+        if (convOpt.isEmpty()) return;
+
+        Conversation conv = convOpt.get();
+        conv.getParticipants().removeIf(u -> u.getId().equals(userId));
+        conversationRepository.save(conv);
+    }
+
+    @Transactional
+    public void markMessagesAsRead(Integer conversationId, Integer userId, Integer lastMessageId) {
+
+        List<Message> messages = messageRepository
+                .findUnreadMessages(conversationId, userId, lastMessageId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow();
+
+        for (Message m : messages) {
+            if (messageReadRepository.existsByMessageIdAndUserId(m.getId(), userId)) {
+                continue;
+            }
+
+            messageReadRepository.save(
+                    MessageRead.builder()
+                            .message(m)
+                            .user(user)
+                            .readAt(LocalDateTime.now())
+                            .build()
+            );
+        }
+
+    }
+    public long countTotalUnread(Integer userId) {
+        List<Conversation> convos = conversationRepository.findByParticipantId(userId);
+
+        long total = 0;
+        for (Conversation c : convos) {
+            total += messageRepository.countUnreadMessages(c.getId(), userId);
+        }
+        return total;
+    }
 
 }

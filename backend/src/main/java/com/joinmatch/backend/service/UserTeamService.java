@@ -19,6 +19,7 @@ public class UserTeamService {
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final ChatService chatService;
 
     public Page<UserTeamResponseDto> findAllByTeamId(Pageable pageable, String sortBy, String direction, Integer teamId) {
         Sort sort = Sort.by(new Sort.Order(
@@ -55,6 +56,7 @@ public class UserTeamService {
         }
         userTeamRepository.delete(userTeam);
         notificationService.sendTeamMemberRemovedNotification(userTeam, reason);
+        chatService.removeUserFromTeamChat(team.getId(), user.getId());
     }
 
     public void quitFromTeam(Integer teamId, Integer userId, String reason) {
@@ -78,5 +80,7 @@ public class UserTeamService {
         userTeamRepository.delete(userTeam);
 
         notificationService.sendTeamLeftNotification(userTeam);
+
+        chatService.removeUserFromTeamChat(team.getId(), user.getId());
     }
 }

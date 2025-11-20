@@ -407,6 +407,8 @@ const TeamPage: React.FC = () => {
 					reason: deleteTeamReason.trim() || null,
 				},
 			})
+
+			// Po sukcesie przekieruj do strony drużyn
 			navigate('/teams')
 		} catch (error: any) {
 			console.error('Error deleting team:', error)
