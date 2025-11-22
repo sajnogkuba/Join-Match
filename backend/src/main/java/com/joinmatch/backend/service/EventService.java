@@ -171,4 +171,15 @@ public class EventService {
         eventRepository.save(referenceById);
         reportEventRepository.save(reportEvent);
     }
+
+    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, String token) {
+        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        var user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User with token " + token + " not found"));
+        Page<Event> events = eventRepository.findAllParticipatedByUserId(user.getId(), sortedPageable);
+        return events.map(EventResponseDto::fromEvent);
+    }
 }
