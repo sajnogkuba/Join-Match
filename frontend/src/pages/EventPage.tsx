@@ -14,6 +14,7 @@ import { formatEventDate, parseEventDate } from '../utils/formatDate'
 import type { EventRatingResponse } from '../Api/types/Rating'
 import ReportEventModal from '../components/ReportEventModal'
 import ReportRatingModal from '../components/ReportRatingModal'
+import AlertModal from '../components/AlertModal'
 import {
 	Share2,
 	Shield,
@@ -37,11 +38,9 @@ const EventPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 
-	// --- MODAL ZGŁOSZENIA WYDARZENIA ---
 	const [showReportModal, setShowReportModal] = useState(false)
 	const [isSendingReport, setIsSendingReport] = useState(false)
 
-	// --- MODAL ZGŁOSZENIA OCENY WYDARZENIA ---
 	const [showRatingReportModal, setShowRatingReportModal] = useState(false)
 	const [ratingToReport, setRatingToReport] = useState<EventRatingResponse | null>(null)
 	const [isSendingRatingReport, setIsSendingRatingReport] = useState(false)
@@ -50,7 +49,6 @@ const EventPage: React.FC = () => {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	// user email will be fetched from backend using access token
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 
 	const [participants, setParticipants] = useState<Participant[]>([])
@@ -71,6 +69,7 @@ const EventPage: React.FC = () => {
 	const [editRatingValue, setEditRatingValue] = useState<number>(0)
 	const [editRatingComment, setEditRatingComment] = useState<string>('')
 	const [hasRatedOrganizer, setHasRatedOrganizer] = useState(false)
+	const [showBannedAlert, setShowBannedAlert] = useState(false)
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
@@ -349,7 +348,6 @@ const EventPage: React.FC = () => {
 		if (id) fetchEventRatings()
 	}, [id])
 
-	// ---------------- FETCH EVENT + PARTICIPANTS ----------------
 	useEffect(() => {
 		if (!id) {
 			setError('Nieprawidłowy identyfikator wydarzenia')
@@ -362,9 +360,14 @@ const EventPage: React.FC = () => {
 				const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
 				setEvent(data)
 
+				if (data.isBanned) {
+					setShowBannedAlert(true)
+					setLoading(false)
+					return
+				}
+
 				await fetchParticipants(Number(id))
 
-				// sprawdź, czy zapisany
 				if (userEmail) {
 					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
 					if (savedRes.data?.some?.((s: any) => s.eventId === Number(id))) {
@@ -382,7 +385,6 @@ const EventPage: React.FC = () => {
 		fetchEvent()
 	}, [id, userEmail])
 
-	// ---------------- JOIN / LEAVE EVENT ----------------
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
 		try {
@@ -403,7 +405,6 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// ---------------- SHARE ----------------
 	const handleShare = async () => {
 		try {
 			const url = window.location.href
@@ -424,7 +425,6 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// ---------------- SAVE / UNSAVE EVENT ----------------
 	const handleSaveEvent = async () => {
 		if (!userEmail || !id) return
 		try {
@@ -464,7 +464,6 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// ---------------- UTILS ----------------
 	const formatPrice = (cost: number, currency: string) =>
 		new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(cost)
 
@@ -488,7 +487,6 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// ---------------- LOADING / ERROR ----------------
 	if (loading)
 		return (
 			<div className='min-h-screen grid place-items-center bg-[#1f2632]'>
@@ -497,6 +495,23 @@ const EventPage: React.FC = () => {
 					Ładowanie wydarzenia…
 				</div>
 			</div>
+		)
+
+	if (event?.isBanned || showBannedAlert)
+		return (
+			<>
+				<div className='min-h-screen bg-[#1f2632]' />
+				<AlertModal
+					isOpen={true}
+					onClose={() => {
+						setShowBannedAlert(false)
+						navigate(-1)
+					}}
+					title='Wydarzenie zbanowane'
+					message='Niestety to wydarzenie zostało zablokowane, więc nie można wyświetlić jego szczegółów.'
+					variant='error'
+				/>
+			</>
 		)
 
 	if (error || !event)
@@ -520,15 +535,12 @@ const EventPage: React.FC = () => {
 	const spotsLeft = Math.max(0, event.numberOfParticipants - participants.length)
 	const progressPercentage = Math.min(100, (participants.length / Math.max(1, event.numberOfParticipants)) * 100)
 
-	// ---------------- UI ----------------
 	return (
 		<>
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-					{/* --- Nagłówek z miniaturą zdjęcia --- */}
 					<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5'>
 						<div className='flex flex-col sm:flex-row sm:items-center gap-5'>
-							{/* Miniaturka wydarzenia */}
 							{event.imageUrl && event.imageUrl.trim() !== '' ? (
 								<img
 									src={event.imageUrl}
@@ -546,7 +558,6 @@ const EventPage: React.FC = () => {
 								<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego organizatora.</p>
 							)}
 
-							{/* Tytuł i szczegóły */}
 							<div>
 								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
 								{isEventPast && averageRating && (
@@ -560,7 +571,6 @@ const EventPage: React.FC = () => {
 							</div>
 						</div>
 
-						{/* Akcje */}
 						<div className='flex items-center gap-3 self-start sm:self-auto'>
 							<button
 								onClick={() => setShowShareModal(true)}
@@ -580,9 +590,7 @@ const EventPage: React.FC = () => {
 					<hr className='my-6 border-zinc-800' />
 
 					<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
-						{/* Main content */}
 						<section className='lg:col-span-2 space-y-6'>
-							{/* Zapełnienie */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-3 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Zapełnienie wydarzenia</h3>
@@ -607,7 +615,6 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Uczestnicy */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-4 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({participants.length})</h3>
@@ -686,7 +693,6 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Info grid */}
 							<div className='grid grid-cols-2 gap-4'>
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Cena</p>
@@ -702,7 +708,6 @@ const EventPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* Lokalizacja */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Lokalizacja</h3>
 								<div className='mt-3 space-y-2 text-sm'>
@@ -722,7 +727,6 @@ const EventPage: React.FC = () => {
 								</button>
 							</div>
 
-							{/* Szczegóły */}
 							<div className='overflow-hidden rounded-2xl border border-zinc-800 bg-black/40'>
 								<button
 									onClick={() => setShowDetailsAccordion(s => !s)}
@@ -744,11 +748,9 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* --- Oceny wydarzenia --- */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-8'>
 								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
 
-								{/* Formularz oceny tylko jeśli użytkownik brał udział */}
 								{joined && isEventPast && !hasRated && (
 									<EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />
 								)}
@@ -763,7 +765,6 @@ const EventPage: React.FC = () => {
 									<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś to wydarzenie.</p>
 								)}
 
-								{/* Lista ocen */}
 								{eventRatings.length ? (
 									<ul className='space-y-3 mt-6'>
 										{eventRatings.map(r => {
@@ -827,7 +828,6 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* --- Ocena organizatora --- */}
 							{joined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
 								<EventRatingForm
 									title='Oceń organizatora'
@@ -874,9 +874,7 @@ const EventPage: React.FC = () => {
 							)}
 						</section>
 
-						{/* Sidebar */}
 						<aside className='space-y-6 lg:sticky lg:top-6'>
-							{/* Akcja dołączenia */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
 									<button
@@ -899,7 +897,6 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Organizator */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Organizator</h3>
 								<div className='mt-4 flex items-center gap-3'>
@@ -932,7 +929,6 @@ const EventPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* Akcje */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Akcje</h3>
 								<div className='mt-4 space-y-3'>
@@ -957,7 +953,6 @@ const EventPage: React.FC = () => {
 				</div>
 			</main>
 
-			{/* Share Modal */}
 			{showShareModal && (
 				<div className='fixed inset-0 z-50 grid place-items-center bg-black/70 p-4'>
 					<div className='w-full max-w-md rounded-2xl bg-zinc-900/90 p-5 ring-1 ring-zinc-800'>
@@ -1005,7 +1000,6 @@ const EventPage: React.FC = () => {
 				</div>
 			)}
 
-			{/* Modal zgłoszenia wydarzenia */}
 			{showReportModal && event && (
 				<ReportEventModal
 					isOpen={showReportModal}
@@ -1016,7 +1010,6 @@ const EventPage: React.FC = () => {
 				/>
 			)}
 
-			{/* Modal zgłoszenia OCENY wydarzenia */}
 			{showRatingReportModal && ratingToReport && (
 				<ReportRatingModal
 					isOpen={showRatingReportModal}

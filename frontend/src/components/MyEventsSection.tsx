@@ -1,4 +1,3 @@
-// src/components/MyEventsSection.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import dayjs, { Dayjs } from "dayjs";
@@ -25,7 +24,6 @@ interface OwnedEvent {
     imageUrl: string | null;
 }
 
-// ===== Helpery =====
 function normalizeEventDate(d: EventDateWire): Dayjs {
     if (Array.isArray(d)) {
         const [y, m, day, h = 0, min = 0] = d;

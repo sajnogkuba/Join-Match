@@ -107,6 +107,7 @@ public class EventService {
                 .imageUrl(e.getImageUrl())
                 .latitude(e.getSportObject().getLatitude())
                 .longitude(e.getSportObject().getLongitude())
+                .isBanned(e.getReportEvents().stream().anyMatch(report -> Boolean.TRUE.equals(report.getActive())))
                 .build();
     }
 

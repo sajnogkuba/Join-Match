@@ -43,4 +43,6 @@ public class EventDetailsResponseDto {
 
     private Double latitude;
     private Double longitude;
+
+    private Boolean isBanned;
 }
