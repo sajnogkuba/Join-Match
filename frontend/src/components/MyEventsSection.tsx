@@ -1,8 +1,7 @@
-// src/components/MyEventsSection.tsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import dayjs, { Dayjs } from "dayjs";
-import { MapPin, CalendarDays, Users } from "lucide-react";
+import { MapPin, CalendarDays, Users, AlertTriangle } from "lucide-react";
 import api from "../Api/axios";
 type EventStatus = "PLANNED" | "CANCELED" | "FINISHED";
 type EventDateWire = number[] | string | Date;
@@ -23,9 +22,9 @@ interface OwnedEvent {
     bookedParticipants?: number;
     minLevel: number;
     imageUrl: string | null;
+    isBanned?: boolean;
 }
 
-// ===== Helpery =====
 function normalizeEventDate(d: EventDateWire): Dayjs {
     if (Array.isArray(d)) {
         const [y, m, day, h = 0, min = 0] = d;
@@ -89,61 +88,85 @@ const MyEventsSection: React.FC = () => {
                         const d = normalizeEventDate(ev.eventDate);
                         const booked = ev.bookedParticipants ?? 0;
                         const hasImage = typeof ev.imageUrl === "string" && ev.imageUrl.trim() !== "";
+                        const isBanned = ev.isBanned === true;
 
                         return (
                             <div
                                 key={ev.eventId}
-                                className="group relative overflow-hidden rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-violet-600/40 transition-all hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(139,92,246,0.2)]"
+                                className={`group relative overflow-hidden rounded-2xl bg-zinc-900/70 border border-zinc-800 transition-all ${
+                                    isBanned 
+                                        ? "opacity-60 grayscale cursor-not-allowed" 
+                                        : "hover:border-violet-600/40 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(139,92,246,0.2)]"
+                                }`}
                             >
-                                <Link
-                                    to={`/event/${ev.eventId}`}
-                                    className="block relative h-48 w-full bg-zinc-800 overflow-hidden"
-                                >
-                                    {hasImage ? (
-                                        <img
-                                            src={ev.imageUrl as string}
-                                            alt={ev.eventName}
-                                            onError={(e) => {
-                                                const img = e.currentTarget as HTMLImageElement;
-                                                img.style.display = "none";
-                                                const fallback = img.nextElementSibling as HTMLElement | null;
-                                                if (fallback) fallback.style.display = "flex";
-                                            }}
-                                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                        />
-                                    ) : null}
-                                    <div
-                                        className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${
-                                            hasImage ? "hidden" : "flex"
-                                        }`}
-                                        style={{ display: hasImage ? "none" : "flex" }}
-                                    >
-                                        <div className="text-center text-zinc-400">
-                                            <div className="text-4xl mb-2">JoinMatch</div>
-                                            <div className="text-sm font-medium">{ev.sportTypeName}</div>
+                                {isBanned ? (
+                                    <div className="block relative h-48 w-full bg-zinc-800 overflow-hidden">
+                                        <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800">
+                                            <div className="text-center text-zinc-500">
+                                                <AlertTriangle className="mx-auto mb-2" size={32} />
+                                                <div className="text-sm font-medium">Zablokowane</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </Link>
+                                ) : (
+                                    <Link
+                                        to={`/event/${ev.eventId}`}
+                                        className="block relative h-48 w-full bg-zinc-800 overflow-hidden"
+                                    >
+                                        {hasImage ? (
+                                            <img
+                                                src={ev.imageUrl as string}
+                                                alt={ev.eventName}
+                                                onError={(e) => {
+                                                    const img = e.currentTarget as HTMLImageElement;
+                                                    img.style.display = "none";
+                                                    const fallback = img.nextElementSibling as HTMLElement | null;
+                                                    if (fallback) fallback.style.display = "flex";
+                                                }}
+                                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                        ) : null}
+                                        <div
+                                            className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${
+                                                hasImage ? "hidden" : "flex"
+                                            }`}
+                                            style={{ display: hasImage ? "none" : "flex" }}
+                                        >
+                                            <div className="text-center text-zinc-400">
+                                                <div className="text-4xl mb-2">JoinMatch</div>
+                                                <div className="text-sm font-medium">{ev.sportTypeName}</div>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                )}
 
                                 <div className="p-5">
-                                    <h3 className="text-lg font-semibold text-white mb-1">{ev.eventName}</h3>
-                                    <p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
+                                    <h3 className={`text-lg font-semibold mb-1 ${isBanned ? "text-zinc-500" : "text-white"}`}>
+                                        {ev.eventName}
+                                    </h3>
+                                    <p className="text-sm text-zinc-500 mb-2 flex items-center gap-2">
                                         <MapPin size={14} /> {ev.sportObjectName}
                                     </p>
-                                    <p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
+                                    <p className="text-sm text-zinc-500 mb-2 flex items-center gap-2">
                                         <CalendarDays size={14} /> {d.format("DD.MM.YYYY HH:mm")}
                                     </p>
-                                    <p className="text-sm text-zinc-400 mb-3 flex items-center gap-2">
+                                    <p className="text-sm text-zinc-500 mb-3 flex items-center gap-2">
                                         <Users size={14} /> {booked}/{ev.numberOfParticipants}
                                     </p>
 
                                     <div className="flex justify-end">
-                                        <Link
-                                            to={`/event/${ev.eventId}`}
-                                            className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900 transition-colors"
-                                        >
-                                            Szczegóły
-                                        </Link>
+                                        {isBanned ? (
+                                            <div className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-500 bg-zinc-800 cursor-not-allowed">
+                                                Zablokowane
+                                            </div>
+                                        ) : (
+                                            <Link
+                                                to={`/event/${ev.eventId}`}
+                                                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900 transition-colors"
+                                            >
+                                                Szczegóły
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             </div>

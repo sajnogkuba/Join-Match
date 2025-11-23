@@ -12,6 +12,7 @@ import type { UserRatingResponse } from "../Api/types/Rating";
 import type { UserSportsResponse } from "../Api/types/Sports";
 import type { User } from "../Api/types/User";
 import MyEventsSection from "../components/MyEventsSection.tsx";
+import MyParticipationsSection from "../components/MyParticipationsSection.tsx";
 
 
 
@@ -185,6 +186,11 @@ const ProfilePage = () => {
                         {activeTab === "Moje wydarzenia" && (
                             <div className="flex-1">
                                 <MyEventsSection />
+                            </div>
+                        )}
+                        {activeTab === "Biorę udział" && (
+                            <div className="flex-1">
+                                <MyParticipationsSection />
                             </div>
                         )}
                     </div>

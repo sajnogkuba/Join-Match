@@ -8,15 +8,12 @@ import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
@@ -65,7 +62,19 @@ public class EventService {
 
         Page<Event> events = eventRepository.findAll(spec, sortedPageable);
 
-        return events.map(EventResponseDto::fromEvent);
+        List<Event> filtered = events.getContent().stream()
+                .filter(event -> event.getReportEvents()
+                        .stream()
+                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
+                .toList();
+
+        Page<Event> filteredPage = new PageImpl<>(
+                filtered,
+                sortedPageable,
+                filtered.size()
+        );
+
+        return filteredPage.map(EventResponseDto::fromEvent);
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +116,7 @@ public class EventService {
                 .imageUrl(e.getImageUrl())
                 .latitude(e.getSportObject().getLatitude())
                 .longitude(e.getSportObject().getLongitude())
+                .isBanned(e.getReportEvents().stream().anyMatch(report -> Boolean.TRUE.equals(report.getActive())))
                 .build();
     }
 
@@ -170,5 +180,16 @@ public class EventService {
         userRepository.save(user);
         eventRepository.save(referenceById);
         reportEventRepository.save(reportEvent);
+    }
+
+    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, String token) {
+        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        var user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User with token " + token + " not found"));
+        Page<Event> events = eventRepository.findAllParticipatedByUserId(user.getId(), sortedPageable);
+        return events.map(EventResponseDto::fromEvent);
     }
 }

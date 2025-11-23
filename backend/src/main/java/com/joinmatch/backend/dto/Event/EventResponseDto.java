@@ -19,7 +19,8 @@ public record EventResponseDto(
         String sportTypeName,
         Integer bookedParticipants,
         Integer minLevel,
-        String imageUrl
+        String imageUrl,
+        Boolean isBanned
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(
@@ -37,7 +38,8 @@ public record EventResponseDto(
                 event.getSportEv().getName(),
                 event.getUserEvents().size(),
                 event.getMinLevel(),
-                event.getImageUrl()
+                event.getImageUrl(),
+                event.getReportEvents().stream().anyMatch(report -> Boolean.TRUE.equals(report.getActive()))
         );
     }
 }
