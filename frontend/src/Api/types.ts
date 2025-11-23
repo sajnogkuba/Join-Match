@@ -29,6 +29,7 @@ export interface Event {
 	city?: string
 	currency?: string
 	minLevel?: number
+	isBanned?: boolean
 }
 
 export type EventDetails = {

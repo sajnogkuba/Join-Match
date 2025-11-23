@@ -20,7 +20,7 @@ public record EventResponseDto(
         Integer bookedParticipants,
         Integer minLevel,
         String imageUrl,
-        Boolean isBaned
+        Boolean isBanned
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(

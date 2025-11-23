@@ -69,6 +69,7 @@ const TeamPage: React.FC = () => {
 	const [saveError, setSaveError] = useState<string | null>(null)
 	const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 	const [activeTab, setActiveTab] = useState<'informacje' | 'dyskusja'>('informacje')
+	const [showBannedAlert, setShowBannedAlert] = useState(false)
 
 	// Check URL query parameter for tab
 	useEffect(() => {
@@ -89,6 +90,12 @@ const TeamPage: React.FC = () => {
 			try {
 				const { data } = await api.get<TeamDetails>(`/team/${id}`)
 				setTeam(data)
+
+				if (data.isBanned) {
+					setShowBannedAlert(true)
+					setLoading(false)
+					return
+				}
 			} catch (err) {
 				console.error('❌ Błąd pobierania szczegółów drużyny:', err)
 				setError('Nie udało się pobrać szczegółów drużyny')
@@ -549,6 +556,24 @@ const TeamPage: React.FC = () => {
 					</div>
 				</div>
 			</main>
+		)
+	}
+
+	if (team?.isBanned || showBannedAlert) {
+		return (
+			<>
+				<div className='min-h-screen bg-[#1f2632]' />
+				<AlertModal
+					isOpen={true}
+					onClose={() => {
+						setShowBannedAlert(false)
+						navigate(-1)
+					}}
+					title='Drużyna zablokowana'
+					message='Niestety ta drużyna została zablokowana, więc nie można wyświetlić jej szczegółów.'
+					variant='error'
+				/>
+			</>
 		)
 	}
 

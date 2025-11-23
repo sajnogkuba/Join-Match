@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.TeamReportDto;
 import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
@@ -12,11 +13,10 @@ import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -44,9 +44,21 @@ public class TeamService {
         ).ignoreCase());
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-
         Page<Team> teams = teamRepository.findAll(sortedPageable);
-        return teams.map(TeamResponseDto::fromTeam);
+
+        List<Team> filtered = teams.getContent().stream()
+                .filter(event -> event.getReportTeamSet()
+                        .stream()
+                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
+                .toList();
+
+        Page<Team> filteredPage = new PageImpl<>(
+                filtered,
+                sortedPageable,
+                filtered.size()
+        );
+
+        return filteredPage.map(TeamResponseDto::fromTeam);
     }
 
     public Page<TeamResponseDto> findAllByLeaderId(Pageable pageable, String sortBy, String direction, Integer leaderId) {
