@@ -1,6 +1,7 @@
 package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.Moderator.GetStatisticsForDashboard;
+import com.joinmatch.backend.dto.Moderator.ModeratorEventRatingReportListItemDto;
 import com.joinmatch.backend.dto.Moderator.ModeratorEventReportListItemDto;
 import com.joinmatch.backend.service.ModeratorService;
 import lombok.AllArgsConstructor;
@@ -67,6 +68,59 @@ public class ModeratorController {
     public ResponseEntity<Void> deleteReportEvent(@PathVariable Integer idReportEvent){
         try{
             moderatorService.deleteReportEvent(idReportEvent);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    //zacznij odtąd
+    @GetMapping("/reportEventRatings")
+    public Page<ModeratorEventRatingReportListItemDto> getEventRatingReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return moderatorService.getEventRatingReports(page, size);
+    }
+    @PatchMapping("/reportEventRating/{idReportEventRating}/accept")
+    public ResponseEntity<Void> acceptReportEventRating(@PathVariable Integer idReportEventRating){
+        try{
+            moderatorService.acceptReportEventRating(idReportEventRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/reportEventRating/{idReportEventRating}/reject")
+    public ResponseEntity<Void> rejectReportEventRating(@PathVariable Integer idReportEventRating){
+        try{
+            moderatorService.rejectReportEventRating(idReportEventRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/reportEventRating/{idReportEventRating}/toggle-viewed")
+    public ResponseEntity<Void> markAsViewedReportEventRating(@PathVariable Integer idReportEventRating){
+        try{
+            moderatorService.markAsViewedReportEventRating(idReportEventRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/reportEventRating/{idReportEventRating}/toggle-unviewed")
+    public ResponseEntity<Void> markAsUnviewedReportEventRating(@PathVariable Integer idReportEventRating){
+        try{
+            moderatorService.markAsUnviewedReportEventRating(idReportEventRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @DeleteMapping("reportEventRating/{idReportEventRating}/delete")
+    public ResponseEntity<Void> deleteReportEventRating(@PathVariable Integer idReportEventRating){
+        try{
+            moderatorService.deleteReportEventRating(idReportEventRating);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
         }
