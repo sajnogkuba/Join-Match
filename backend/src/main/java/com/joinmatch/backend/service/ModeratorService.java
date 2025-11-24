@@ -54,4 +54,35 @@ public class ModeratorService {
                 r.getReviewed()
         ));
     }
+
+    public void rejectReportEvent(Integer idReportEvent) {
+        ReportEvent reportEvent = reportEventRepository.findById(idReportEvent).orElseThrow(() -> new IllegalArgumentException());
+        reportEvent.setActive(false);
+        reportEventRepository.save(reportEvent);
+    }
+
+    public void markAsViewedReportEvent(Integer idReportEvent) {
+        ReportEvent reportEvent = reportEventRepository.findById(idReportEvent).orElseThrow(() -> new IllegalArgumentException());
+        reportEvent.setReviewed(true);
+        reportEventRepository.save(reportEvent);
+    }
+
+    public void acceptReportEvent(Integer idReportEvent) {
+        ReportEvent reportEvent = reportEventRepository.findById(idReportEvent).orElseThrow(() -> new IllegalArgumentException());
+        reportEvent.setActive(true);
+        reportEventRepository.save(reportEvent);
+    }
+
+    public void deleteReportEvent(Integer idReportEvent) {
+        ReportEvent reportEvent = reportEventRepository.findById(idReportEvent).orElseThrow(() -> new IllegalArgumentException());
+        reportEvent.getReporterUser().getReportEvents().remove(reportEvent);
+        reportEvent.getReportedEvent().getReportEvents().remove(reportEvent);
+        reportEventRepository.delete(reportEvent);
+    }
+
+    public void markAsUnviewedReportEvent(Integer idReportEvent) {
+        ReportEvent reportEvent = reportEventRepository.findById(idReportEvent).orElseThrow(() -> new IllegalArgumentException());
+        reportEvent.setReviewed(false);
+        reportEventRepository.save(reportEvent);
+    }
 }

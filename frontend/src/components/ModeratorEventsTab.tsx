@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Filter, Eye } from "lucide-react";
+import { Search, Filter, Eye, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 
@@ -52,9 +52,8 @@ const ModeratorEventsTab: React.FC = () => {
     const currentPageRef = useRef(0);
     const observerTargetRef = useRef<HTMLDivElement | null>(null);
 
-    const loggedEmail = typeof window !== "undefined"
-        ? localStorage.getItem("email")
-        : null;
+    const loggedEmail =
+        typeof window !== "undefined" ? localStorage.getItem("email") : null;
 
     const getUserProfileLink = (reporterEmail: string, reporterId: number) => {
         if (!loggedEmail) return `/profile/${reporterId}`;
@@ -68,9 +67,9 @@ const ModeratorEventsTab: React.FC = () => {
                 else setLoadingMore(true);
                 setError(null);
 
-                const res = await axiosInstance.get<
-                    PageResponse<EventReportItem>
-                >(`/moderator/reportEvents?page=${pageNum}&size=${PAGE_SIZE}`);
+                const res = await axiosInstance.get<PageResponse<EventReportItem>>(
+                    `/moderator/reportEvents?page=${pageNum}&size=${PAGE_SIZE}`
+                );
 
                 const data = res.data;
 
@@ -141,6 +140,92 @@ const ModeratorEventsTab: React.FC = () => {
             hour: "2-digit",
             minute: "2-digit",
         });
+    };
+
+    // ========= AKCJE – TYLKO UPDATE STANU PO 200 =========
+
+    const handleAccept = async (id: number) => {
+        try {
+            await axiosInstance.patch(`/moderator/reportEvent/${id}/accept`);
+            setReports((prev) =>
+                prev.map((r) =>
+                    r.id === id
+                        ? {
+                            ...r,
+                            active: true, // lub false, w zależności jak chcesz traktować "zaakceptowane"
+                            viewed: true,
+                        }
+                        : r
+                )
+            );
+        } catch (e) {
+            console.error(e);
+            alert("Nie udało się zaakceptować zgłoszenia.");
+        }
+    };
+
+    const handleReject = async (id: number) => {
+        try {
+            await axiosInstance.patch(`/moderator/reportEvent/${id}/reject`);
+            setReports((prev) =>
+                prev.map((r) =>
+                    r.id === id
+                        ? {
+                            ...r,
+                            active: false,
+                            viewed: true,
+                        }
+                        : r
+                )
+            );
+        } catch (e) {
+            console.error(e);
+            alert("Nie udało się odrzucić zgłoszenia.");
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!window.confirm("Na pewno chcesz usunąć to zgłoszenie?")) return;
+
+        try {
+            await axiosInstance.delete(`/moderator/reportEvent/${id}/delete`);
+            setReports((prev) => prev.filter((r) => r.id !== id));
+        } catch (e) {
+            console.error(e);
+            alert("Nie udało się usunąć zgłoszenia.");
+        }
+    };
+
+    // oczko – jeśli nowe => toggle-viewed, jeśli przeczytane => toqqle-unviewed
+    const handleToggleViewed = async (report: EventReportItem) => {
+        const { id, viewed } = report;
+
+        try {
+            if (!viewed) {
+                // oznacz jako przeczytane
+                await axiosInstance.patch(
+                    `/moderator/reportEvent/${id}/toggle-viewed`
+                );
+                setReports((prev) =>
+                    prev.map((r) =>
+                        r.id === id ? { ...r, viewed: true } : r
+                    )
+                );
+            } else {
+                // oznacz jako nieprzeczytane
+                await axiosInstance.patch(
+                    `/moderator/reportEvent/${id}/toggle-unviewed`
+                );
+                setReports((prev) =>
+                    prev.map((r) =>
+                        r.id === id ? { ...r, viewed: false } : r
+                    )
+                );
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Nie udało się zmienić statusu przeczytania.");
+        }
     };
 
     return (
@@ -219,9 +304,14 @@ const ModeratorEventsTab: React.FC = () => {
                                             >
                                                 {r.reporterUsername}
                                             </Link>
-                                            <span className="text-xs text-zinc-500">
-                                                {r.userEmail}
-                                            </span>
+                                            <span
+                                                className={
+                                                    "text-xs text-zinc-500 " +
+                                                    (isUnseen ? "font-semibold" : "")
+                                                }
+                                            >
+                                                    {r.userEmail}
+                                                </span>
                                         </div>
                                     </div>
                                 </td>
@@ -247,9 +337,14 @@ const ModeratorEventsTab: React.FC = () => {
                                             >
                                                 {r.eventName}
                                             </Link>
-                                            <span className="text-xs text-zinc-400">
-                                                {formatDate(r.eventDate)}
-                                            </span>
+                                            <span
+                                                className={
+                                                    "text-xs text-zinc-400 " +
+                                                    (isUnseen ? "font-semibold" : "")
+                                                }
+                                            >
+                                                    {formatDate(r.eventDate)}
+                                                </span>
                                         </div>
                                     </div>
                                 </td>
@@ -268,9 +363,8 @@ const ModeratorEventsTab: React.FC = () => {
                                     </p>
                                 </td>
 
-                                {/* Status viewed/active */}
+                                {/* Status – tylko aktywny / nieaktywny */}
                                 <td className="px-4 py-3">
-                                    <div className="flex flex-col gap-1">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
                                                 r.active
@@ -278,27 +372,56 @@ const ModeratorEventsTab: React.FC = () => {
                                                     : "bg-zinc-700/30 text-zinc-300 border-zinc-600/60"
                                             }`}
                                         >
-                                            {r.active ? "Aktywne" : "Zamknięte"}
+                                            {r.active ? "Aktywny" : "Nieaktywny"}
                                         </span>
-                                        <span
-                                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
-                                                r.viewed
-                                                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
-                                                    : "bg-red-500/15 text-red-300 border-red-500/40"
-                                            }`}
-                                        >
-                                            {r.viewed ? "Przeczytane" : "Nowe"}
-                                        </span>
-                                    </div>
                                 </td>
 
-                                {/* Akcje */}
+                                {/* Akcje – ptaszek, krzyżyk, śmietnik, oko */}
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        <button className="p-2 rounded-lg border border-zinc-700 hover:bg-zinc-800">
+                                        {/* Akceptuj */}
+                                        <button
+                                            onClick={() => handleAccept(r.id)}
+                                            className="p-2 rounded-lg border border-emerald-600/60 hover:bg-emerald-600/20 hover:border-emerald-500 transition"
+                                            title="Akceptuj zgłoszenie"
+                                        >
+                                            <Check className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Odrzuć */}
+                                        <button
+                                            onClick={() => handleReject(r.id)}
+                                            className="p-2 rounded-lg border border-red-600/60 hover:bg-red-600/20 hover:border-red-500 transition"
+                                            title="Odrzuć zgłoszenie"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Usuń */}
+                                        <button
+                                            onClick={() => handleDelete(r.id)}
+                                            className="p-2 rounded-lg border border-zinc-700 hover:bg-zinc-800 transition"
+                                            title="Usuń zgłoszenie"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Oznacz jako przeczytane / nieprzeczytane */}
+                                        <button
+                                            onClick={() => handleToggleViewed(r)}
+                                            className={`p-2 rounded-lg border transition ${
+                                                isUnseen
+                                                    ? "border-blue-500/70 hover:bg-blue-600/20"
+                                                    : "border-zinc-700 hover:bg-zinc-800"
+                                            }`}
+                                            title={
+                                                isUnseen
+                                                    ? "Oznacz jako przeczytane"
+                                                    : "Oznacz jako nieprzeczytane"
+                                            }
+                                        >
                                             <Eye className="h-4 w-4" />
                                         </button>
-                                        {/* tutaj później możesz dodać: oznacz jako przeczytane / zamknij */}
                                     </div>
                                 </td>
                             </tr>
