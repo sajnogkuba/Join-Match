@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Filter, Eye, Check, X, Trash2, Star } from "lucide-react";
+import { Search, Eye, Check, X, Trash2, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 
@@ -22,7 +22,7 @@ type PageResponse<T> = {
 
 type EventRatingReportItem = {
     id: number;
-    description: string;          // opis zgłoszenia
+    description: string;      // opis zgłoszenia
 
     reporterId: number;
     userEmail: string;
@@ -34,8 +34,8 @@ type EventRatingReportItem = {
     eventImageUrl: string | null;
 
     idRater: number;
-    rate: number;                 // ocena (1–5)
-    commentRate: string;          // komentarz do oceny
+    rate: number;             // ocena 1–5
+    commentRate: string;      // komentarz do oceny
 
     viewed: boolean;
     active: boolean;
@@ -76,16 +76,24 @@ const ModeratorEventRatingsTab: React.FC = () => {
                     `/moderator/reportEventRatings?page=${pageNum}&size=${PAGE_SIZE}`
                 );
 
-                const data = res.data;
+                // na wszelki wypadek rzutujemy active/viewed na bool
+                const mapped = res.data.content.map((item) => ({
+                    ...item,
+                    active: !!item.active,
+                    viewed: !!item.viewed,
+                }));
 
                 if (append) {
-                    setReports((prev) => [...prev, ...data.content]);
+                    setReports((prev) => [...prev, ...mapped]);
                 } else {
-                    setReports(data.content);
+                    setReports(mapped);
                 }
 
-                setHasNext(!data.last);
-                currentPageRef.current = data.number;
+                setHasNext(!res.data.last);
+                currentPageRef.current = res.data.number;
+
+                // pomocniczo – możesz zobaczyć w konsoli co przychodzi
+                // console.log("REPORTS FROM API:", mapped);
             } catch (e) {
                 setError("Nie udało się załadować zgłoszeń ocen wydarzeń.");
             } finally {
@@ -133,7 +141,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
         [query, reports]
     );
 
-    // ========= AKCJE =========
+    // ==== AKCJE ====
 
     const handleAccept = async (id: number) => {
         try {
@@ -168,7 +176,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm("Na pewno chcesz usunąć to zgłoszenie?")) return;
+        if (!window.confirm("Na pewno usunąć to zgłoszenie?")) return;
 
         try {
             await axiosInstance.delete(
@@ -212,7 +220,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
 
     return (
         <section className="p-4 md:p-0">
-            {/* search + filtry */}
+            {/* search bez filtrów */}
             <div className="flex items-center gap-2 mb-4">
                 <div className="relative flex-1">
                     <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -223,11 +231,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                         className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-600"
                     />
                 </div>
-
-                <button className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800">
-                    <Filter className="h-4 w-4" />
-                    Filtry
-                </button>
             </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
@@ -330,7 +333,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Opis – komentarz + powód zgłoszenia */}
+                                {/* Opis oceny + opis zgłoszenia */}
                                 <td className="px-4 py-3 max-w-xs">
                                     <p
                                         className={
@@ -347,7 +350,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                     </p>
                                 </td>
 
-                                {/* Status – Aktywny / Nieaktywny */}
+                                {/* Status */}
                                 <td className="px-4 py-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
@@ -363,36 +366,40 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                 {/* Akcje */}
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        {/* Akceptuj */}
                                         <button
-                                            onClick={() => handleAccept(r.id)}
+                                            onClick={() =>
+                                                handleAccept(r.id)
+                                            }
                                             className="p-2 rounded-lg border border-emerald-600/60 hover:bg-emerald-600/20 hover:border-emerald-500 transition"
                                             title="Akceptuj zgłoszenie"
                                         >
                                             <Check className="h-4 w-4" />
                                         </button>
 
-                                        {/* Odrzuć */}
                                         <button
-                                            onClick={() => handleReject(r.id)}
+                                            onClick={() =>
+                                                handleReject(r.id)
+                                            }
                                             className="p-2 rounded-lg border border-red-600/60 hover:bg-red-600/20 hover:border-red-500 transition"
                                             title="Odrzuć zgłoszenie"
                                         >
                                             <X className="h-4 w-4" />
                                         </button>
 
-                                        {/* Usuń */}
                                         <button
-                                            onClick={() => handleDelete(r.id)}
+                                            onClick={() =>
+                                                handleDelete(r.id)
+                                            }
                                             className="p-2 rounded-lg border border-zinc-700 hover:bg-zinc-800 transition"
                                             title="Usuń zgłoszenie"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
 
-                                        {/* Oznacz jako przeczytane / nieprzeczytane */}
                                         <button
-                                            onClick={() => handleToggleViewed(r)}
+                                            onClick={() =>
+                                                handleToggleViewed(r)
+                                            }
                                             className={`p-2 rounded-lg border transition ${
                                                 isUnseen
                                                     ? "border-blue-500/70 hover:bg-blue-600/20"
@@ -415,7 +422,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                 </table>
             </div>
 
-            {/* infinite scroll anchor */}
             <div
                 ref={observerTargetRef}
                 className="h-12 flex items-center justify-center text-xs text-zinc-500"

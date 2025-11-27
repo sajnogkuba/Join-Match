@@ -73,7 +73,6 @@ public class ModeratorController {
         }
         return ResponseEntity.ok().build();
     }
-    //zacznij odtąd
     @GetMapping("/reportEventRatings")
     public Page<ModeratorEventRatingReportListItemDto> getEventRatingReports(
             @RequestParam(defaultValue = "0") int page,
