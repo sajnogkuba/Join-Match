@@ -54,4 +54,28 @@ public class UserEventController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/request")
+    public ResponseEntity<UserEventResponseDto> requestJoin(
+            @RequestBody UserEventRequestDto dto) {
+        return ResponseEntity.ok(
+                userEventService.requestToJoin(dto.userEmail(), dto.eventId())
+        );
+    }
+
+    @PostMapping("/{eventId}/approve/{userId}")
+    public ResponseEntity<Void> approveUser(
+            @PathVariable Integer eventId,
+            @PathVariable Integer userId) {
+        userEventService.approveUser(eventId, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{eventId}/reject/{userId}")
+    public ResponseEntity<Void> rejectUser(
+            @PathVariable Integer eventId,
+            @PathVariable Integer userId) {
+        userEventService.rejectUser(eventId, userId);
+        return ResponseEntity.ok().build();
+    }
+
 }

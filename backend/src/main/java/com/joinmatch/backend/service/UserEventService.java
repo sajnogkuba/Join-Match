@@ -37,11 +37,56 @@ public class UserEventService {
         UserEvent userEvent = new UserEvent();
         UserEventResponseDto response = getUserEventResponseDto(eventRequestDto, userEvent);
 
-        User user = userRepository.findByEmail(eventRequestDto.userEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        chatService.addUserToEventChat(eventRequestDto.eventId(), user.getId());
+        Integer statusId = eventRequestDto.attendanceStatusId();
+
+        if (statusId == 1) {
+            User user = userRepository.findByEmail(eventRequestDto.userEmail())
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            chatService.addUserToEventChat(eventRequestDto.eventId(), user.getId());
+        }
 
         return response;
+    }
+
+
+    @Transactional
+    public UserEventResponseDto requestToJoin(String userEmail, Integer eventId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (event.getEventVisibility().getId() == 1) {
+            return create(new UserEventRequestDto(userEmail, eventId, 1));
+        }
+
+        return create(new UserEventRequestDto(userEmail, eventId, 4));
+    }
+
+    @Transactional
+    public void approveUser(Integer eventId, Integer userId) {
+        UserEvent ue = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Relacja nie znaleziona"));
+
+        AttendanceStatus accepted = attendanceStatusRepository.findById(1)
+                .orElseThrow();
+
+        ue.setAttendanceStatus(accepted);
+        userEventRepository.save(ue);
+
+        chatService.addUserToEventChat(eventId, userId);
+    }
+
+    @Transactional
+    public void rejectUser(Integer eventId, Integer userId) {
+        UserEvent ue = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Relacja nie znaleziona"));
+
+        AttendanceStatus rejected = attendanceStatusRepository.findById(3)
+                .orElseThrow();
+
+        ue.setAttendanceStatus(rejected);
+        userEventRepository.save(ue);
     }
 
     private UserEventResponseDto getUserEventResponseDto(UserEventRequestDto eventRequestDto, UserEvent userEvent) {
