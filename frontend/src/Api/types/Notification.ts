@@ -14,7 +14,10 @@ export const NotificationType = {
   POST_COMMENT: 'POST_COMMENT',
   POST_REACTION: 'POST_REACTION',
   COMMENT_REACTION: 'COMMENT_REACTION',
-  COMMENT_REPLY: 'COMMENT_REPLY'
+  COMMENT_REPLY: 'COMMENT_REPLY',
+  EVENT_JOIN_REQUEST: 'EVENT_JOIN_REQUEST',
+  EVENT_JOIN_ACCEPTED: 'EVENT_JOIN_ACCEPTED',
+  EVENT_JOIN_REJECTED: 'EVENT_JOIN_REJECTED',
 } as const;
 
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
@@ -30,6 +33,8 @@ export interface NotificationData {
   postId?: number;
   commentId?: number;
   reactionTypeId?: number;
+  eventId?: number;
+  eventName?: string;
 }
 
 export interface Notification {

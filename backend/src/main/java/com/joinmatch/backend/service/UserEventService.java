@@ -19,11 +19,13 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class UserEventService {
+
     private final UserEventRepository userEventRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final AttendanceStatusRepository attendanceStatusRepository;
     private final ChatService chatService;
+    private final NotificationService notificationService;
 
     public List<UserEventResponseDto> getAllUserEvent() {
         return userEventRepository.findAll()
@@ -33,21 +35,29 @@ public class UserEventService {
     }
 
     @Transactional
-    public UserEventResponseDto create(UserEventRequestDto eventRequestDto) {
+    public UserEventResponseDto create(UserEventRequestDto dto) {
+
+        User user = userRepository.findByEmail(dto.userEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Event event = eventRepository.findById(dto.eventId())
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+        AttendanceStatus status = attendanceStatusRepository.findById(dto.attendanceStatusId())
+                .orElseThrow(() -> new IllegalArgumentException("Status not found"));
+
         UserEvent userEvent = new UserEvent();
-        UserEventResponseDto response = getUserEventResponseDto(eventRequestDto, userEvent);
+        userEvent.setUser(user);
+        userEvent.setEvent(event);
+        userEvent.setAttendanceStatus(status);
 
-        Integer statusId = eventRequestDto.attendanceStatusId();
+        UserEvent saved = userEventRepository.save(userEvent);
 
-        if (statusId == 1) {
-            User user = userRepository.findByEmail(eventRequestDto.userEmail())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            chatService.addUserToEventChat(eventRequestDto.eventId(), user.getId());
+        if (status.getId() == 1) {
+            chatService.addUserToEventChat(event.getEventId(), user.getId());
+            notificationService.sendEventPublicJoined(event, user);
         }
 
-        return response;
+        return UserEventResponseDto.fromUserEvent(saved);
     }
-
 
     @Transactional
     public UserEventResponseDto requestToJoin(String userEmail, Integer eventId) {
@@ -60,13 +70,20 @@ public class UserEventService {
             return create(new UserEventRequestDto(userEmail, eventId, 1));
         }
 
+        notificationService.sendEventJoinRequest(event, user);
+
         return create(new UserEventRequestDto(userEmail, eventId, 4));
     }
 
     @Transactional
     public void approveUser(Integer eventId, Integer userId) {
-        UserEvent ue = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, userId)
+
+        UserEvent ue = userEventRepository
+                .findByEvent_EventIdAndUser_Id(eventId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Relacja nie znaleziona"));
+
+        Event event = ue.getEvent();
+        User user = ue.getUser();
 
         AttendanceStatus accepted = attendanceStatusRepository.findById(1)
                 .orElseThrow();
@@ -75,37 +92,32 @@ public class UserEventService {
         userEventRepository.save(ue);
 
         chatService.addUserToEventChat(eventId, userId);
+
+        notificationService.sendEventJoinAccepted(user, event);
     }
 
     @Transactional
     public void rejectUser(Integer eventId, Integer userId) {
-        UserEvent ue = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, userId)
+
+        UserEvent ue = userEventRepository
+                .findByEvent_EventIdAndUser_Id(eventId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Relacja nie znaleziona"));
+
+        Event event = ue.getEvent();
+        User user = ue.getUser();
 
         AttendanceStatus rejected = attendanceStatusRepository.findById(3)
                 .orElseThrow();
 
         ue.setAttendanceStatus(rejected);
         userEventRepository.save(ue);
-    }
 
-    private UserEventResponseDto getUserEventResponseDto(UserEventRequestDto eventRequestDto, UserEvent userEvent) {
-        User user = userRepository.findByEmail(eventRequestDto.userEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User with email " + eventRequestDto.userEmail() + " not found"));
-        Event event = eventRepository.findById(eventRequestDto.eventId())
-                .orElseThrow(() -> new IllegalArgumentException("Event with id " + eventRequestDto.eventId() + " not found"));
-        AttendanceStatus attendanceStatus = attendanceStatusRepository.findById(eventRequestDto.attendanceStatusId())
-                .orElseThrow(() -> new IllegalArgumentException("AttendanceStatus with id " + eventRequestDto.attendanceStatusId() + " not found"));
-        userEvent.setUser(user);
-        userEvent.setEvent(event);
-        userEvent.setAttendanceStatus(attendanceStatus);
-        UserEvent saved = userEventRepository.save(userEvent);
-        return UserEventResponseDto.fromUserEvent(saved);
+        notificationService.sendEventJoinRejected(user, event);
     }
 
     public List<UserEventResponseDto> getUserEventsByUserEmail(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User with email " + userEmail + " not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return userEventRepository.findByUserId(user.getId())
                 .stream()
                 .map(UserEventResponseDto::fromUserEvent)
@@ -127,8 +139,6 @@ public class UserEventService {
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
         userEventRepository.deleteByUserAndEvent(user, event);
-
         chatService.removeUserFromEventChat(eventId, user.getId());
     }
-
 }

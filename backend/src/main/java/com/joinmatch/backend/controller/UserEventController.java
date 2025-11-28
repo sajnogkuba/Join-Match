@@ -1,7 +1,13 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.Notification.EventInviteRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
+import com.joinmatch.backend.model.Event;
+import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.repository.UserRepository;
+import com.joinmatch.backend.service.EventService;
+import com.joinmatch.backend.service.NotificationService;
 import com.joinmatch.backend.service.UserEventService;
 import com.joinmatch.backend.service.UserService;
 import jakarta.validation.Valid;
@@ -10,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/user-event")
@@ -17,6 +24,8 @@ import java.util.List;
 public class UserEventController {
     private final UserEventService userEventService;
     private final UserService userService;
+    private final EventService eventService;
+    private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<UserEventResponseDto>> getAllUserEvents() {
@@ -62,19 +71,30 @@ public class UserEventController {
         );
     }
 
-    @PostMapping("/{eventId}/approve/{userId}")
+    @PostMapping("/{eventId}/approve")
     public ResponseEntity<Void> approveUser(
             @PathVariable Integer eventId,
-            @PathVariable Integer userId) {
+            @RequestParam Integer userId) {
         userEventService.approveUser(eventId, userId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{eventId}/reject/{userId}")
+    @PostMapping("/{eventId}/reject")
     public ResponseEntity<Void> rejectUser(
             @PathVariable Integer eventId,
-            @PathVariable Integer userId) {
+            @RequestParam Integer userId) {
         userEventService.rejectUser(eventId, userId);
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("/invite")
+    public ResponseEntity<Void> inviteUserToEvent(@RequestBody EventInviteRequestDto dto) {
+
+        User sender = userService.findById(dto.senderId());
+        User receiver = userService.findByEmail(dto.targetEmail());
+        Event event = eventService.findById(dto.eventId());
+
+        notificationService.sendEventInvitation(receiver, sender, event);
+
         return ResponseEntity.ok().build();
     }
 
