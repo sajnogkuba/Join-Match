@@ -1,11 +1,9 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.Moderator.GetStatisticsForDashboard;
-import com.joinmatch.backend.dto.Moderator.ModeratorEventRatingReportListItemDto;
-import com.joinmatch.backend.dto.Moderator.ModeratorEventReportListItemDto;
-import com.joinmatch.backend.dto.Moderator.UserRateReportDto;
+import com.joinmatch.backend.dto.Moderator.*;
 import com.joinmatch.backend.model.ReportEvent;
 import com.joinmatch.backend.model.ReportEventRating;
+import com.joinmatch.backend.model.ReportTeam;
 import com.joinmatch.backend.model.ReportUserRating;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -196,5 +194,58 @@ public class ModeratorService {
         reportUserRating.getUserRatingReporter().getReportUserRatings().remove(reportUserRating);
         reportUserRating.getUserRating().getReportUserRatings().remove(reportUserRating);
         reportUserRatingRepository.delete(reportUserRating);
+    }
+
+    public Page<ModeratorTeamReportDto> getTeamReports(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<ReportTeam> reports = reportTeamRepository.findAllByOrderByIdDesc(pageable);
+
+        return reports.map(r -> new ModeratorTeamReportDto(
+                r.getId(),
+                r.getTeam().getId(),
+                r.getTeam().getName(),
+                r.getTeam().getPhotoUrl(),
+                r.getTeamReporterUser().getId(),
+                r.getTeamReporterUser().getEmail(),
+                r.getTeamReporterUser().getName(),
+                r.getTeamReporterUser().getUrlOfPicture(),
+                r.getDescription(),
+                r.getActive(),
+                r.isReviewed()
+        ));
+    }
+
+    public void acceptReportTeam(Integer idReportTeam) {
+        ReportTeam referenceById = reportTeamRepository.findById(idReportTeam).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setActive(true);
+        reportTeamRepository.save(referenceById);
+    }
+
+    public void rejectReportTeam(Integer idReportTeam) {
+        ReportTeam referenceById = reportTeamRepository.findById(idReportTeam).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setActive(false);
+        reportTeamRepository.save(referenceById);
+    }
+
+    public void markAsViewedReportTeam(Integer idReportTeam) {
+        ReportTeam referenceById = reportTeamRepository.findById(idReportTeam).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setReviewed(true);
+        reportTeamRepository.save(referenceById);
+    }
+
+    public void markAsUnviewedReportTeam(Integer idReportTeam) {
+        ReportTeam referenceById = reportTeamRepository.findById(idReportTeam).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setReviewed(false);
+        reportTeamRepository.save(referenceById);
+
+    }
+
+    public void deleteReportTeam(Integer idReportTeam) {
+        ReportTeam referenceById = reportTeamRepository.findById(idReportTeam).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.getTeam().getReportTeamSet().remove(referenceById);
+        referenceById.getTeamReporterUser().getTeamReportSender().remove(referenceById);
+        reportTeamRepository.delete(referenceById);
+
     }
 }

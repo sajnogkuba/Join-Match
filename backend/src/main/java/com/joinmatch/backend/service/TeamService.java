@@ -132,11 +132,11 @@ public class TeamService {
         Team team = teamRepository.findById(teamReportDto.IdTeam()).orElseThrow(() -> new IllegalArgumentException());
         User user = userRepository.findByTokenValue(teamReportDto.token()).orElseThrow(() -> new IllegalArgumentException());
         ReportTeam reportTeam = new ReportTeam();
-        reportTeam.setTeamReporterUserId(user);
+        reportTeam.setTeamReporterUser(user);
         reportTeam.setDescription(teamReportDto.description());
         reportTeam.setActive(false);
         reportTeam.setReviewed(false);
-        reportTeam.setTeamId(team);
+        reportTeam.setTeam(team);
         team.getReportTeamSet().add(reportTeam);
         user.getTeamReportSender().add(reportTeam);
         userRepository.save(user);

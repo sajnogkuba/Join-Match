@@ -51,7 +51,7 @@ public class Team {
 
     @OneToMany(mappedBy = "team")
     private List<Conversation> conversations;
-    @OneToMany(mappedBy = "teamId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReportTeam> reportTeamSet;
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CompetitionTeam> competitionTeams = new HashSet<>();
