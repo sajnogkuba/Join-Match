@@ -31,14 +31,13 @@ export default function CreateEventForm() {
 	const [sportId, setSportId] = useState<number>(0)
 	const [level, setLevel] = useState(1)
 	const [free, setFree] = useState(false)
-	const [isPrivate] = useState(false)
+	const [isPrivate, setIsPrivate] = useState(false)
 	const [price, setPrice] = useState<number | ''>(0)
 	const [maxParticipants, setMaxParticipants] = useState<number | ''>('')
 	const [eventDate, setEventDate] = useState('')
 	const [eventTime, setEventTime] = useState('')
 	const [placeId, setPlaceId] = useState<number>(0)
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
-
 	const [sportTypes, setSportTypes] = useState<SportType[]>([])
 	const [sportObjects, setSportObjects] = useState<SportObject[]>([])
 	const [errors, setErrors] = useState<FormErrors>({})
@@ -91,6 +90,21 @@ export default function CreateEventForm() {
 
 		setErrors(newErrors)
 		return Object.keys(newErrors).length === 0
+	}
+
+	const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) => {
+		return (
+			<div
+				onClick={() => onChange(!enabled)}
+				className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer transition-all ${
+					enabled ? 'bg-violet-600' : 'bg-zinc-700'
+				}`}>
+				<div
+					className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+						enabled ? 'translate-x-5' : 'translate-x-0'
+					}`}></div>
+			</div>
+		)
 	}
 
 	const toLocalDateTime = (d: string, t: string) => `${d}T${t}:00`
@@ -236,6 +250,24 @@ export default function CreateEventForm() {
 						/>
 					</div>
 
+					{/* Widoczność wydarzenia */}
+					<div className={card}>
+						<label className='block text-zinc-400 mb-3'>Widoczność wydarzenia</label>
+
+						<div className='flex items-center justify-between'>
+							<div className='flex flex-col'>
+								<span className='font-semibold text-white'>
+									{isPrivate ? 'Prywatne wydarzenie' : 'Publiczne wydarzenie'}
+								</span>
+								<span className='text-zinc-400 text-sm'>
+									{isPrivate ? 'Widoczne tylko dla zaproszonych uczestników' : 'Widoczne dla wszystkich użytkowników'}
+								</span>
+							</div>
+
+							<Toggle enabled={isPrivate} onChange={setIsPrivate} />
+						</div>
+					</div>
+
 					{/* Cena */}
 					<div className={card}>
 						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
@@ -277,10 +309,10 @@ export default function CreateEventForm() {
 						<DatePicker
 							value={eventDate}
 							onChange={setEventDate}
-							placeholder="Wybierz datę wydarzenia"
+							placeholder='Wybierz datę wydarzenia'
 							error={!!errors.eventDate}
-							mode="event"
-							theme="violet"
+							mode='event'
+							theme='violet'
 						/>
 						{errors.eventDate && <p className='text-red-400 text-sm mt-1'>{errors.eventDate}</p>}
 					</div>
@@ -290,9 +322,9 @@ export default function CreateEventForm() {
 						<TimePicker
 							value={eventTime}
 							onChange={setEventTime}
-							placeholder="Wybierz godzinę"
+							placeholder='Wybierz godzinę'
 							error={!!errors.eventTime}
-							theme="violet"
+							theme='violet'
 						/>
 						{errors.eventTime && <p className='text-red-400 text-sm mt-1'>{errors.eventTime}</p>}
 					</div>

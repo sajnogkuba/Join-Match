@@ -192,4 +192,8 @@ public class EventService {
         Page<Event> events = eventRepository.findAllParticipatedByUserId(user.getId(), sortedPageable);
         return events.map(EventResponseDto::fromEvent);
     }
+    public Event findById(Integer id){
+        return eventRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + id + " not found"));
+    }
 }

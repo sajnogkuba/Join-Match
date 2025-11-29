@@ -15,6 +15,7 @@ import type { EventRatingResponse } from '../Api/types/Rating'
 import ReportEventModal from '../components/ReportEventModal'
 import ReportRatingModal from '../components/ReportRatingModal'
 import AlertModal from '../components/AlertModal'
+import InviteToEventModal from '../components/InviteToEventModal'
 import {
 	Share2,
 	Shield,
@@ -28,6 +29,8 @@ import {
 	MessageCircle,
 	CalendarDays,
 	Flag,
+	Check,
+	X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
@@ -52,13 +55,25 @@ const EventPage: React.FC = () => {
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 
 	const [participants, setParticipants] = useState<Participant[]>([])
+	const confirmedParticipants = participants.filter(p => p.attendanceStatusName === 'Zapisany')
+	const pendingParticipants = participants.filter(p => p.attendanceStatusName === 'Oczekujący')
+	const rejectedParticipants = participants.filter(p => p.attendanceStatusName === 'Odrzucony')
+	const invitedParticipants = participants.filter(p => p.attendanceStatusName === 'Zaproszony')
+	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
+	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
+	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
+
+	const visibleParticipantsCount =
+		confirmedParticipants.length + pendingParticipants.length + invitedParticipants.length
+
 	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
-	const [showShareToast, setShowShareToast] = useState(false)
 	const [showShareModal, setShowShareModal] = useState(false)
 	const [showDetailsAccordion, setShowDetailsAccordion] = useState(false)
 	const [showParticipants, setShowParticipants] = useState(false)
+	const [showInviteModal, setShowInviteModal] = useState(false)
+	const [isSendingInvite, setIsSendingInvite] = useState(false)
 
 	const [eventRatings, setEventRatings] = useState<EventRatingResponse[]>([])
 	const [isSending, setIsSending] = useState(false)
@@ -110,7 +125,6 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// --- HANDLER: ZGŁOSZENIE KONKRETNEJ OCENY WYDARZENIA ---
 	const handleSubmitRatingReport = async (message: string) => {
 		if (!ratingToReport) return
 
@@ -122,8 +136,6 @@ const EventPage: React.FC = () => {
 
 		try {
 			setIsSendingRatingReport(true)
-
-			// /api/ratings/report/eventRating + DTO: (String token, Integer idEventRating, String description)
 			await axiosInstance.post('/ratings/report/eventRating', {
 				token,
 				idEventRating: ratingToReport.id,
@@ -142,6 +154,36 @@ const EventPage: React.FC = () => {
 			}
 		} finally {
 			setIsSendingRatingReport(false)
+		}
+	}
+
+	const handleAcceptInvitation = async () => {
+		if (!userEmail || !id) return
+		try {
+			await axiosInstance.post('/user-event/invitation/accept', {
+				userEmail,
+				eventId: Number(id),
+			})
+			toast.success('Zaproszenie przyjęte! Witamy w wydarzeniu.')
+			await fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd akceptacji zaproszenia:', err)
+			toast.error('Nie udało się zaakceptować zaproszenia.')
+		}
+	}
+
+	const handleDeclineInvitation = async () => {
+		if (!userEmail || !id) return
+		try {
+			await axiosInstance.post('/user-event/invitation/decline', {
+				userEmail,
+				eventId: Number(id),
+			})
+			toast.success('Zaproszenie odrzucone.')
+			await fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd odrzucania zaproszenia:', err)
+			toast.error('Nie udało się odrzucić zaproszenia.')
 		}
 	}
 
@@ -208,7 +250,8 @@ const EventPage: React.FC = () => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
 			setParticipants(data || [])
-			if (userEmail && data?.some(p => p.userEmail === userEmail)) setJoined(true)
+			if (userEmail && data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany'))
+				setJoined(true)
 			else setJoined(false)
 		} catch (err) {
 			console.error('❌ Błąd pobierania uczestników:', err)
@@ -266,6 +309,32 @@ const EventPage: React.FC = () => {
 			window.open(url, '_blank')
 		} else {
 			toast.error('Brak danych lokalizacji dla tego obiektu')
+		}
+	}
+
+	const handleApproveUser = async (userId: number) => {
+		try {
+			await axiosInstance.post(`/user-event/${id}/approve`, null, {
+				params: { userId },
+			})
+			toast.success('Użytkownik zaakceptowany!')
+			fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd akceptacji:', err)
+			toast.error('Nie udało się zaakceptować użytkownika.')
+		}
+	}
+
+	const handleRejectUser = async (userId: number) => {
+		try {
+			await axiosInstance.post(`/user-event/${id}/reject`, null, {
+				params: { userId },
+			})
+			toast.success('Użytkownik odrzucony.')
+			fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd odrzucania:', err)
+			toast.error('Nie udało się odrzucić użytkownika.')
 		}
 	}
 
@@ -388,17 +457,17 @@ const EventPage: React.FC = () => {
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
 		try {
-			if (joined) {
+			if (joined || isPending) {
 				await axiosInstance.delete(`/user-event`, {
-					data: { userEmail, eventId: Number(id), attendanceStatusId: 1 },
+					data: { userEmail, eventId: Number(id) },
 				})
 			} else {
-				await axiosInstance.post(`/user-event`, {
+				await axiosInstance.post(`/user-event/request`, {
 					userEmail,
 					eventId: Number(id),
-					attendanceStatusId: 1,
 				})
 			}
+
 			await fetchParticipants(Number(id))
 		} catch (err) {
 			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
@@ -418,8 +487,6 @@ const EventPage: React.FC = () => {
 				document.execCommand('copy')
 				document.body.removeChild(el)
 			}
-			setShowShareToast(true)
-			setTimeout(() => setShowShareToast(false), 2000)
 		} catch (e) {
 			console.error('Nie udało się skopiować linku', e)
 		}
@@ -461,6 +528,28 @@ const EventPage: React.FC = () => {
 		} catch (err) {
 			console.error('❌ Błąd przy otwieraniu czatu z organizatorem:', err)
 			toast.error('Nie udało się otworzyć czatu z organizatorem.')
+		}
+	}
+
+	const handleSendInvite = async (targetEmail: string) => {
+		if (!id || !currentUserId) return
+
+		try {
+			setIsSendingInvite(true)
+
+			await axiosInstance.post('/user-event/invite', {
+				senderId: currentUserId,
+				targetEmail,
+				eventId: Number(id),
+			})
+
+			toast.success('Zaproszenie wysłane!')
+			setShowInviteModal(false)
+		} catch (err) {
+			console.error('❌ Błąd wysyłania zaproszenia:', err)
+			toast.error('Nie udało się wysłać zaproszenia.')
+		} finally {
+			setIsSendingInvite(false)
 		}
 	}
 
@@ -532,8 +621,11 @@ const EventPage: React.FC = () => {
 			</div>
 		)
 
-	const spotsLeft = Math.max(0, event.numberOfParticipants - participants.length)
-	const progressPercentage = Math.min(100, (participants.length / Math.max(1, event.numberOfParticipants)) * 100)
+	const spotsLeft = Math.max(0, event.numberOfParticipants - confirmedParticipants.length)
+	const progressPercentage = Math.min(
+		100,
+		(confirmedParticipants.length / Math.max(1, event.numberOfParticipants)) * 100
+	)
 
 	return (
 		<>
@@ -595,7 +687,7 @@ const EventPage: React.FC = () => {
 								<div className='mb-3 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Zapełnienie wydarzenia</h3>
 									<span className='text-violet-300 font-semibold'>
-										{participants.length}/{event.numberOfParticipants}
+										{confirmedParticipants.length}/{event.numberOfParticipants}
 									</span>
 								</div>
 								<div className='h-3 w-full overflow-hidden rounded-full bg-zinc-800'>
@@ -617,7 +709,7 @@ const EventPage: React.FC = () => {
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-4 flex items-center justify-between'>
-									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({participants.length})</h3>
+									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({visibleParticipantsCount})</h3>
 									<button
 										onClick={() => setShowParticipants(s => !s)}
 										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
@@ -626,33 +718,84 @@ const EventPage: React.FC = () => {
 									</button>
 								</div>
 
-								<div className='mb-2 flex flex-wrap gap-2'>
-									{participants.slice(0, showParticipants ? participants.length : 8).map(p => (
-										<Link
-											key={p.id}
-											to={`/profile/${p.userId}`}
-											className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
-											<Avatar
-												src={p.userAvatarUrl || null}
-												name={p.userName}
-												size='sm'
-												className='ring-1 ring-zinc-700 shadow-sm'
-											/>
-											<div className='text-sm'>
-												<div className='font-medium text-white leading-tight'>
-													{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
-												</div>
-												{p.skillLevel && (
-													<div
-														className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-															p.skillLevel
-														)}`}>
-														{p.skillLevel}
+								{currentUserId === event?.ownerId && (
+									<button
+										onClick={() => setShowInviteModal(true)}
+										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200 ml-auto mb-3'>
+										+ Zaproś uczestnika
+									</button>
+								)}
+
+								{/* Pending participants - visible only to organizer */}
+								{currentUserId === event?.ownerId && pendingParticipants.length > 0 && (
+									<div className='rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 mb-4'>
+										<h4 className='text-white font-semibold mb-3'>
+											Oczekujący na akceptację ({pendingParticipants.length})
+										</h4>
+										<div className='space-y-3'>
+											{pendingParticipants.map(p => (
+												<div key={p.id} className='flex items-center justify-between bg-zinc-800/40 p-3 rounded-xl'>
+													<div className='flex items-center gap-3'>
+														<Avatar src={p.userAvatarUrl || null} name={p.userName} size='sm' />
+														<div>
+															<p className='text-white font-medium'>{p.userName}</p>
+															<p className='text-xs text-zinc-400'>{p.userEmail}</p>
+														</div>
 													</div>
-												)}
-											</div>
-										</Link>
-									))}
+
+													<div className='flex gap-2'>
+														<button
+															onClick={() => handleApproveUser(p.userId)}
+															className='px-3 py-1 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-500'>
+															Akceptuj
+														</button>
+														<button
+															onClick={() => handleRejectUser(p.userId)}
+															className='px-3 py-1 rounded-lg bg-rose-600 text-white text-sm hover:bg-rose-500'>
+															Odrzuć
+														</button>
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+
+								<div className='mb-2 flex flex-wrap gap-2'>
+									{confirmedParticipants
+										.concat(pendingParticipants, invitedParticipants) // removed rejectedParticipants so rejected users are not shown in the public list
+										.slice(
+											0,
+											showParticipants
+												? confirmedParticipants.length + pendingParticipants.length + invitedParticipants.length
+												: 8
+										)
+										.map(p => (
+											<Link
+												key={p.id}
+												to={`/profile/${p.userId}`}
+												className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
+												<Avatar
+													src={p.userAvatarUrl || null}
+													name={p.userName}
+													size='sm'
+													className='ring-1 ring-zinc-700 shadow-sm'
+												/>
+												<div className='text-sm'>
+													<div className='font-medium text-white leading-tight'>
+														{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
+													</div>
+													{p.skillLevel && (
+														<div
+															className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+																p.skillLevel
+															)}`}>
+															{p.skillLevel}
+														</div>
+													)}
+												</div>
+											</Link>
+										))}
 								</div>
 
 								{!showParticipants && participants.length > 8 && (
@@ -665,7 +808,7 @@ const EventPage: React.FC = () => {
 								<p className='text-sm text-zinc-400 mb-4'>
 									Rozmawiaj z innymi uczestnikami wydarzenia w dedykowanym czacie grupowym.
 								</p>
-								{joined ? (
+								{joined || currentUserId === event.ownerId ? (
 									<button
 										onClick={async () => {
 											if (!id) return
@@ -877,15 +1020,50 @@ const EventPage: React.FC = () => {
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
-									<button
-										onClick={handleJoinEvent}
-										className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
-											joined
-												? 'bg-rose-600 hover:bg-rose-500'
-												: 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30'
-										}`}>
-										{joined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
-									</button>
+									// If the current user was invited, show accept/decline UI
+									isInvited ? (
+										<div className='space-y-3'>
+											<div className='rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 text-center'>
+												<p className='text-violet-200 text-sm font-medium'>
+													Organizator zaprosił Cię do tego wydarzenia!
+												</p>
+											</div>
+											<div className='grid grid-cols-2 gap-3'>
+												<button
+													onClick={handleAcceptInvitation}
+													className='flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-500 transition'>
+													<Check size={18} /> Przyjmij
+												</button>
+												<button
+													onClick={handleDeclineInvitation}
+													className='flex items-center justify-center gap-2 rounded-xl bg-zinc-700 px-4 py-3 font-semibold text-white hover:bg-zinc-600 transition'>
+													<X size={18} /> Odrzuć
+												</button>
+											</div>
+										</div>
+									) : // 2. NOWE: Czy ODRZUCONY
+									isRejected ? (
+										<div className='w-full rounded-2xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-center'>
+											<p className='text-red-400 text-sm font-medium'>
+												Twoje zgłoszenie zostało odrzucone przez organizatora.
+											</p>
+										</div>
+									) : // 3. Reszta starej logiki (Oczekujący / Dołącz)
+									isPending ? (
+										<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 text-zinc-400'>
+											Twoja prośba oczekuje na akceptację…
+										</button>
+									) : (
+										<button
+											onClick={handleJoinEvent}
+											className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
+												joined
+													? 'bg-rose-600 hover:bg-rose-500'
+													: 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30'
+											}`}>
+											{joined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
+										</button>
+									)
 								) : spotsLeft <= 0 ? (
 									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
 										Brak wolnych miejsc
@@ -937,6 +1115,11 @@ const EventPage: React.FC = () => {
 										className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
 										{saved ? <BookmarkCheck size={16} className='text-violet-400' /> : <Bookmark size={16} />}
 										{saved ? 'Zapisano wydarzenie' : 'Zapisz wydarzenie'}
+									</button>
+									<button
+										onClick={() => setShowInviteModal(true)}
+										className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
+										<UserRound size={16} /> Zaproś do wydarzenia
 									</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
 										<CalendarDays size={16} /> Dodaj do kalendarza
@@ -1010,6 +1193,15 @@ const EventPage: React.FC = () => {
 				/>
 			)}
 
+			{showInviteModal && (
+				<InviteToEventModal
+					isOpen={showInviteModal}
+					onClose={() => setShowInviteModal(false)}
+					onSubmit={handleSendInvite}
+					isSubmitting={isSendingInvite}
+				/>
+			)}
+
 			{showRatingReportModal && ratingToReport && (
 				<ReportRatingModal
 					isOpen={showRatingReportModal}
@@ -1020,8 +1212,7 @@ const EventPage: React.FC = () => {
 					rating={{
 						id: ratingToReport.id,
 						userName: ratingToReport.userName,
-						raterAvatarUrl:
-							participants.find(p => p.userName === ratingToReport.userName)?.userAvatarUrl ?? undefined,
+						raterAvatarUrl: participants.find(p => p.userName === ratingToReport.userName)?.userAvatarUrl ?? undefined,
 						rating: ratingToReport.rating,
 						comment: ratingToReport.comment,
 					}}
