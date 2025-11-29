@@ -3,6 +3,7 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.dto.Moderator.GetStatisticsForDashboard;
 import com.joinmatch.backend.dto.Moderator.ModeratorEventRatingReportListItemDto;
 import com.joinmatch.backend.dto.Moderator.ModeratorEventReportListItemDto;
+import com.joinmatch.backend.dto.Moderator.UserRateReportDto;
 import com.joinmatch.backend.service.ModeratorService;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -120,6 +121,58 @@ public class ModeratorController {
     public ResponseEntity<Void> deleteReportEventRating(@PathVariable Integer idReportEventRating){
         try{
             moderatorService.deleteReportEventRating(idReportEventRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @GetMapping("/reportUserRatings")
+    public Page<UserRateReportDto> getUserRatingReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return moderatorService.getUserRatingReports(page, size);
+    }
+    @PatchMapping("/reportUserRating/{idReportUserRating}/accept")
+    public ResponseEntity<Void> acceptReportUserRating(@PathVariable Integer idReportUserRating){
+        try{
+            moderatorService.acceptReportUserRating(idReportUserRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/reportUserRating/{idReportUserRating}/reject")
+    public ResponseEntity<Void> rejectReportUserRating(@PathVariable Integer idReportUserRating){
+        try{
+            moderatorService.rejectReportUserRating(idReportUserRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/reportUserRating/{idReportUserRating}/toggle-viewed")
+    public ResponseEntity<Void> markAsViewedReportUserRating(@PathVariable Integer idReportUserRating){
+        try{
+            moderatorService.markAsViewedReportUserRating(idReportUserRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PatchMapping("/reportUserRating/{idReportUserRating}/toggle-unviewed")
+    public ResponseEntity<Void> markAsUnviewedReportUserRating(@PathVariable Integer idReportUserRating){
+        try{
+            moderatorService.markAsUnviewedReportUserRating(idReportUserRating);
+        }catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @DeleteMapping("reportUserRating/{idReportUserRating}/delete")
+    public ResponseEntity<Void> deleteReportUserRating(@PathVariable Integer idReportUserRating){
+        try{
+            moderatorService.deleteReportUserRating(idReportUserRating);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
         }

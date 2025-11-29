@@ -333,7 +333,7 @@ public class RatingService {
         UserRating referenceById = userRatingRepository.getReferenceById(userRatingReportDto.idUserRating());
         ReportUserRating reportUserRating = new ReportUserRating();
         reportUserRating.setUserRating(referenceById);
-        reportUserRating.setUserRatingReported(user);
+        reportUserRating.setUserRatingReporter(user);
         reportUserRating.setActive(false);
         reportUserRating.setDescription(userRatingReportDto.description());
         reportUserRating.setReviewed(false);

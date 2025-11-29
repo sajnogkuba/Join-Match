@@ -31,7 +31,7 @@ public class ReportUserRating {
     @JoinColumn(name = "reporter_user_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private User userRatingReported;
+    private User userRatingReporter;
 
     @Column(nullable = false)
     private Boolean reviewed;
