@@ -233,4 +233,62 @@ public class ModeratorController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/reportUsers")
+    public Page<ModeratorUserReportDto> getUserReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return moderatorService.getUserReports(page, size);
+    }
+
+    @PatchMapping("/reportUser/{idReportUser}/accept")
+    public ResponseEntity<Void> acceptReportUser(@PathVariable Integer idReportUser) {
+        try {
+            moderatorService.acceptReportUser(idReportUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/reportUser/{idReportUser}/reject")
+    public ResponseEntity<Void> rejectReportUser(@PathVariable Integer idReportUser) {
+        try {
+            moderatorService.rejectReportUser(idReportUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/reportUser/{idReportUser}/toggle-viewed")
+    public ResponseEntity<Void> markAsViewedReportUser(@PathVariable Integer idReportUser) {
+        try {
+            moderatorService.markAsViewedReportUser(idReportUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/reportUser/{idReportUser}/toggle-unviewed")
+    public ResponseEntity<Void> markAsUnviewedReportUser(@PathVariable Integer idReportUser) {
+        try {
+            moderatorService.markAsUnviewedReportUser(idReportUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/reportUser/{idReportUser}/delete")
+    public ResponseEntity<Void> deleteReportUser(@PathVariable Integer idReportUser) {
+        try {
+            moderatorService.deleteReportUser(idReportUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
 }

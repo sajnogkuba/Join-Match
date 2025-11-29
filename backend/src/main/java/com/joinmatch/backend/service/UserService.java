@@ -320,8 +320,8 @@ public class UserService {
         User user = userRepository.findByTokenValue(userReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
         User suspect = userRepository.findById(userReportDto.reportedUserId()).orElseThrow(() -> new IllegalArgumentException("Brak usera"));
         ReportUser reportUser = new ReportUser();
-        reportUser.setUserId(suspect);
-        reportUser.setReporterUserId(user);
+        reportUser.setSuspectUser(suspect);
+        reportUser.setReporterUser(user);
         reportUser.setActive(false);
         reportUser.setDescription(userReportDto.description());
         suspect.getSuspectUser().add(reportUser);

@@ -1,10 +1,7 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.Moderator.*;
-import com.joinmatch.backend.model.ReportEvent;
-import com.joinmatch.backend.model.ReportEventRating;
-import com.joinmatch.backend.model.ReportTeam;
-import com.joinmatch.backend.model.ReportUserRating;
+import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -246,6 +243,62 @@ public class ModeratorService {
         referenceById.getTeam().getReportTeamSet().remove(referenceById);
         referenceById.getTeamReporterUser().getTeamReportSender().remove(referenceById);
         reportTeamRepository.delete(referenceById);
+
+    }
+
+    public Page<ModeratorUserReportDto> getUserReports(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<ReportUser> reports = reportUserRepository.findAllByOrderByIdDesc(pageable);
+
+        return reports.map(r -> new ModeratorUserReportDto(
+                r.getId(),
+                r.getSuspectUser().getId(),
+                r.getSuspectUser().getEmail(),
+                r.getSuspectUser().getName(),
+                r.getSuspectUser().getUrlOfPicture(),
+                r.getReporterUser().getId(),
+                r.getReporterUser().getEmail(),
+                r.getReporterUser().getName(),
+                r.getReporterUser().getUrlOfPicture(),
+                r.getDescription(),
+                r.getActive(),
+                r.isReviewed()
+        ));
+    }
+
+    public void acceptReportUser(Integer idReportUser) {
+        ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setActive(true);
+        reportUserRepository.save(referenceById);
+
+    }
+
+    public void rejectReportUser(Integer idReportUser) {
+        ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setActive(false);
+        reportUserRepository.save(referenceById);
+
+    }
+
+    public void markAsViewedReportUser(Integer idReportUser) {
+        ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setReviewed(true);
+        reportUserRepository.save(referenceById);
+
+    }
+
+    public void markAsUnviewedReportUser(Integer idReportUser) {
+        ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.setReviewed(false);
+        reportUserRepository.save(referenceById);
+    }
+
+    public void deleteReportUser(Integer idReportUser) {
+        ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
+        referenceById.getSuspectUser().getSuspectUser().remove(referenceById);
+        referenceById.getReporterUser().getUserReportSender().remove(referenceById);
+        reportUserRepository.delete(referenceById);
 
     }
 }
