@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.dto.Notification.EventInviteRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
 import com.joinmatch.backend.model.AttendanceStatus;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -57,22 +59,6 @@ public class UserEventService {
         }
 
         return UserEventResponseDto.fromUserEvent(saved);
-    }
-
-    @Transactional
-    public UserEventResponseDto requestToJoin(String userEmail, Integer eventId) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
-
-        if (event.getEventVisibility().getId() == 1) {
-            return create(new UserEventRequestDto(userEmail, eventId, 1));
-        }
-
-        notificationService.sendEventJoinRequest(event, user);
-
-        return create(new UserEventRequestDto(userEmail, eventId, 4));
     }
 
     @Transactional
@@ -140,5 +126,101 @@ public class UserEventService {
 
         userEventRepository.deleteByUserAndEvent(user, event);
         chatService.removeUserFromEventChat(eventId, user.getId());
+    }
+    @Transactional
+    public void inviteUserToEvent(EventInviteRequestDto dto) {
+        User sender = userRepository.findById(dto.senderId())
+                .orElseThrow(() -> new IllegalArgumentException("Sender not found"));
+        User receiver = userRepository.findByEmail(dto.targetEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Receiver not found"));
+        Event event = eventRepository.findById(dto.eventId())
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        boolean alreadyParticipates = userEventRepository.findByEvent_EventIdAndUser_Id(event.getEventId(), receiver.getId()).isPresent();
+        if (alreadyParticipates) {
+            throw new IllegalArgumentException("Użytkownik już bierze udział w wydarzeniu");
+        }
+
+        if (sender.getId().equals(event.getOwner().getId())) {
+            UserEvent userEvent = new UserEvent();
+            userEvent.setUser(receiver);
+            userEvent.setEvent(event);
+
+            AttendanceStatus invitedStatus = attendanceStatusRepository.findById(5)
+                    .orElseThrow(() -> new RuntimeException("Brak statusu ZAPROSZONY"));
+
+            userEvent.setAttendanceStatus(invitedStatus);
+            userEventRepository.save(userEvent);
+        }
+
+        notificationService.sendEventInvitation(receiver, sender, event);
+    }
+    @Transactional
+    public void acceptInvitation(String userEmail, Integer eventId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        UserEvent userEvent = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Brak zaproszenia"));
+
+        if (userEvent.getAttendanceStatus().getId() != 5) {
+            throw new IllegalStateException("Nie można zaakceptować: użytkownik nie ma statusu ZAPROSZONY");
+        }
+
+        AttendanceStatus accepted = attendanceStatusRepository.findById(1)
+                .orElseThrow(() -> new RuntimeException("Brak statusu ACCEPTED"));
+
+        userEvent.setAttendanceStatus(accepted);
+        userEventRepository.save(userEvent);
+
+        chatService.addUserToEventChat(eventId, user.getId());
+
+        notificationService.sendInvitationAcceptedNotification(event, user);
+    }
+
+    @Transactional
+    public void declineInvitation(String userEmail, Integer eventId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        UserEvent userEvent = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Brak zaproszenia"));
+
+        if (userEvent.getAttendanceStatus().getId() != 5) {
+            throw new IllegalStateException("Nie można odrzucić: użytkownik nie ma statusu ZAPROSZONY");
+        }
+
+        userEventRepository.delete(userEvent);
+
+        notificationService.sendInvitationRejectedNotification(event, user);
+    }
+    @Transactional
+    public UserEventResponseDto requestToJoin(String userEmail, Integer eventId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        Optional<UserEvent> existingUserEvent = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, user.getId());
+
+        if (existingUserEvent.isPresent()) {
+            UserEvent ue = existingUserEvent.get();
+            if (ue.getAttendanceStatus().getId() == 5) {
+                acceptInvitation(userEmail, eventId);
+                return UserEventResponseDto.fromUserEvent(userEventRepository.findByEvent_EventIdAndUser_Id(eventId, user.getId()).get());
+            }
+            return UserEventResponseDto.fromUserEvent(ue);
+        }
+
+        if (event.getEventVisibility().getId() == 1) {
+            return create(new UserEventRequestDto(userEmail, eventId, 1));
+        }
+
+        notificationService.sendEventJoinRequest(event, user);
+        return create(new UserEventRequestDto(userEmail, eventId, 4));
     }
 }

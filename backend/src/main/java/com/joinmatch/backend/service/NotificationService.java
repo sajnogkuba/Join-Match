@@ -612,5 +612,65 @@ public class NotificationService {
         }
     }
 
+    @Transactional
+    public void sendInvitationAcceptedNotification(Event event, User user) {
+        try {
+            EventNotificationDataDto data = new EventNotificationDataDto(
+                    event.getEventId(),
+                    event.getEventName(),
+                    user.getId(),
+                    user.getName()
+            );
+            String json = objectMapper.writeValueAsString(data);
+
+            Notification notification = Notification.builder()
+                    .user(event.getOwner())
+                    .type(NotificationType.EVENT_INVITATION_ACCEPTED)
+                    .title("Zaproszenie przyjęte")
+                    .message(user.getName() + " zaakceptował zaproszenie do wydarzenia: " + event.getEventName())
+                    .data(json)
+                    .build();
+
+            Notification saved = notificationRepository.save(notification);
+            messagingTemplate.convertAndSendToUser(
+                    event.getOwner().getId().toString(),
+                    "/queue/notifications",
+                    NotificationResponseDto.fromNotification(saved)
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Transactional
+    public void sendInvitationRejectedNotification(Event event, User user) {
+        try {
+            EventNotificationDataDto data = new EventNotificationDataDto(
+                    event.getEventId(),
+                    event.getEventName(),
+                    user.getId(),
+                    user.getName()
+            );
+            String json = objectMapper.writeValueAsString(data);
+
+            Notification notification = Notification.builder()
+                    .user(event.getOwner())
+                    .type(NotificationType.EVENT_INVITATION_REJECTED)
+                    .title("Zaproszenie odrzucone")
+                    .message(user.getName() + " odrzucił zaproszenie do wydarzenia: " + event.getEventName())
+                    .data(json)
+                    .build();
+
+            Notification saved = notificationRepository.save(notification);
+            messagingTemplate.convertAndSendToUser(
+                    event.getOwner().getId().toString(),
+                    "/queue/notifications",
+                    NotificationResponseDto.fromNotification(saved)
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }

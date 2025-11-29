@@ -73,24 +73,18 @@ const NotificationBell: React.FC = () => {
 			return
 		}
 
-		// ➤ Event: zaakceptowano moje zgłoszenie
-		if (notification.type === NotificationType.EVENT_JOIN_ACCEPTED) {
-			if (notification.data?.eventId) {
-				navigate(`/event/${notification.data.eventId}`)
-			}
-			return
-		}
-
-		// ➤ Event: odrzucono moje zgłoszenie
-		if (notification.type === NotificationType.EVENT_JOIN_REJECTED) {
-			if (notification.data?.eventId) {
-				navigate(`/event/${notification.data.eventId}`)
-			}
-			return
-		}
-
 		// ➤ Event: zaproszenie
-		if (notification.type === NotificationType.EVENT_INVITE) {
+		if (notification.type === NotificationType.EVENT_INVITATION) {
+			if (notification.data?.eventId) {
+				navigate(`/event/${notification.data.eventId}`)
+			}
+			return
+		}
+
+		if (
+			notification.type === NotificationType.EVENT_INVITATION_ACCEPTED ||
+			notification.type === NotificationType.EVENT_INVITATION_REJECTED
+		) {
 			if (notification.data?.eventId) {
 				navigate(`/event/${notification.data.eventId}`)
 			}
@@ -206,11 +200,11 @@ const NotificationBell: React.FC = () => {
 				return <MessageSquare size={16} className='text-violet-400' />
 			case NotificationType.EVENT_JOIN_REQUEST:
 				return <Users size={16} className='text-violet-400' />
-			case NotificationType.EVENT_JOIN_ACCEPTED:
+			case NotificationType.EVENT_INVITATION_ACCEPTED:
 				return <Users size={16} className='text-green-400' />
-			case NotificationType.EVENT_JOIN_REJECTED:
+			case NotificationType.EVENT_INVITATION_REJECTED:
 				return <Users size={16} className='text-red-400' />
-			case NotificationType.EVENT_INVITE:
+			case NotificationType.EVENT_INVITATION:
 				return <UserPlus size={16} className='text-violet-400' />
 			default:
 				return <Bell size={16} className='text-zinc-400' />

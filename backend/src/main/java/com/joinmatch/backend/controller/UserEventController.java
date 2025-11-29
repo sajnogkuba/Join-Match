@@ -88,13 +88,19 @@ public class UserEventController {
     }
     @PostMapping("/invite")
     public ResponseEntity<Void> inviteUserToEvent(@RequestBody EventInviteRequestDto dto) {
+        userEventService.inviteUserToEvent(dto);
+        return ResponseEntity.ok().build();
+    }
 
-        User sender = userService.findById(dto.senderId());
-        User receiver = userService.findByEmail(dto.targetEmail());
-        Event event = eventService.findById(dto.eventId());
+    @PostMapping("/invitation/accept")
+    public ResponseEntity<Void> acceptInvitation(@RequestBody UserEventRequestDto dto) {
+        userEventService.acceptInvitation(dto.userEmail(), dto.eventId());
+        return ResponseEntity.ok().build();
+    }
 
-        notificationService.sendEventInvitation(receiver, sender, event);
-
+    @PostMapping("/invitation/decline")
+    public ResponseEntity<Void> declineInvitation(@RequestBody UserEventRequestDto dto) {
+        userEventService.declineInvitation(dto.userEmail(), dto.eventId());
         return ResponseEntity.ok().build();
     }
 

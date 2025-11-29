@@ -29,6 +29,8 @@ import {
 	MessageCircle,
 	CalendarDays,
 	Flag,
+	Check,
+	X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
@@ -56,7 +58,13 @@ const EventPage: React.FC = () => {
 	const confirmedParticipants = participants.filter(p => p.attendanceStatusName === 'Zapisany')
 	const pendingParticipants = participants.filter(p => p.attendanceStatusName === 'Oczekujący')
 	const rejectedParticipants = participants.filter(p => p.attendanceStatusName === 'Odrzucony')
+	const invitedParticipants = participants.filter(p => p.attendanceStatusName === 'Zaproszony')
+	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
 	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
+	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
+
+	const visibleParticipantsCount =
+		confirmedParticipants.length + pendingParticipants.length + invitedParticipants.length
 
 	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
@@ -117,7 +125,6 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// --- HANDLER: ZGŁOSZENIE KONKRETNEJ OCENY WYDARZENIA ---
 	const handleSubmitRatingReport = async (message: string) => {
 		if (!ratingToReport) return
 
@@ -129,8 +136,6 @@ const EventPage: React.FC = () => {
 
 		try {
 			setIsSendingRatingReport(true)
-
-			// /api/ratings/report/eventRating + DTO: (String token, Integer idEventRating, String description)
 			await axiosInstance.post('/ratings/report/eventRating', {
 				token,
 				idEventRating: ratingToReport.id,
@@ -149,6 +154,36 @@ const EventPage: React.FC = () => {
 			}
 		} finally {
 			setIsSendingRatingReport(false)
+		}
+	}
+
+	const handleAcceptInvitation = async () => {
+		if (!userEmail || !id) return
+		try {
+			await axiosInstance.post('/user-event/invitation/accept', {
+				userEmail,
+				eventId: Number(id),
+			})
+			toast.success('Zaproszenie przyjęte! Witamy w wydarzeniu.')
+			await fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd akceptacji zaproszenia:', err)
+			toast.error('Nie udało się zaakceptować zaproszenia.')
+		}
+	}
+
+	const handleDeclineInvitation = async () => {
+		if (!userEmail || !id) return
+		try {
+			await axiosInstance.post('/user-event/invitation/decline', {
+				userEmail,
+				eventId: Number(id),
+			})
+			toast.success('Zaproszenie odrzucone.')
+			await fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd odrzucania zaproszenia:', err)
+			toast.error('Nie udało się odrzucić zaproszenia.')
 		}
 	}
 
@@ -674,7 +709,7 @@ const EventPage: React.FC = () => {
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-4 flex items-center justify-between'>
-									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({participants.length})</h3>
+									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({visibleParticipantsCount})</h3>
 									<button
 										onClick={() => setShowParticipants(s => !s)}
 										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
@@ -728,11 +763,11 @@ const EventPage: React.FC = () => {
 
 								<div className='mb-2 flex flex-wrap gap-2'>
 									{confirmedParticipants
-										.concat(pendingParticipants, rejectedParticipants)
+										.concat(pendingParticipants, invitedParticipants) // removed rejectedParticipants so rejected users are not shown in the public list
 										.slice(
 											0,
 											showParticipants
-												? confirmedParticipants.length + rejectedParticipants.length + pendingParticipants.length
+												? confirmedParticipants.length + pendingParticipants.length + invitedParticipants.length
 												: 8
 										)
 										.map(p => (
@@ -985,6 +1020,35 @@ const EventPage: React.FC = () => {
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
+									// If the current user was invited, show accept/decline UI
+									isInvited ? (
+										<div className='space-y-3'>
+											<div className='rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 text-center'>
+												<p className='text-violet-200 text-sm font-medium'>
+													Organizator zaprosił Cię do tego wydarzenia!
+												</p>
+											</div>
+											<div className='grid grid-cols-2 gap-3'>
+												<button
+													onClick={handleAcceptInvitation}
+													className='flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-500 transition'>
+													<Check size={18} /> Przyjmij
+												</button>
+												<button
+													onClick={handleDeclineInvitation}
+													className='flex items-center justify-center gap-2 rounded-xl bg-zinc-700 px-4 py-3 font-semibold text-white hover:bg-zinc-600 transition'>
+													<X size={18} /> Odrzuć
+												</button>
+											</div>
+										</div>
+									) : // 2. NOWE: Czy ODRZUCONY
+									isRejected ? (
+										<div className='w-full rounded-2xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-center'>
+											<p className='text-red-400 text-sm font-medium'>
+												Twoje zgłoszenie zostało odrzucone przez organizatora.
+											</p>
+										</div>
+									) : // 3. Reszta starej logiki (Oczekujący / Dołącz)
 									isPending ? (
 										<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 text-zinc-400'>
 											Twoja prośba oczekuje na akceptację…
