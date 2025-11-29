@@ -1,9 +1,6 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.Moderator.GetStatisticsForDashboard;
-import com.joinmatch.backend.dto.Moderator.ModeratorEventRatingReportListItemDto;
-import com.joinmatch.backend.dto.Moderator.ModeratorEventReportListItemDto;
-import com.joinmatch.backend.dto.Moderator.UserRateReportDto;
+import com.joinmatch.backend.dto.Moderator.*;
 import com.joinmatch.backend.service.ModeratorService;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -178,4 +175,62 @@ public class ModeratorController {
         }
         return ResponseEntity.ok().build();
     }
+    @GetMapping("/reportTeams")
+    public Page<ModeratorTeamReportDto> getTeamReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return moderatorService.getTeamReports(page, size);
+    }
+
+    @PatchMapping("/reportTeam/{idReportTeam}/accept")
+    public ResponseEntity<Void> acceptReportTeam(@PathVariable Integer idReportTeam) {
+        try {
+            moderatorService.acceptReportTeam(idReportTeam);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/reportTeam/{idReportTeam}/reject")
+    public ResponseEntity<Void> rejectReportTeam(@PathVariable Integer idReportTeam) {
+        try {
+            moderatorService.rejectReportTeam(idReportTeam);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/reportTeam/{idReportTeam}/toggle-viewed")
+    public ResponseEntity<Void> markAsViewedReportTeam(@PathVariable Integer idReportTeam) {
+        try {
+            moderatorService.markAsViewedReportTeam(idReportTeam);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/reportTeam/{idReportTeam}/toggle-unviewed")
+    public ResponseEntity<Void> markAsUnviewedReportTeam(@PathVariable Integer idReportTeam) {
+        try {
+            moderatorService.markAsUnviewedReportTeam(idReportTeam);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/reportTeam/{idReportTeam}/delete")
+    public ResponseEntity<Void> deleteReportTeam(@PathVariable Integer idReportTeam) {
+        try {
+            moderatorService.deleteReportTeam(idReportTeam);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
 }

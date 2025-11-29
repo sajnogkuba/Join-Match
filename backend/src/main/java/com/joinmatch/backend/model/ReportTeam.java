@@ -27,11 +27,11 @@ public class ReportTeam {
     @JoinColumn(name = "team_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Team teamId;
+    private Team team;
 
     @ManyToOne
     @JoinColumn(name = "reporter_user_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private User teamReporterUserId;
+    private User teamReporterUser;
 }

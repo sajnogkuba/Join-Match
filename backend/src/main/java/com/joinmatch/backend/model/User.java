@@ -86,7 +86,7 @@ public class User {
     @EqualsAndHashCode.Exclude
     private Set<ReportUser> userReportSender = new HashSet<>();
 
-    @OneToMany(mappedBy = "teamReporterUserId",cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "teamReporterUser",cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<ReportTeam> teamReportSender = new HashSet<>();
