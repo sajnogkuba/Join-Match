@@ -112,7 +112,7 @@ public class EventService {
                 .ownerAvatarUrl(e.getOwner().getUrlOfPicture())
 
                 .skillLevel("Amator")
-                .paymentMethod("Gotówka")
+                .paymentMethod(e.getPaymentMethod())
                 .imageUrl(e.getImageUrl())
                 .latitude(e.getSportObject().getLatitude())
                 .longitude(e.getSportObject().getLongitude())

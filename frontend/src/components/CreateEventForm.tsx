@@ -45,6 +45,7 @@ export default function CreateEventForm() {
 	const [serverError, setServerError] = useState<string | null>(null)
 	const [serverOk, setServerOk] = useState<string | null>(null)
 	const [uploadingImage, setUploadingImage] = useState(false)
+	const [paymentMethod, setPaymentMethod] = useState<string>('')
 
 	const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
 
@@ -284,6 +285,16 @@ export default function CreateEventForm() {
 						/>
 						{errors.price && <p className='text-red-400 text-sm mt-1'>{errors.price}</p>}
 						<Checkbox id='free' label='Bezpłatne wydarzenie' checked={free} onChange={v => setFree(v)} />
+					</div>
+
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2'>Rodzaj płatności</label>
+						<select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className={inputBase}>
+							<option value='GOTOWKA'>Gotówka</option>
+							<option value='BLIK'>BLIK</option>
+							<option value='PRZELEW'>Przelew</option>
+							<option value='KARTA'>Karta</option>
+						</select>
 					</div>
 
 					{/* Maks uczestników */}

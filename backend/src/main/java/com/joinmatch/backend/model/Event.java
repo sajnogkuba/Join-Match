@@ -68,6 +68,9 @@ public class Event {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
+    @Column(name = "payment_method", length = 50)
+    private String paymentMethod;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_type_id", nullable = false)
     @ToString.Exclude
