@@ -85,15 +85,22 @@ const ModeratorPanelPage: React.FC = () => {
                             <button
                                 key={item.key}
                                 onClick={() => setTab(item.key)}
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition ${
-                                    tab === item.key
-                                        ? "border-violet-600 bg-violet-600/20 text-white"
-                                        : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                                }`}
+                                className={`
+        flex items-center gap-2 
+        px-4 py-2 rounded-xl border transition
+        w-full md:w-auto 
+        justify-start md:justify-center
+        whitespace-nowrap md:whitespace-normal
+        text-left md:text-center
+        ${tab === item.key
+                                    ? "border-violet-600 bg-violet-600/20 text-white"
+                                    : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"}
+    `}
                             >
                                 {item.icon}
                                 {item.label}
                             </button>
+
                         ))}
                     </div>
 

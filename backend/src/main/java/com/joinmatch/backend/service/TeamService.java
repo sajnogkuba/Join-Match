@@ -139,8 +139,8 @@ public class TeamService {
         reportTeam.setTeam(team);
         team.getReportTeamSet().add(reportTeam);
         user.getTeamReportSender().add(reportTeam);
-        userRepository.save(user);
-        teamRepository.save(team);
+//        userRepository.save(user);
+//        teamRepository.save(team);
         reportTeamRepository.save(reportTeam);
     }
 }
