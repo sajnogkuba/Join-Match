@@ -196,7 +196,7 @@ const ProfilePage = () => {
                         )}
                         {activeTab === "Odznaki" && (
                             <div className="flex-1">
-                                <BadgesSection />
+                                <BadgesSection userId={currentUser?.id ?? null} />
                             </div>
                         )}
                     </div>

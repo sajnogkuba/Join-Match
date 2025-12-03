@@ -1,5 +1,6 @@
 package com.joinmatch.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -111,6 +112,12 @@ public class User {
     public List<JoinMatchToken> getTokens() {
         return Collections.unmodifiableList(tokens);
     }
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<UserBadge> userBadges = new ArrayList<>();
 
     public void addToken(JoinMatchToken token) {
         tokens.add(token);

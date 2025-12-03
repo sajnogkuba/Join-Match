@@ -685,7 +685,7 @@ const UserProfilePage = () => {
 
 							{activeTab === 'Odznaki' && (
 								<div className="flex-1">
-									<BadgesSection />
+									<BadgesSection userId={id ? parseInt(id) : null} />
 								</div>
 							)}
 

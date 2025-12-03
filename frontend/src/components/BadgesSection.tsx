@@ -1,15 +1,23 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "../Api/axios";
-import type { BadgeResponseDto } from "../Api/types/Badge";
+import type { BadgeResponseDto, UserBadgeResponseDto } from "../Api/types/Badge";
 import { Loader2 } from "lucide-react";
+
+type BadgeWithOwnership = BadgeResponseDto & {
+    owned?: boolean;
+};
 
 type BadgeGroup = {
     category: string;
-    badges: BadgeResponseDto[];
+    badges: BadgeWithOwnership[];
 };
 
-const BadgesSection: React.FC = () => {
-    const [badges, setBadges] = useState<BadgeResponseDto[]>([]);
+interface BadgesSectionProps {
+    userId?: number | null;
+}
+
+const BadgesSection: React.FC<BadgesSectionProps> = ({ userId }) => {
+    const [badges, setBadges] = useState<BadgeWithOwnership[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,8 +61,53 @@ const BadgesSection: React.FC = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const response = await api.get<BadgeResponseDto[]>("/badge");
-                setBadges(response.data || []);
+                
+                // Pobierz wszystkie aktywne odznaki
+                const allBadgesResponse = await api.get<BadgeResponseDto[]>("/badge");
+                const allBadges = allBadgesResponse.data || [];
+                
+                // Jeśli userId jest podane, pobierz odznaki użytkownika i połącz dane
+                if (userId) {
+                    try {
+                        const userBadgesResponse = await api.get<UserBadgeResponseDto[]>(`/badge/user/${userId}`);
+                        const userBadges = userBadgesResponse.data || [];
+                        
+                        // Utwórz mapę posiadanych odznak (po ID)
+                        const ownedBadgeIds = new Set(userBadges.map(b => b.id));
+                        
+                        // Połącz dane - dodaj flagę owned do wszystkich odznak
+                        const badgesWithOwnership: BadgeWithOwnership[] = allBadges.map(badge => ({
+                            ...badge,
+                            owned: ownedBadgeIds.has(badge.id)
+                        }));
+                        
+                        setBadges(badgesWithOwnership);
+                    } catch (userBadgesErr: any) {
+                        // Jeśli nie udało się pobrać odznak użytkownika, użyj wszystkich odznak bez flagi owned
+                        if (userBadgesErr.response?.status === 204) {
+                            // No Content - użytkownik nie ma odznak
+                            const badgesWithOwnership: BadgeWithOwnership[] = allBadges.map(badge => ({
+                                ...badge,
+                                owned: false
+                            }));
+                            setBadges(badgesWithOwnership);
+                        } else {
+                            // Błąd - użyj wszystkich odznak bez flagi owned
+                            const badgesWithOwnership: BadgeWithOwnership[] = allBadges.map(badge => ({
+                                ...badge,
+                                owned: false
+                            }));
+                            setBadges(badgesWithOwnership);
+                        }
+                    }
+                } else {
+                    // Brak userId - wszystkie odznaki bez flagi owned (wszystkie wyszarzone)
+                    const badgesWithOwnership: BadgeWithOwnership[] = allBadges.map(badge => ({
+                        ...badge,
+                        owned: false
+                    }));
+                    setBadges(badgesWithOwnership);
+                }
             } catch (err: any) {
                 if (err.response?.status === 204) {
                     // No Content - brak odznak
@@ -68,7 +121,7 @@ const BadgesSection: React.FC = () => {
         };
 
         fetchBadges();
-    }, []);
+    }, [userId]);
 
     return (
         <section className="space-y-6 flex flex-col h-full max-h-[calc(100vh-300px)]">
@@ -108,7 +161,7 @@ const BadgesSection: React.FC = () => {
                                                 <img
                                                     src={badge.iconUrl}
                                                     alt={badge.name}
-                                                    className="w-16 h-16 object-contain filter grayscale"
+                                                    className={`w-16 h-16 object-contain ${badge.owned ? '' : 'filter grayscale'}`}
                                                 />
                                             </div>
                                             <h4 className="text-sm font-semibold text-white text-center mb-1 line-clamp-2 break-words">
