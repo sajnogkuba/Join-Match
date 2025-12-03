@@ -34,5 +34,9 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Integer> {
     """)
     boolean haveCommonEventOrOrganizer(@Param("raterId") Integer raterId,
                                        @Param("ratedId") Integer ratedId);
+
+    @Query("SELECT COUNT(ue) FROM UserEvent ue WHERE ue.user.id = :userId")
+    int countJoinedEvents(@Param("userId") Integer userId);
+
 }
 

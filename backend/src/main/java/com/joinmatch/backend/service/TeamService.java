@@ -1,6 +1,5 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.TeamReportDto;
 import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
