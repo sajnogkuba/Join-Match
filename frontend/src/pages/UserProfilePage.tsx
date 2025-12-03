@@ -15,6 +15,7 @@ import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 import UserReportForm from '../components/UserReportForm'
+import BadgesSection from '../components/BadgesSection'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -680,6 +681,12 @@ const UserProfilePage = () => {
 										<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen jako organizator.</p>
 									)}
 								</section>
+							)}
+
+							{activeTab === 'Odznaki' && (
+								<div className="flex-1">
+									<BadgesSection />
+								</div>
 							)}
 
 							{activeTab === 'Zgłoś użytkownika' && (

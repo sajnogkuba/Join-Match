@@ -1,4 +1,4 @@
-import { UserRound, LogOut, Lock, UserPlus, Star, CalendarDays, Ticket } from "lucide-react";
+import { UserRound, LogOut, Lock, UserPlus, Star, CalendarDays, Ticket, Award } from "lucide-react";
 import type { SidebarItemKey } from "../Api/types/Profile";
 
 interface ProfileSidebarProps {
@@ -14,6 +14,7 @@ const ProfileSidebar = ({ active, onSelect }: ProfileSidebarProps) => {
         { label: "Oceny", icon: Star },
         { label: "Moje wydarzenia", icon: CalendarDays },
         { label: "Biorę udział", icon: Ticket },
+        { label: "Odznaki", icon: Award },
     ];
     
     return (

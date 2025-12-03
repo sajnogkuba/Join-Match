@@ -11,3 +11,4 @@ export type SidebarItemKey =
     | "Oceny"
     | "Moje wydarzenia"
     | "Biorę udział"
+    | "Odznaki"
