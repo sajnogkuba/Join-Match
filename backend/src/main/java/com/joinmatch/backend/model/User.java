@@ -101,10 +101,12 @@ public class User {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<ReportUserRating> reportUserRatings = new HashSet<>();
+
     @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL,orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<ReportCompetition> reportCompetitions = new HashSet<>();
+
     @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -119,6 +121,14 @@ public class User {
     @EqualsAndHashCode.Exclude
     private List<UserBadge> userBadges = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<UserEvent> userEvents = new HashSet<>();
+
+    @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
+    private List<Event> createdEvents = new ArrayList<>();
+
+
+
     public void addToken(JoinMatchToken token) {
         tokens.add(token);
         token.setUser(this);
@@ -127,6 +137,14 @@ public class User {
     public void removeToken(JoinMatchToken token) {
         tokens.remove(token);
         token.setUser(null);
+    }
+
+    public int getJoinedEventsCount() {
+        return userEvents.size();
+    }
+
+    public int getCreatedEventsCount() {
+        return createdEvents.size();
     }
 
 

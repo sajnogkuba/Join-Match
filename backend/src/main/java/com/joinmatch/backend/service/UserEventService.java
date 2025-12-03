@@ -28,6 +28,7 @@ public class UserEventService {
     private final AttendanceStatusRepository attendanceStatusRepository;
     private final ChatService chatService;
     private final NotificationService notificationService;
+    private final BadgeAwardService badgeAwardService;
 
     public List<UserEventResponseDto> getAllUserEvent() {
         return userEventRepository.findAll()
@@ -58,7 +59,9 @@ public class UserEventService {
             notificationService.sendEventPublicJoined(event, user);
         }
 
-        return UserEventResponseDto.fromUserEvent(saved);
+        var responseDto = UserEventResponseDto.fromUserEvent(saved);
+        badgeAwardService.evaluateBadgesForUser(user);
+        return responseDto;
     }
 
     @Transactional

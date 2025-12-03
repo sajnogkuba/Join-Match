@@ -41,4 +41,8 @@ WHERE
         WHERE ue.user.id = :id
     """)
     Page<Event> findAllParticipatedByUserId(Integer id, Pageable sortedPageable);
+
+    @Query("SELECT COUNT(e) FROM Event e WHERE e.owner.id = :userId")
+    int countCreatedEvents(@Param("userId") Integer userId);
+
 }
