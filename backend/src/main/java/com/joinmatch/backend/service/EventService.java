@@ -177,8 +177,8 @@ public class EventService {
         reportEvent.setDescription(eventReportDto.description());
         user.getReportEvents().add(reportEvent);
         referenceById.getReportEvents().add(reportEvent);
-        userRepository.save(user);
-        eventRepository.save(referenceById);
+//        userRepository.save(user);
+//        eventRepository.save(referenceById);
         reportEventRepository.save(reportEvent);
     }
 

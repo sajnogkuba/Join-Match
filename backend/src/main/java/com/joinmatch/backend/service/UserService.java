@@ -44,7 +44,6 @@ public class UserService {
 
 
     public void register(RegisterRequest request) {
-        // Sprawdź, czy email już istnieje
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new RuntimeException("User already exists");
         }
@@ -326,8 +325,8 @@ public class UserService {
         reportUser.setDescription(userReportDto.description());
         suspect.getSuspectUser().add(reportUser);
         user.getUserReportSender().add(reportUser);
-        userRepository.save(user);
-        userRepository.save(suspect);
+//        userRepository.save(user);
+//        userRepository.save(suspect);
         reportUserRepository.save(reportUser);
     }
     public User findByEmail(String email) {

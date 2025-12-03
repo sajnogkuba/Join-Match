@@ -325,8 +325,8 @@ public class RatingService {
         reportEventRating.setEventRating(referenceById);
         user.getReportEventRatings().add(reportEventRating);
         referenceById.getReportEventRatings().add(reportEventRating);
-        userRepository.save(user);
-        eventRatingRepository.save(referenceById);
+//        userRepository.save(user);
+//        eventRatingRepository.save(referenceById);
         reportEventRatingRepository.save(reportEventRating);
     }
 
@@ -340,6 +340,6 @@ public class RatingService {
         reportUserRating.setDescription(userRatingReportDto.description());
         reportUserRating.setReviewed(false);
         reportUserRatingRepository.save(reportUserRating);
-        userRepository.save(user);
+//        userRepository.save(user);
     }
 }
