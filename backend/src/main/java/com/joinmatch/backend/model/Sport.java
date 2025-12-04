@@ -21,7 +21,7 @@ public class Sport {
     @NotNull
     @Column(name = "name", nullable = false, length = 50)
     private String name;
-    @Size(max = 100)
+    @Size(max = 255)
     @NotNull
     @Column(name = "URL", nullable = false, length = 100)
     private String URL;

@@ -1,8 +1,6 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.Sport.RemoveSportDto;
-import com.joinmatch.backend.dto.Sport.SportTypeResponseDto;
-import com.joinmatch.backend.dto.Sport.SportWithRatingDto;
+import com.joinmatch.backend.dto.Sport.*;
 import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.SportUser;
 import com.joinmatch.backend.model.User;
@@ -115,5 +113,26 @@ public class SportService {
         userRepository.save(user);
         sportRepository.save(sport);
         }
+
+    public void addNewSport(SportDto sportDto) {
+        Sport sport = new Sport();
+        sport.setName(sportDto.name());
+        sport.setURL(sportDto.url());
+        sportRepository.save(sport);
+    }
+
+    public void renameSport(ChangeNameOfSportDto changeNameOfSportDto) {
+        Sport sport = sportRepository.findSportById(changeNameOfSportDto.sportId()).orElseThrow(() -> new IllegalArgumentException("Sport not found"));
+        sport.setName(changeNameOfSportDto.newName());
+        sportRepository.save(sport);
+    }
+
+    public void deleteSport(Integer idOfSport) {
+        Sport sport = sportRepository.findSportById(idOfSport).orElseThrow(() -> new IllegalArgumentException("Sport not found"));
+        if((!sport.getEvents().isEmpty()) || (!sport.getSportUsers().isEmpty())){
+            throw new RuntimeException("Sport have links");
+        }
+        sportRepository.delete(sport);
+    }
 }
 

@@ -8,6 +8,7 @@ import {
     UsersRound,
     AlertTriangle,
     Settings2,
+    Dumbbell,
 } from "lucide-react";
 
 import ModeratorDashboardTab from "../components/ModeratorDashboardTab.tsx";
@@ -18,6 +19,7 @@ import ModeratorUserRatingsTab from "../components/ModeratorUserRatingsTab.tsx";
 import ModeratorTeamsTab from "../components/ModeratorTeamsTab.tsx";
 import ModeratorReportedUsersTab from "../components/ModeratorReportedUsersTab.tsx";
 import ModeratorSettingsTab from "../components/ModeratorSettingsTab.tsx";
+import ModeratorSportsTab from "../components/ModeratorSportsTab.tsx";
 
 const CARD_BG = "bg-black/60";
 const RING = "ring-1 ring-zinc-800";
@@ -29,6 +31,7 @@ type TabKey =
     | "eventRatings"
     | "userRatings"
     | "teams"
+    | "sports"
     | "reportedUsers"
     | "settings";
 
@@ -42,6 +45,7 @@ const ModeratorPanelPage: React.FC = () => {
         { key: "eventRatings" as TabKey, label: "Oceny wydarzenia", icon: <Star className="h-4 w-4" /> },
         { key: "userRatings" as TabKey, label: "Oceny użytkownika", icon: <UserCheck className="h-4 w-4" /> },
         { key: "teams" as TabKey, label: "Drużyny", icon: <UsersRound className="h-4 w-4" /> },
+        { key: "sports" as TabKey, label: "Sporty", icon: <Dumbbell className="h-4 w-4" /> },
         {
             key: "reportedUsers" as TabKey,
             label: "Zgłoszeni użytkownicy",
@@ -80,28 +84,40 @@ const ModeratorPanelPage: React.FC = () => {
                     className={`rounded-3xl ${CARD_BG} p-0 md:p-6 ${RING} shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)]`}
                 >
                     {/* TABS */}
-                    <div className="flex flex-col md:flex-row gap-2 md:gap-3 p-4 md:p-0 md:pb-6">
-                        {tabs.map((item) => (
-                            <button
-                                key={item.key}
-                                onClick={() => setTab(item.key)}
-                                className={`
-        flex items-center gap-2 
-        px-4 py-2 rounded-xl border transition
-        w-full md:w-auto 
-        justify-start md:justify-center
-        whitespace-nowrap md:whitespace-normal
-        text-left md:text-center
-        ${tab === item.key
-                                    ? "border-violet-600 bg-violet-600/20 text-white"
-                                    : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"}
-    `}
-                            >
-                                {item.icon}
-                                {item.label}
-                            </button>
-
-                        ))}
+                    <div className="px-4 pt-4 md:px-0 md:pt-0 md:pb-6">
+                        {/* wrapper, żeby na mobile był poziomy scroll, a od sm w górę może się zawijać */}
+                        <div
+                            className="
+                                flex gap-2 md:gap-3
+                                overflow-x-auto md:overflow-visible
+                                -mx-4 px-4 md:mx-0 md:px-0
+                                pb-3 md:pb-0
+                                sm:flex-wrap
+                            "
+                        >
+                            {tabs.map((item) => (
+                                <button
+                                    key={item.key}
+                                    onClick={() => setTab(item.key)}
+                                    className={`
+                                        inline-flex items-center gap-2
+                                        rounded-xl border transition
+                                        px-3 py-2 text-sm
+                                        shrink-0
+                                        ${
+                                        tab === item.key
+                                            ? "border-violet-600 bg-violet-600/20 text-white"
+                                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                                    }
+                                    `}
+                                >
+                                    {item.icon}
+                                    <span className="whitespace-nowrap">
+                                        {item.label}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {/* SEKCJE */}
@@ -111,6 +127,7 @@ const ModeratorPanelPage: React.FC = () => {
                     {tab === "eventRatings" && <ModeratorEventRatingsTab />}
                     {tab === "userRatings" && <ModeratorUserRatingsTab />}
                     {tab === "teams" && <ModeratorTeamsTab />}
+                    {tab === "sports" && <ModeratorSportsTab />}
                     {tab === "reportedUsers" && <ModeratorReportedUsersTab />}
                     {tab === "settings" && <ModeratorSettingsTab />}
                 </div>
