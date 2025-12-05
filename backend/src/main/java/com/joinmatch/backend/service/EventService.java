@@ -30,6 +30,17 @@ public class EventService {
     private final EventVisibilityRepository eventVisibilityRepository;
     private final ReportEventRepository reportEventRepository;
 
+    private String mapSkillLevelToString(Integer level) {
+        if (level == null) return "Nieokreślony";
+        return switch (level) {
+            case 1 -> "Amator";
+            case 2 -> "Rekreacyjny";
+            case 3 -> "Średniozaawansowany";
+            case 4 -> "Zaawansowany";
+            case 5 -> "Profesjonalista";
+            default -> "Inny (" + level + ")";
+        };
+    }
 
     public Page<EventResponseDto> getAll(
             Pageable pageable,
@@ -85,6 +96,7 @@ public class EventService {
         return EventDetailsResponseDto.builder()
                 .eventId(e.getEventId())
                 .eventName(e.getEventName())
+                .description(e.getDescription())
                 .numberOfParticipants(e.getNumberOfParticipants())
                 .bookedParticipants(e.getNumberOfParticipants())
 
@@ -111,8 +123,8 @@ public class EventService {
                 .ownerName(e.getOwner().getName())
                 .ownerAvatarUrl(e.getOwner().getUrlOfPicture())
 
-                .skillLevel("Amator")
-                .paymentMethod(e.getPaymentMethod())
+                .skillLevel(mapSkillLevelToString(e.getMinLevel()))
+                .paymentMethods(e.getPaymentMethods())
                 .imageUrl(e.getImageUrl())
                 .latitude(e.getSportObject().getLatitude())
                 .longitude(e.getSportObject().getLongitude())
@@ -138,6 +150,7 @@ public class EventService {
         EventVisibility eventVisibility = eventVisibilityRepository.findById(eventRequestDto.eventVisibilityId())
                 .orElseThrow(() -> new IllegalArgumentException("EventVisibility with id " + eventRequestDto.eventVisibilityId() + " not found"));
         event.setEventName(eventRequestDto.eventName());
+        event.setDescription(eventRequestDto.description());
         event.setNumberOfParticipants(eventRequestDto.numberOfParticipants());
         event.setCost(eventRequestDto.cost());
         event.setOwner(owner);
@@ -148,6 +161,7 @@ public class EventService {
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
         event.setImageUrl(eventRequestDto.imageUrl());
+        event.setPaymentMethods(eventRequestDto.paymentMethods());
 
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);

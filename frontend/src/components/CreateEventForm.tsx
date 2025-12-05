@@ -7,7 +7,7 @@ import api from '../Api/axios'
 import type { SportType } from '../Api/types/SportType.ts'
 import type { SportObject } from '../Api/types/SportObject.ts'
 import { motion } from 'framer-motion'
-import { Upload, CalendarDays, MapPin, DollarSign, Users } from 'lucide-react'
+import { Upload, CalendarDays, MapPin, DollarSign, Users, AlignLeft } from 'lucide-react'
 import PlaceAutocomplete from './PlaceAutocomplete'
 
 const inputBase =
@@ -28,6 +28,7 @@ type FormErrors = {
 
 export default function CreateEventForm() {
 	const [eventName, setEventName] = useState('')
+	const [description, setDescription] = useState('')
 	const [sportId, setSportId] = useState<number>(0)
 	const [level, setLevel] = useState(1)
 	const [free, setFree] = useState(false)
@@ -45,7 +46,7 @@ export default function CreateEventForm() {
 	const [serverError, setServerError] = useState<string | null>(null)
 	const [serverOk, setServerOk] = useState<string | null>(null)
 	const [uploadingImage, setUploadingImage] = useState(false)
-	const [paymentMethod, setPaymentMethod] = useState<string>('')
+	const [paymentMethods, setPaymentMethods] = useState<string[]>(['GOTOWKA'])
 
 	const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
 
@@ -108,6 +109,16 @@ export default function CreateEventForm() {
 		)
 	}
 
+	const togglePaymentMethod = (method: string) => {
+		setPaymentMethods(prev => {
+			if (prev.includes(method)) {
+				return prev.filter(m => m !== method)
+			} else {
+				return [...prev, method]
+			}
+		})
+	}
+
 	const toLocalDateTime = (d: string, t: string) => `${d}T${t}:00`
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -160,6 +171,7 @@ export default function CreateEventForm() {
 
 			await api.post('/event', {
 				eventName,
+				description, // NOWE: Wysyłamy opis
 				numberOfParticipants: Number(maxParticipants),
 				cost: free ? 0 : Number(price),
 				ownerEmail,
@@ -170,10 +182,12 @@ export default function CreateEventForm() {
 				sportTypeId: sportId,
 				minLevel: level,
 				imageUrl,
+				paymentMethods,
 			})
 
 			setServerOk('🎉 Wydarzenie utworzone pomyślnie!')
 			setEventName('')
+			setDescription('') // Reset opisu
 			setSportId(0)
 			setLevel(1)
 			setFree(false)
@@ -212,15 +226,31 @@ export default function CreateEventForm() {
 
 				<form onSubmit={handleSubmit} className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
 					{/* Nazwa */}
-					<div className={card}>
-						<label className='block text-zinc-400 mb-2'>Nazwa wydarzenia</label>
-						<input
-							className={`${inputBase} ${errors.eventName ? 'border-red-500' : ''}`}
-							placeholder='np. Niedzielny mecz piłki'
-							value={eventName}
-							onChange={e => setEventName(e.target.value)}
-						/>
-						{errors.eventName && <p className='text-red-400 text-sm mt-1'>{errors.eventName}</p>}
+					<div className={`${card} md:col-span-2 lg:col-span-3`}>
+						<div className='grid md:grid-cols-2 gap-6'>
+							<div>
+								<label className='block text-zinc-400 mb-2'>Nazwa wydarzenia</label>
+								<input
+									className={`${inputBase} ${errors.eventName ? 'border-red-500' : ''}`}
+									placeholder='np. Niedzielny mecz piłki'
+									value={eventName}
+									onChange={e => setEventName(e.target.value)}
+								/>
+								{errors.eventName && <p className='text-red-400 text-sm mt-1'>{errors.eventName}</p>}
+							</div>
+
+							<div>
+								<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
+									<AlignLeft size={16} /> Opis wydarzenia (opcjonalne)
+								</label>
+								<textarea
+									className={`${inputBase} h-[52px] resize-none py-3`}
+									placeholder='Krótki opis, zasady, informacje dodatkowe...'
+									value={description}
+									onChange={e => setDescription(e.target.value)}
+								/>
+							</div>
+						</div>
 					</div>
 
 					{/* Sport */}
@@ -288,13 +318,24 @@ export default function CreateEventForm() {
 					</div>
 
 					<div className={card}>
-						<label className='block text-zinc-400 mb-2'>Rodzaj płatności</label>
-						<select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className={inputBase}>
-							<option value='GOTOWKA'>Gotówka</option>
-							<option value='BLIK'>BLIK</option>
-							<option value='PRZELEW'>Przelew</option>
-							<option value='KARTA'>Karta</option>
-						</select>
+						<label className='block text-zinc-400 mb-2'>Akceptowane metody płatności</label>
+						<div className='flex flex-wrap gap-4'>
+							{['GOTOWKA', 'BLIK', 'PRZELEW', 'KARTA'].map(method => (
+								<div
+									key={method}
+									onClick={() => togglePaymentMethod(method)}
+									className={`cursor-pointer px-4 py-2 rounded-xl border transition-all ${
+										paymentMethods.includes(method)
+											? 'bg-violet-600 border-violet-500 text-white'
+											: 'bg-zinc-900/70 border-zinc-700 text-zinc-400 hover:bg-zinc-800'
+									}`}>
+									{method}
+								</div>
+							))}
+						</div>
+						{paymentMethods.length === 0 && (
+							<p className='text-red-400 text-sm mt-1'>Wybierz przynajmniej jedną metodę.</p>
+						)}
 					</div>
 
 					{/* Maks uczestników */}

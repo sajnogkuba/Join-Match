@@ -8,4 +8,5 @@ export interface Participant {
 	attendanceStatusName: string
 	eventId: number
 	eventName: string
+	isPaid: boolean
 }

@@ -10,7 +10,8 @@ public record UserEventResponseDto(
         String userAvatarUrl,
         String attendanceStatusName,
         Integer eventId,
-        String eventName
+        String eventName,
+        Boolean isPaid
 ) {
     public static UserEventResponseDto fromUserEvent(UserEvent userEvent) {
         var user = userEvent.getUser();
@@ -24,7 +25,8 @@ public record UserEventResponseDto(
                 user.getUrlOfPicture(),
                 userEvent.getAttendanceStatus().getName(),
                 event.getEventId(),
-                event.getEventName()
+                event.getEventName(),
+                userEvent.getIsPaid()
         );
     }
 }
