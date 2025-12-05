@@ -31,6 +31,8 @@ import {
 	Flag,
 	Check,
 	X,
+	CheckCircle,
+	XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
@@ -91,6 +93,23 @@ const EventPage: React.FC = () => {
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+
+	const getSkillLevelValue = (level?: string) => {
+		switch (level?.toLowerCase()) {
+			case 'amator':
+				return 1
+			case 'rekreacyjny':
+				return 2
+			case 'średniozaawansowany':
+				return 3
+			case 'zaawansowany':
+				return 4
+			case 'profesjonalista':
+				return 5
+			default:
+				return 1
+		}
+	}
 
 	// --- HANDLER: ZGŁOSZENIE WYDARZENIA ---
 	const handleSubmitReport = async (message: string) => {
@@ -565,14 +584,39 @@ const EventPage: React.FC = () => {
 		if (!level) return 'bg-zinc-600/20 text-zinc-300'
 
 		switch (level.toLowerCase()) {
+			case 'amator':
 			case 'niski':
 				return 'bg-emerald-500/15 text-emerald-300'
+			case 'rekreacyjny':
 			case 'średni':
 				return 'bg-amber-500/15 text-amber-300'
+			case 'średniozaawansowany':
+			case 'zaawansowany':
 			case 'wysoki':
 				return 'bg-rose-500/15 text-rose-300'
+			case 'profesjonalista':
+				return 'bg-violet-500/15 text-violet-300'
 			default:
 				return 'bg-zinc-600/20 text-zinc-300'
+		}
+	}
+
+	const handleTogglePayment = async (participantId: number, currentStatus: boolean, e: React.MouseEvent) => {
+		e.preventDefault()
+		if (!id || !currentUserId || event?.ownerId !== currentUserId) return
+
+		try {
+			const token = localStorage.getItem('accessToken')
+			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null, {
+				params: { token },
+			})
+
+			setParticipants(prev => prev.map(p => (p.userId === participantId ? { ...p, isPaid: !currentStatus } : p)))
+
+			toast.success(currentStatus ? 'Oznaczono jako nieopłacone' : 'Oznaczono jako opłacone')
+		} catch (err) {
+			console.error('Błąd zmiany statusu płatności:', err)
+			toast.error('Nie udało się zmienić statusu płatności')
 		}
 	}
 
@@ -761,9 +805,9 @@ const EventPage: React.FC = () => {
 									</div>
 								)}
 
-								<div className='mb-2 flex flex-wrap gap-2'>
+								<div className='mb-2 flex flex-col gap-2'>
 									{confirmedParticipants
-										.concat(pendingParticipants, invitedParticipants) // removed rejectedParticipants so rejected users are not shown in the public list
+										.concat(pendingParticipants, invitedParticipants)
 										.slice(
 											0,
 											showParticipants
@@ -774,24 +818,59 @@ const EventPage: React.FC = () => {
 											<Link
 												key={p.id}
 												to={`/profile/${p.userId}`}
-												className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
-												<Avatar
-													src={p.userAvatarUrl || null}
-													name={p.userName}
-													size='sm'
-													className='ring-1 ring-zinc-700 shadow-sm'
-												/>
-												<div className='text-sm'>
-													<div className='font-medium text-white leading-tight'>
-														{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
-													</div>
-													{p.skillLevel && (
-														<div
-															className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-																p.skillLevel
-															)}`}>
-															{p.skillLevel}
+												className='group flex items-center justify-between rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
+												{/* Lewa strona: Avatar i Info */}
+												<div className='flex items-center gap-3'>
+													<Avatar
+														src={p.userAvatarUrl || null}
+														name={p.userName}
+														size='sm'
+														className='ring-1 ring-zinc-700 shadow-sm'
+													/>
+													<div className='text-sm'>
+														<div className='font-medium text-white leading-tight'>
+															{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
 														</div>
+														{p.skillLevel && (
+															<div
+																className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+																	p.skillLevel
+																)}`}>
+																{p.skillLevel}
+															</div>
+														)}
+													</div>
+												</div>
+
+												{/* Prawa strona: Ikona Płatności (widoczna zawsze, interaktywna dla organizatora) */}
+												<div
+													onClick={e => {
+														if (currentUserId === event.ownerId) {
+															handleTogglePayment(p.userId, p.isPaid, e)
+														} else {
+															e.preventDefault()
+														}
+													}}
+													className={`
+        flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium select-none
+        transition-all
+        ${currentUserId === event.ownerId ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}
+        ${
+					p.isPaid
+						? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'
+						: 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
+				}
+    `}>
+													{p.isPaid ? (
+														<>
+															<CheckCircle size={14} className='shrink-0' />
+															<span>Opłacone</span>
+														</>
+													) : (
+														<>
+															<XCircle size={14} className='shrink-0' />
+															<span>Nieopłacone</span>
+														</>
 													)}
 												</div>
 											</Link>
@@ -837,17 +916,50 @@ const EventPage: React.FC = () => {
 							</div>
 
 							<div className='grid grid-cols-2 gap-4'>
+								{/* CENA */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Cena</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{formatPrice(event.cost, event.currency)}</p>
 								</div>
+
+								{/* PŁATNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Płatność</p>
-									<p className='mt-1 text-white text-lg font-semibold'>{event.paymentMethod}</p>
+									<p className='mt-1 text-white text-sm font-semibold break-words'>
+										{event.paymentMethods && event.paymentMethods.length > 0
+											? event.paymentMethods.join(', ')
+											: 'Nie określono'}
+									</p>
 								</div>
+
+								{/* WIDOCZNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Widoczność</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{capitalizeFirst(event.eventVisibilityName)}</p>
+								</div>
+
+								{/* POZIOM TRUDNOŚCI */}
+								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+									<p className='text-xs text-zinc-400'>Wymagany poziom</p>
+
+									<div className='flex flex-col gap-2 mt-2'>
+										{/* Plakietka z nazwą i kolorem */}
+										<div
+											className={`self-start inline-block rounded px-2 py-1 text-sm font-medium ${getSkillLevelColor(
+												event.skillLevel
+											)}`}>
+											{event.skillLevel}
+										</div>
+
+										{/* Twój komponent gwiazdek */}
+										<div title={`${getSkillLevelValue(event.skillLevel)}/5`}>
+											<StarRatingDisplay
+												value={getSkillLevelValue(event.skillLevel)}
+												size={18}
+												max={5}
+											/>
+										</div>
+									</div>
 								</div>
 							</div>
 
@@ -883,9 +995,8 @@ const EventPage: React.FC = () => {
 								{showDetailsAccordion && (
 									<div className='border-t border-zinc-800 px-5 py-4 text-sm leading-relaxed text-zinc-300'>
 										<h4 className='mb-2 font-semibold text-white'>Opis wydarzenia</h4>
-										<p>
-											To jest placeholder dla opisu wydarzenia. Tutaj organizator może dodać szczegółowe informacje,
-											zasady, wymagania oraz inne istotne detale.
+										<p className='whitespace-pre-line'>
+											{event.description ? event.description : 'Organizator nie dodał opisu dla tego wydarzenia.'}
 										</p>
 									</div>
 								)}

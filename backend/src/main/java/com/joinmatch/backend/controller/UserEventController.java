@@ -26,6 +26,7 @@ public class UserEventController {
     private final UserService userService;
     private final EventService eventService;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<UserEventResponseDto>> getAllUserEvents() {
@@ -101,6 +102,20 @@ public class UserEventController {
     @PostMapping("/invitation/decline")
     public ResponseEntity<Void> declineInvitation(@RequestBody UserEventRequestDto dto) {
         userEventService.declineInvitation(dto.userEmail(), dto.eventId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{eventId}/participant/{userId}/payment")
+    public ResponseEntity<Void> togglePaymentStatus(
+            @PathVariable Integer eventId,
+            @PathVariable Integer userId,
+            @RequestParam String token
+    ) {
+        User requester = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
+
+        userEventService.togglePaymentStatus(eventId, userId, requester.getEmail());
+
         return ResponseEntity.ok().build();
     }
 

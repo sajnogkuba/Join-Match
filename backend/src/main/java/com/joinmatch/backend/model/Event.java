@@ -68,6 +68,14 @@ public class Event {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
+    @Column(name = "description", length = 1000)
+    private String description;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "event_payment_methods", joinColumns = @JoinColumn(name = "event_id"))
+    @Column(name = "payment_method")
+    private List<String> paymentMethods = new ArrayList<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sport_type_id", nullable = false)
     @ToString.Exclude

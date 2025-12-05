@@ -226,4 +226,23 @@ public class UserEventService {
         notificationService.sendEventJoinRequest(event, user);
         return create(new UserEventRequestDto(userEmail, eventId, 4));
     }
+
+    @Transactional
+    public void togglePaymentStatus(Integer eventId, Integer participantId, String requesterEmail) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!event.getOwner().getId().equals(requester.getId())) {
+            throw new IllegalArgumentException("Tylko organizator może zarządzać płatnościami.");
+        }
+
+        UserEvent userEvent = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, participantId)
+                .orElseThrow(() -> new IllegalArgumentException("Uczestnik nie bierze udziału w tym wydarzeniu"));
+
+        userEvent.setIsPaid(!userEvent.getIsPaid());
+
+        userEventRepository.save(userEvent);
+    }
 }

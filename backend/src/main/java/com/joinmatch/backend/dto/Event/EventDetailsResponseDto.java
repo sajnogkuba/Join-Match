@@ -3,6 +3,7 @@ package com.joinmatch.backend.dto.Event;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 public class EventDetailsResponseDto {
     private Integer eventId;
     private String eventName;
+    private String description;
     private Integer numberOfParticipants;
     private Integer bookedParticipants;
 
@@ -38,6 +40,7 @@ public class EventDetailsResponseDto {
     private String ownerAvatarUrl;
 
     private String skillLevel;
+    private List<String> paymentMethods;
     private String paymentMethod;
     private String imageUrl;
 
