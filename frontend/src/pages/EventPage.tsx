@@ -65,8 +65,7 @@ const EventPage: React.FC = () => {
 	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
 	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
 
-	const visibleParticipantsCount =
-		confirmedParticipants.length + pendingParticipants.length + invitedParticipants.length
+	const visibleParticipantsCount = confirmedParticipants.length
 
 	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
@@ -282,6 +281,7 @@ const EventPage: React.FC = () => {
 		try {
 			const res = await axiosInstance.get(`/ratings/event/${id}`)
 			setEventRatings(res.data || [])
+			console.log('EVENT RATINGS:', res.data)
 		} catch (e) {
 			console.error('❌ Błąd pobierania ocen wydarzenia:', e)
 			setEventRatings([])
@@ -806,43 +806,35 @@ const EventPage: React.FC = () => {
 								)}
 
 								<div className='mb-2 flex flex-col gap-2'>
-									{confirmedParticipants
-										.concat(pendingParticipants, invitedParticipants)
-										.slice(
-											0,
-											showParticipants
-												? confirmedParticipants.length + pendingParticipants.length + invitedParticipants.length
-												: 8
-										)
-										.map(p => (
-											<Link
-												key={p.id}
-												to={`/profile/${p.userId}`}
-												className='group flex items-center justify-between rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
-												{/* Lewa strona: Avatar i Info */}
-												<div className='flex items-center gap-3'>
-													<Avatar
-														src={p.userAvatarUrl || null}
-														name={p.userName}
-														size='sm'
-														className='ring-1 ring-zinc-700 shadow-sm'
-													/>
-													<div className='text-sm'>
-														<div className='font-medium text-white leading-tight'>
-															{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
-														</div>
-														{p.skillLevel && (
-															<div
-																className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-																	p.skillLevel
-																)}`}>
-																{p.skillLevel}
-															</div>
-														)}
+									{confirmedParticipants.slice(0, showParticipants ? confirmedParticipants.length : 8).map(p => (
+										<Link
+											key={p.id}
+											to={`/profile/${p.userId}`}
+											className='group flex items-center justify-between rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
+											{/* Lewa strona: Avatar i Info */}
+											<div className='flex items-center gap-3'>
+												<Avatar
+													src={p.userAvatarUrl || null}
+													name={p.userName}
+													size='sm'
+													className='ring-1 ring-zinc-700 shadow-sm'
+												/>
+												<div className='text-sm'>
+													<div className='font-medium text-white leading-tight'>
+														{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
 													</div>
+													{p.skillLevel && (
+														<div
+															className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+																p.skillLevel
+															)}`}>
+															{p.skillLevel}
+														</div>
+													)}
 												</div>
+											</div>
 
-												{/* Prawa strona: Ikona Płatności (widoczna zawsze, interaktywna dla organizatora) */}
+											{event.cost > 0 && (
 												<div
 													onClick={e => {
 														if (currentUserId === event.ownerId) {
@@ -860,7 +852,7 @@ const EventPage: React.FC = () => {
 						? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'
 						: 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
 				}
-    `}>
+      `}>
 													{p.isPaid ? (
 														<>
 															<CheckCircle size={14} className='shrink-0' />
@@ -873,8 +865,9 @@ const EventPage: React.FC = () => {
 														</>
 													)}
 												</div>
-											</Link>
-										))}
+											)}
+										</Link>
+									))}
 								</div>
 
 								{!showParticipants && participants.length > 8 && (
@@ -925,8 +918,10 @@ const EventPage: React.FC = () => {
 								{/* PŁATNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Płatność</p>
-									<p className='mt-1 text-white text-sm font-semibold break-words'>
-										{event.paymentMethods && event.paymentMethods.length > 0
+									<p className='mt-1 text-white text-sm font-semibold wrap-break-word'>
+										{event.cost === 0
+											? 'Wydarzenie darmowe'
+											: event.paymentMethods && event.paymentMethods.length > 0
 											? event.paymentMethods.join(', ')
 											: 'Nie określono'}
 									</p>
@@ -953,11 +948,7 @@ const EventPage: React.FC = () => {
 
 										{/* Twój komponent gwiazdek */}
 										<div title={`${getSkillLevelValue(event.skillLevel)}/5`}>
-											<StarRatingDisplay
-												value={getSkillLevelValue(event.skillLevel)}
-												size={18}
-												max={5}
-											/>
+											<StarRatingDisplay value={getSkillLevelValue(event.skillLevel)} size={18} max={5} />
 										</div>
 									</div>
 								</div>
@@ -1061,6 +1052,7 @@ const EventPage: React.FC = () => {
 																isMine={!!isMine}
 																onEdit={() => startEditEventRating(r)}
 																onDelete={() => deleteEventRating(r.id)}
+																raterId={r.id}
 															/>
 															<div className='mt-2 flex justify-end'>
 																<button
@@ -1310,6 +1302,7 @@ const EventPage: React.FC = () => {
 					onClose={() => setShowInviteModal(false)}
 					onSubmit={handleSendInvite}
 					isSubmitting={isSendingInvite}
+					eventId={event.eventId}
 				/>
 			)}
 

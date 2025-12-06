@@ -6,6 +6,7 @@ export interface Participant {
 	userAvatarUrl?: string | null
 	skillLevel?: string
 	attendanceStatusName: string
+	attendanceStatusId: number
 	eventId: number
 	eventName: string
 	isPaid: boolean

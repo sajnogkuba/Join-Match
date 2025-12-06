@@ -593,6 +593,7 @@ const UserProfilePage = () => {
 															isMine={r.raterName === currentUserName}
 															onEdit={() => startEditUserRating(r)}
 															onDelete={() => deleteUserRating(r.id)}
+															raterId={r.id}
 														/>
 													</li>
 												)
@@ -672,6 +673,7 @@ const UserProfilePage = () => {
 															onDelete={() => deleteOrganizerRating(r.id)}
 															eventName={r.eventName}
 															eventId={r.eventId}
+															raterId={r.raterId}
 														/>
 													</li>
 												)

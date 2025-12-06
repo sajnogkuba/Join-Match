@@ -81,6 +81,30 @@ const NotificationBell: React.FC = () => {
 			return
 		}
 
+		// ➤ Zgłoszenie zaakceptowane (ktoś zaakceptował TWOJE dołączenie)
+		if (notification.type === NotificationType.EVENT_JOIN_ACCEPTED) {
+			if (notification.data?.eventId) {
+				navigate(`/event/${notification.data.eventId}`)
+			}
+			return
+		}
+
+		// ➤ Zgłoszenie odrzucone
+		if (notification.type === NotificationType.EVENT_JOIN_REJECTED) {
+			if (notification.data?.eventId) {
+				navigate(`/event/${notification.data.eventId}`)
+			}
+			return
+		}
+
+		// ➤ Ktoś dołączył do mojego publicznego wydarzenia
+		if (notification.type === NotificationType.EVENT_JOINED_PUBLIC) {
+			if (notification.data?.eventId) {
+				navigate(`/event/${notification.data.eventId}`)
+			}
+			return
+		}
+
 		if (
 			notification.type === NotificationType.EVENT_INVITATION_ACCEPTED ||
 			notification.type === NotificationType.EVENT_INVITATION_REJECTED
