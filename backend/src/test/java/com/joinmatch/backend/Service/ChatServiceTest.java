@@ -470,8 +470,8 @@ class ChatServiceTest {
         User u2 = new User();
         u2.setId(2);
 
-        UserEvent ue1 = new UserEvent(1, u1, event, null);
-        UserEvent ue2 = new UserEvent(2, u2, event, null);
+        UserEvent ue1 = new UserEvent(1, u1, event, null, false);
+        UserEvent ue2 = new UserEvent(2, u2, event, null, false);
 
         event.setUserEvents(List.of(ue1, ue2));
 

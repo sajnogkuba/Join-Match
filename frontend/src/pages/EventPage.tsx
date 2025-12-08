@@ -59,8 +59,6 @@ const EventPage: React.FC = () => {
 	const [participants, setParticipants] = useState<Participant[]>([])
 	const confirmedParticipants = participants.filter(p => p.attendanceStatusName === 'Zapisany')
 	const pendingParticipants = participants.filter(p => p.attendanceStatusName === 'Oczekujący')
-	const rejectedParticipants = participants.filter(p => p.attendanceStatusName === 'Odrzucony')
-	const invitedParticipants = participants.filter(p => p.attendanceStatusName === 'Zaproszony')
 	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
 	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
 	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
