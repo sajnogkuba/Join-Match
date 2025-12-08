@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { FormEvent, ChangeEvent } from "react";
 import axiosInstance from "../Api/axios.tsx";
+import axios from "axios";
 
 type Sport = {
     id: number;
@@ -124,7 +125,7 @@ const ModeratorSportsTab: React.FC = () => {
             setEditingId(null);
             setEditingName("");
             await fetchSports();
-        } catch (e) {
+        } catch (e: unknown) {
             if (axios.isAxiosError(e) && e.response?.status === 404) {
                 setError("Sport nie istnieje.");
             } else {
