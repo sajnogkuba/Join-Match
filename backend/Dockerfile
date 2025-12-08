@@ -1,4 +1,4 @@
-FROM openjdk:17-alpine
+FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 COPY . /app
 RUN ./mvnw clean install -DskipTests
