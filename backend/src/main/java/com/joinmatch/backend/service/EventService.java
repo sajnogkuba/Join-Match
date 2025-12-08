@@ -73,46 +73,47 @@ public class EventService {
         Event e = eventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
 
-        return EventDetailsResponseDto.builder()
-                .eventId(e.getEventId())
-                .eventName(e.getEventName())
-                .numberOfParticipants(e.getNumberOfParticipants())
-                .bookedParticipants(e.getNumberOfParticipants())
+        return new EventDetailsResponseDto(
+                e.getEventId(),
+                e.getEventName(),
+                e.getNumberOfParticipants(),
+                e.getNumberOfParticipants(), // bookedParticipants
 
-                .cost(e.getCost())
-                .currency("PLN")
-                .status(e.getStatus())
-                .eventDate(e.getEventDate())
-                .scoreTeam1(e.getScoreTeam1())
-                .scoreTeam2(e.getScoreTeam2())
+                e.getCost(),
+                "PLN",
+                e.getStatus(),
+                e.getEventDate(),
+                e.getScoreTeam1(),
+                e.getScoreTeam2(),
 
-                .sportTypeName(e.getSportEv().getName())
-                .sportObjectName(e.getSportObject().getName())
+                e.getSportEv().getName(),
+                e.getSportObject().getName(),
 
-                .sportObjectId(e.getSportObject().getObjectId())
-                .city(e.getSportObject().getCity())
-                .street(e.getSportObject().getStreet())
-                .number(e.getSportObject().getNumber())
-                .secondNumber(e.getSportObject().getSecondNumber())
+                e.getSportObject().getObjectId(),
+                e.getSportObject().getCity(),
+                e.getSportObject().getStreet(),
+                e.getSportObject().getNumber(),
+                e.getSportObject().getSecondNumber(),
 
-                .eventVisibilityId(e.getEventVisibility().getId())
-                .eventVisibilityName(e.getEventVisibility().getName())
+                e.getEventVisibility().getId(),
+                e.getEventVisibility().getName(),
 
-                .ownerId(e.getOwner().getId())
-                .ownerName(e.getOwner().getName())
-                .ownerAvatarUrl(e.getOwner().getUrlOfPicture())
+                e.getOwner().getId(),
+                e.getOwner().getName(),
+                e.getOwner().getUrlOfPicture(),
 
-                .skillLevel("Amator")
-                .paymentMethod("Gotówka")
-                .imageUrl(e.getImageUrl())
-                .latitude(e.getSportObject().getLatitude())
-                .longitude(e.getSportObject().getLongitude())
-                .build();
+                "Amator",
+                "Gotówka",
+                e.getImageUrl(),
+
+                e.getSportObject().getLatitude(),
+                e.getSportObject().getLongitude()
+        );
     }
 
 
 
-    @Transactional
+        @Transactional
     public EventResponseDto create(EventRequestDto eventRequestDto) {
         Event event = new Event();
         return getEventResponseDto(eventRequestDto, event);

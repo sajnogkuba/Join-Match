@@ -136,6 +136,8 @@ public class ModeratorService {
         ReportEventRating reportEventRating = reportEventRatingRepository.findById(idReportEventRating).orElseThrow(() -> new IllegalArgumentException());
         reportEventRating.getReporterUser().getReportEvents().remove(reportEventRating);
         reportEventRating.getEventRating().getReportEventRatings().remove(reportEventRating);
+        reportEventRating.getReporterUser().getReportEventRatings().remove(reportEventRating);
+        reportEventRating.getEventRating().getReportEventRatings().remove(reportEventRating);
         reportEventRatingRepository.delete(reportEventRating);
     }
     public Page<UserRateReportDto> getUserRatingReports(int page, int size) {
