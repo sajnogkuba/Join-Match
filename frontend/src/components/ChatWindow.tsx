@@ -2,9 +2,6 @@ import { Link } from 'react-router-dom'
 import type { ChatMessage } from '../Context/ChatContext'
 import MessageBubble from './MessageBubble'
 import Avatar from './Avatar'
-import { useChat } from '../Context/ChatContext'
-import { useEffect } from 'react'
-import api from '../Api/axios'
 
 interface ChatWindowProps {
 	messages: ChatMessage[]
@@ -19,32 +16,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, myUserId, input, setI
 	// Znajdź ID drugiego użytkownika z wiadomości
 	const otherUserMessage = messages.find(m => m.senderId !== myUserId)
 	const otherUserId = otherUserMessage?.senderId
-	const { markConversationRead } = useChat()
-
-	useEffect(() => {
-		if (!activeConversation) return
-
-		if (messages.length === 0) {
-			api.post(`/conversations/${activeConversation.id}/read`, null, {
-				params: {
-					userId: myUserId,
-					lastMessageId: null,
-				},
-			})
-			return
-		}
-
-		const lastMessage = messages[messages.length - 1]
-
-		api.post(`/conversations/${activeConversation.id}/read`, null, {
-			params: {
-				userId: myUserId,
-				lastMessageId: lastMessage.id,
-			},
-		})
-
-		markConversationRead(activeConversation.id)
-	}, [messages])
 
 	return (
 		<div className='flex flex-col flex-1 bg-zinc-950 min-h-0'>

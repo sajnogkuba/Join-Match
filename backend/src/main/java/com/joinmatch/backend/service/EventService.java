@@ -3,17 +3,19 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
-import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.data.domain.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
@@ -28,19 +30,6 @@ public class EventService {
     private final SportRepository sportRepository;
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
-    private final ReportEventRepository reportEventRepository;
-
-    private String mapSkillLevelToString(Integer level) {
-        if (level == null) return "Nieokreślony";
-        return switch (level) {
-            case 1 -> "Amator";
-            case 2 -> "Rekreacyjny";
-            case 3 -> "Średniozaawansowany";
-            case 4 -> "Zaawansowany";
-            case 5 -> "Profesjonalista";
-            default -> "Inny (" + level + ")";
-        };
-    }
 
     public Page<EventResponseDto> getAll(
             Pageable pageable,
@@ -73,19 +62,7 @@ public class EventService {
 
         Page<Event> events = eventRepository.findAll(spec, sortedPageable);
 
-        List<Event> filtered = events.getContent().stream()
-                .filter(event -> event.getReportEvents()
-                        .stream()
-                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
-                .toList();
-
-        Page<Event> filteredPage = new PageImpl<>(
-                filtered,
-                sortedPageable,
-                filtered.size()
-        );
-
-        return filteredPage.map(EventResponseDto::fromEvent);
+        return events.map(EventResponseDto::fromEvent);
     }
 
     @Transactional(readOnly = true)
@@ -93,47 +70,46 @@ public class EventService {
         Event e = eventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
 
-        return new EventDetailsResponseDto(
-                e.getEventId(),
-                e.getEventName(),
-                e.getNumberOfParticipants(),
-                e.getNumberOfParticipants(), // bookedParticipants
+        return EventDetailsResponseDto.builder()
+                .eventId(e.getEventId())
+                .eventName(e.getEventName())
+                .numberOfParticipants(e.getNumberOfParticipants())
+                .bookedParticipants(e.getNumberOfParticipants())
 
-                e.getCost(),
-                "PLN",
-                e.getStatus(),
-                e.getEventDate(),
-                e.getScoreTeam1(),
-                e.getScoreTeam2(),
+                .cost(e.getCost())
+                .currency("PLN")
+                .status(e.getStatus())
+                .eventDate(e.getEventDate())
+                .scoreTeam1(e.getScoreTeam1())
+                .scoreTeam2(e.getScoreTeam2())
 
-                e.getSportEv().getName(),
-                e.getSportObject().getName(),
+                .sportTypeName(e.getSportEv().getName())
+                .sportObjectName(e.getSportObject().getName())
 
-                e.getSportObject().getObjectId(),
-                e.getSportObject().getCity(),
-                e.getSportObject().getStreet(),
-                e.getSportObject().getNumber(),
-                e.getSportObject().getSecondNumber(),
+                .sportObjectId(e.getSportObject().getObjectId())
+                .city(e.getSportObject().getCity())
+                .street(e.getSportObject().getStreet())
+                .number(e.getSportObject().getNumber())
+                .secondNumber(e.getSportObject().getSecondNumber())
 
-                e.getEventVisibility().getId(),
-                e.getEventVisibility().getName(),
+                .eventVisibilityId(e.getEventVisibility().getId())
+                .eventVisibilityName(e.getEventVisibility().getName())
 
-                e.getOwner().getId(),
-                e.getOwner().getName(),
-                e.getOwner().getUrlOfPicture(),
+                .ownerId(e.getOwner().getId())
+                .ownerName(e.getOwner().getName())
+                .ownerAvatarUrl(e.getOwner().getUrlOfPicture())
 
-                "Amator",
-                "Gotówka",
-                e.getImageUrl(),
-
-                e.getSportObject().getLatitude(),
-                e.getSportObject().getLongitude()
-        );
+                .skillLevel("Amator")
+                .paymentMethod("Gotówka")
+                .imageUrl(e.getImageUrl())
+                .latitude(e.getSportObject().getLatitude())
+                .longitude(e.getSportObject().getLongitude())
+                .build();
     }
 
 
 
-        @Transactional
+    @Transactional
     public EventResponseDto create(EventRequestDto eventRequestDto) {
         Event event = new Event();
         return getEventResponseDto(eventRequestDto, event);
@@ -149,7 +125,6 @@ public class EventService {
         EventVisibility eventVisibility = eventVisibilityRepository.findById(eventRequestDto.eventVisibilityId())
                 .orElseThrow(() -> new IllegalArgumentException("EventVisibility with id " + eventRequestDto.eventVisibilityId() + " not found"));
         event.setEventName(eventRequestDto.eventName());
-        event.setDescription(eventRequestDto.description());
         event.setNumberOfParticipants(eventRequestDto.numberOfParticipants());
         event.setCost(eventRequestDto.cost());
         event.setOwner(owner);
@@ -160,7 +135,6 @@ public class EventService {
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
         event.setImageUrl(eventRequestDto.imageUrl());
-        event.setPaymentMethods(eventRequestDto.paymentMethods());
 
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);
@@ -177,36 +151,5 @@ public class EventService {
                 .stream()
                 .map(EventResponseDto::fromEvent)
                 .toList();
-    }
-    @Transactional
-    public void reportEvent(EventReportDto eventReportDto){
-        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
-        Event referenceById = eventRepository.getReferenceById(eventReportDto.idEvent());
-        ReportEvent reportEvent = new ReportEvent();
-        reportEvent.setReportedEvent(referenceById);
-        reportEvent.setReporterUser(user);
-        reportEvent.setReviewed(false);
-        reportEvent.setActive(false);
-        reportEvent.setDescription(eventReportDto.description());
-        user.getReportEvents().add(reportEvent);
-        referenceById.getReportEvents().add(reportEvent);
-//        userRepository.save(user);
-//        eventRepository.save(referenceById);
-        reportEventRepository.save(reportEvent);
-    }
-
-    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, String token) {
-        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-
-        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-
-        var user = userRepository.findByTokenValue(token)
-                .orElseThrow(() -> new IllegalArgumentException("User with token " + token + " not found"));
-        Page<Event> events = eventRepository.findAllParticipatedByUserId(user.getId(), sortedPageable);
-        return events.map(EventResponseDto::fromEvent);
-    }
-    public Event findById(Integer id){
-        return eventRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Event with id " + id + " not found"));
     }
 }

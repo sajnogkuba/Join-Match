@@ -7,7 +7,7 @@ import api from '../Api/axios'
 import type { SportType } from '../Api/types/SportType.ts'
 import type { SportObject } from '../Api/types/SportObject.ts'
 import { motion } from 'framer-motion'
-import { Upload, CalendarDays, MapPin, DollarSign, Users, AlignLeft } from 'lucide-react'
+import { Upload, CalendarDays, MapPin, DollarSign, Users } from 'lucide-react'
 import PlaceAutocomplete from './PlaceAutocomplete'
 
 const inputBase =
@@ -28,17 +28,17 @@ type FormErrors = {
 
 export default function CreateEventForm() {
 	const [eventName, setEventName] = useState('')
-	const [description, setDescription] = useState('')
 	const [sportId, setSportId] = useState<number>(0)
 	const [level, setLevel] = useState(1)
 	const [free, setFree] = useState(false)
-	const [isPrivate, setIsPrivate] = useState(false)
+	const [isPrivate] = useState(false)
 	const [price, setPrice] = useState<number | ''>(0)
 	const [maxParticipants, setMaxParticipants] = useState<number | ''>('')
 	const [eventDate, setEventDate] = useState('')
 	const [eventTime, setEventTime] = useState('')
 	const [placeId, setPlaceId] = useState<number>(0)
 	const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
 	const [sportTypes, setSportTypes] = useState<SportType[]>([])
 	const [sportObjects, setSportObjects] = useState<SportObject[]>([])
 	const [errors, setErrors] = useState<FormErrors>({})
@@ -46,7 +46,6 @@ export default function CreateEventForm() {
 	const [serverError, setServerError] = useState<string | null>(null)
 	const [serverOk, setServerOk] = useState<string | null>(null)
 	const [uploadingImage, setUploadingImage] = useState(false)
-	const [paymentMethods, setPaymentMethods] = useState<string[]>(['GOTOWKA'])
 
 	const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
 
@@ -92,31 +91,6 @@ export default function CreateEventForm() {
 
 		setErrors(newErrors)
 		return Object.keys(newErrors).length === 0
-	}
-
-	const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) => {
-		return (
-			<div
-				onClick={() => onChange(!enabled)}
-				className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer transition-all ${
-					enabled ? 'bg-violet-600' : 'bg-zinc-700'
-				}`}>
-				<div
-					className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-						enabled ? 'translate-x-5' : 'translate-x-0'
-					}`}></div>
-			</div>
-		)
-	}
-
-	const togglePaymentMethod = (method: string) => {
-		setPaymentMethods(prev => {
-			if (prev.includes(method)) {
-				return prev.filter(m => m !== method)
-			} else {
-				return [...prev, method]
-			}
-		})
 	}
 
 	const toLocalDateTime = (d: string, t: string) => `${d}T${t}:00`
@@ -171,7 +145,6 @@ export default function CreateEventForm() {
 
 			await api.post('/event', {
 				eventName,
-				description, // NOWE: Wysyłamy opis
 				numberOfParticipants: Number(maxParticipants),
 				cost: free ? 0 : Number(price),
 				ownerEmail,
@@ -182,12 +155,10 @@ export default function CreateEventForm() {
 				sportTypeId: sportId,
 				minLevel: level,
 				imageUrl,
-				paymentMethods,
 			})
 
 			setServerOk('🎉 Wydarzenie utworzone pomyślnie!')
 			setEventName('')
-			setDescription('') // Reset opisu
 			setSportId(0)
 			setLevel(1)
 			setFree(false)
@@ -226,31 +197,15 @@ export default function CreateEventForm() {
 
 				<form onSubmit={handleSubmit} className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
 					{/* Nazwa */}
-					<div className={`${card} md:col-span-2 lg:col-span-3`}>
-						<div className='grid md:grid-cols-2 gap-6'>
-							<div>
-								<label className='block text-zinc-400 mb-2'>Nazwa wydarzenia</label>
-								<input
-									className={`${inputBase} ${errors.eventName ? 'border-red-500' : ''}`}
-									placeholder='np. Niedzielny mecz piłki'
-									value={eventName}
-									onChange={e => setEventName(e.target.value)}
-								/>
-								{errors.eventName && <p className='text-red-400 text-sm mt-1'>{errors.eventName}</p>}
-							</div>
-
-							<div>
-								<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
-									<AlignLeft size={16} /> Opis wydarzenia (opcjonalne)
-								</label>
-								<textarea
-									className={`${inputBase} h-[52px] resize-none py-3`}
-									placeholder='Krótki opis, zasady, informacje dodatkowe...'
-									value={description}
-									onChange={e => setDescription(e.target.value)}
-								/>
-							</div>
-						</div>
+					<div className={card}>
+						<label className='block text-zinc-400 mb-2'>Nazwa wydarzenia</label>
+						<input
+							className={`${inputBase} ${errors.eventName ? 'border-red-500' : ''}`}
+							placeholder='np. Niedzielny mecz piłki'
+							value={eventName}
+							onChange={e => setEventName(e.target.value)}
+						/>
+						{errors.eventName && <p className='text-red-400 text-sm mt-1'>{errors.eventName}</p>}
 					</div>
 
 					{/* Sport */}
@@ -281,24 +236,6 @@ export default function CreateEventForm() {
 						/>
 					</div>
 
-					{/* Widoczność wydarzenia */}
-					<div className={card}>
-						<label className='block text-zinc-400 mb-3'>Widoczność wydarzenia</label>
-
-						<div className='flex items-center justify-between'>
-							<div className='flex flex-col'>
-								<span className='font-semibold text-white'>
-									{isPrivate ? 'Prywatne wydarzenie' : 'Publiczne wydarzenie'}
-								</span>
-								<span className='text-zinc-400 text-sm'>
-									{isPrivate ? 'Widoczne tylko dla zaproszonych uczestników' : 'Widoczne dla wszystkich użytkowników'}
-								</span>
-							</div>
-
-							<Toggle enabled={isPrivate} onChange={setIsPrivate} />
-						</div>
-					</div>
-
 					{/* Cena */}
 					<div className={card}>
 						<label className='block text-zinc-400 mb-2 flex items-center gap-2'>
@@ -315,27 +252,6 @@ export default function CreateEventForm() {
 						/>
 						{errors.price && <p className='text-red-400 text-sm mt-1'>{errors.price}</p>}
 						<Checkbox id='free' label='Bezpłatne wydarzenie' checked={free} onChange={v => setFree(v)} />
-					</div>
-
-					<div className={card}>
-						<label className='block text-zinc-400 mb-2'>Akceptowane metody płatności</label>
-						<div className='flex flex-wrap gap-4'>
-							{['GOTOWKA', 'BLIK', 'PRZELEW', 'KARTA'].map(method => (
-								<div
-									key={method}
-									onClick={() => togglePaymentMethod(method)}
-									className={`cursor-pointer px-4 py-2 rounded-xl border transition-all ${
-										paymentMethods.includes(method)
-											? 'bg-violet-600 border-violet-500 text-white'
-											: 'bg-zinc-900/70 border-zinc-700 text-zinc-400 hover:bg-zinc-800'
-									}`}>
-									{method}
-								</div>
-							))}
-						</div>
-						{paymentMethods.length === 0 && (
-							<p className='text-red-400 text-sm mt-1'>Wybierz przynajmniej jedną metodę.</p>
-						)}
 					</div>
 
 					{/* Maks uczestników */}
@@ -361,10 +277,10 @@ export default function CreateEventForm() {
 						<DatePicker
 							value={eventDate}
 							onChange={setEventDate}
-							placeholder='Wybierz datę wydarzenia'
+							placeholder="Wybierz datę wydarzenia"
 							error={!!errors.eventDate}
-							mode='event'
-							theme='violet'
+							mode="event"
+							theme="violet"
 						/>
 						{errors.eventDate && <p className='text-red-400 text-sm mt-1'>{errors.eventDate}</p>}
 					</div>
@@ -374,9 +290,9 @@ export default function CreateEventForm() {
 						<TimePicker
 							value={eventTime}
 							onChange={setEventTime}
-							placeholder='Wybierz godzinę'
+							placeholder="Wybierz godzinę"
 							error={!!errors.eventTime}
-							theme='violet'
+							theme="violet"
 						/>
 						{errors.eventTime && <p className='text-red-400 text-sm mt-1'>{errors.eventTime}</p>}
 					</div>

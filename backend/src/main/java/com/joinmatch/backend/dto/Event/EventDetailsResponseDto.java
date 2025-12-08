@@ -1,43 +1,46 @@
 package com.joinmatch.backend.dto.Event;
 
+import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
-public record EventDetailsResponseDto (
-        Integer eventId,
-        String eventName,
-     Integer numberOfParticipants,
-     Integer bookedParticipants,
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class EventDetailsResponseDto {
+    private Integer eventId;
+    private String eventName;
+    private Integer numberOfParticipants;
+    private Integer bookedParticipants;
 
-     BigDecimal cost,
-     String currency,
-     String status,
-     LocalDateTime eventDate,
-     Integer scoreTeam1,
-     Integer scoreTeam2,
+    private BigDecimal cost;
+    private String currency;
+    private String status;
+    private LocalDateTime eventDate;
+    private Integer scoreTeam1;
+    private Integer scoreTeam2;
 
-     String sportTypeName,
-     String sportObjectName,
+    private String sportTypeName;
+    private String sportObjectName;
 
-     Integer sportObjectId,
-     String city,
-     String street,
-     Integer number,
-     Integer secondNumber,
+    private Integer sportObjectId;
+    private String city;
+    private String street;
+    private Integer number;
+    private Integer secondNumber;
 
-     Integer eventVisibilityId,
-     String eventVisibilityName,
+    private Integer eventVisibilityId;
+    private String eventVisibilityName;
 
-     Integer ownerId,
-     String ownerName,
-     String ownerAvatarUrl,
+    private Integer ownerId;
+    private String ownerName;
+    private String ownerAvatarUrl;
 
-     String skillLevel,
-     String paymentMethod,
-     String imageUrl,
+    private String skillLevel;
+    private String paymentMethod;
+    private String imageUrl;
 
-     Double latitude,
-     Double longitude
-)
-{}
+    private Double latitude;
+    private Double longitude;
+}

@@ -24,14 +24,10 @@ public class ReportCompetition {
 
     @ManyToOne
     @JoinColumn(name = "competition_id", nullable = false)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Competition competition;
 
     @ManyToOne
     @JoinColumn(name = "reporter_user_id", nullable = false)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private User reporterUser;
 
     @Column(nullable = false)

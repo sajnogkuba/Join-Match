@@ -29,15 +29,11 @@ export interface Event {
 	city?: string
 	currency?: string
 	minLevel?: number
-	isBanned?: boolean
-	paymentMethods: string[]
-	description?: string
 }
 
 export type EventDetails = {
 	eventId: number
 	eventName: string
-	description?: string
 	numberOfParticipants: number
 	bookedParticipants: number
 	cost: number
@@ -64,10 +60,10 @@ export type EventDetails = {
 	ownerAvatarUrl?: string
 
 	skillLevel: string
-	paymentMethods: string[]
+	paymentMethod: string
 	imageUrl?: string
 
 	latitude: number
 	longitude: number
-	isBanned?: boolean
 }
+

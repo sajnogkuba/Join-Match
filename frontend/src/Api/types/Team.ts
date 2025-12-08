@@ -7,7 +7,6 @@ export interface Team {
 	leaderId: number
 	leaderName: string
 	photoUrl: string | null
-	isBanned?: boolean
 }
 
 export interface TeamDetails {
@@ -22,6 +21,5 @@ export interface TeamDetails {
 	photoUrl: string | null
 	memberCount: number
 	createdAt: string | null
-	isBanned?: boolean
 }
 

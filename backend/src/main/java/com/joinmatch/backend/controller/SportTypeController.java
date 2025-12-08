@@ -5,7 +5,6 @@ import com.joinmatch.backend.service.SportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.util.List;
 
@@ -39,7 +38,7 @@ public class SportTypeController {
     }
     @PostMapping
     public ResponseEntity<SportDto> createNewSport(@RequestBody SportDto sportDto){
-            sportService.addNewSport(sportDto);
+
         return ResponseEntity.status(201).body(sportDto);
     }
     @PatchMapping("/mainSport")
@@ -57,26 +56,6 @@ public class SportTypeController {
             sportService.removeSport(removeSportDto);
         }catch (IllegalArgumentException exception){
             return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().build();
-    }
-    @PatchMapping("/updateName")
-    public ResponseEntity<Void> renameSport(@RequestBody ChangeNameOfSportDto changeNameOfSportDto){
-        try{
-            sportService.renameSport(changeNameOfSportDto);
-        }catch (IllegalArgumentException exception){
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().build();
-    }
-    @DeleteMapping("/deleteSport/{idOfSport}")
-    public ResponseEntity<Void> deleteSport (@PathVariable Integer idOfSport){
-        try{
-            sportService.deleteSport(idOfSport);
-        }catch (IllegalArgumentException exception){
-            return ResponseEntity.notFound().build();
-        }catch (RuntimeException e){
-            return ResponseEntity.status(409).build();
         }
         return ResponseEntity.ok().build();
     }

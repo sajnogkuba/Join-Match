@@ -1,6 +1,5 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.dto.Reports.TeamReportDto;
 import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
 import com.joinmatch.backend.dto.Team.TeamRequestDto;
@@ -92,15 +91,6 @@ public class TeamController {
     public ResponseEntity<TeamResponseDto> updateTeam(@PathVariable Integer id, @RequestBody TeamRequestDto teamRequestDto) {
         TeamResponseDto updatedTeam = teamService.updateTeam(id, teamRequestDto);
         return ResponseEntity.ok(updatedTeam);
-    }
-    @PostMapping("/report/team")
-    public ResponseEntity<Void> reportTeam(@RequestBody TeamReportDto teamReportDto){
-        try {
-            teamService.reportUserRating(teamReportDto);
-        }catch (IllegalArgumentException e){
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().build();
     }
 
 }

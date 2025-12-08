@@ -18,13 +18,9 @@ public class CompetitionTeam {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "competition_id", nullable = false)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Competition competition;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "team_id", nullable = false)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Team team;
 }

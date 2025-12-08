@@ -27,7 +27,4 @@ public class UserEvent {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "attendance_status_id", nullable = false)
     private AttendanceStatus attendanceStatus;
-
-    @Column(name = "is_paid", nullable = false)
-    private Boolean isPaid = false;
 }

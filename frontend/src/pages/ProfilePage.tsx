@@ -12,8 +12,6 @@ import type { UserRatingResponse } from "../Api/types/Rating";
 import type { UserSportsResponse } from "../Api/types/Sports";
 import type { User } from "../Api/types/User";
 import MyEventsSection from "../components/MyEventsSection.tsx";
-import MyParticipationsSection from "../components/MyParticipationsSection.tsx";
-import BadgesSection from "../components/BadgesSection.tsx";
 
 
 
@@ -187,16 +185,6 @@ const ProfilePage = () => {
                         {activeTab === "Moje wydarzenia" && (
                             <div className="flex-1">
                                 <MyEventsSection />
-                            </div>
-                        )}
-                        {activeTab === "Biorę udział" && (
-                            <div className="flex-1">
-                                <MyParticipationsSection />
-                            </div>
-                        )}
-                        {activeTab === "Odznaki" && (
-                            <div className="flex-1">
-                                <BadgesSection userId={currentUser?.id ?? null} />
                             </div>
                         )}
                     </div>

@@ -11,7 +11,6 @@ interface ConversationPreview {
 	name: string
 	avatarUrl?: string | null
 	lastMessage?: string | null
-	unreadCount?: number
 }
 
 const ChatBell: React.FC = () => {
@@ -19,10 +18,10 @@ const ChatBell: React.FC = () => {
 	const [conversations, setConversations] = useState<ConversationPreview[]>([])
 	const dropdownRef = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
+	const { totalUnreadCount } = useChat()
 	const [loading, setLoading] = useState(false)
 	const { accessToken } = useAuth()
 	const [myUserId, setMyUserId] = useState<number | null>(null)
-	const { totalUnreadConversations, markConversationRead } = useChat()
 
 	useEffect(() => {
 		const fetchUserId = async () => {
@@ -42,11 +41,7 @@ const ChatBell: React.FC = () => {
 		setLoading(true)
 		api
 			.get('/conversations/preview', { params: { userId: myUserId } })
-			.then(res => {
-				console.log('📥 /conversations/preview data', res.data)
-				setConversations(res.data)
-
-			})
+			.then(res => setConversations(res.data))
 			.catch(err => {
 				console.error('❌ /conversations/preview error:', err)
 				setConversations([])
@@ -64,14 +59,20 @@ const ChatBell: React.FC = () => {
 		return () => document.removeEventListener('mousedown', handleClickOutside)
 	}, [])
 
-	const handleOpenConversation = async (id: number) => {
-		if (myUserId) {
-			await api.post(`/conversations/${id}/read`, null, {
-				params: { userId: myUserId },
-			})
-		}
+	// Pobieranie listy rozmów
+	useEffect(() => {
+		if (!isOpen) return
+		setLoading(true)
+		const token = localStorage.getItem('accessToken')
+		if (!token) return
+		api
+			.get('/conversations/preview', { params: { token } })
+			.then(res => setConversations(res.data))
+			.catch(() => setConversations([]))
+			.finally(() => setLoading(false))
+	}, [isOpen])
 
-		markConversationRead(id)
+	const handleOpenConversation = (id: number) => {
 		setIsOpen(false)
 		navigate('/chat', { state: { conversationId: id } })
 	}
@@ -84,9 +85,9 @@ const ChatBell: React.FC = () => {
 				className='relative p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors'
 				title='Wiadomości'>
 				<MessageSquare size={20} className='text-zinc-300' />
-				{totalUnreadConversations > 0 && (
+				{totalUnreadCount > 0 && (
 					<span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium'>
-						{totalUnreadConversations > 99 ? '99+' : totalUnreadConversations}
+						{totalUnreadCount > 99 ? '99+' : totalUnreadCount}
 					</span>
 				)}
 			</button>
@@ -129,16 +130,7 @@ const ChatBell: React.FC = () => {
 											className='w-10 h-10 rounded-full object-cover'
 										/>
 										<div className='flex-1 min-w-0'>
-											<div className='flex items-center justify-between'>
-												<div className='text-white font-medium truncate'>{conv.name}</div>
-
-												{conv.unreadCount && conv.unreadCount > 0 && (
-													<span className='ml-2 bg-violet-600 text-white text-xs rounded-full h-5 min-w-5 px-2 flex items-center justify-center'>
-														{conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-													</span>
-												)}
-											</div>
-
+											<div className='text-white font-medium truncate'>{conv.name}</div>
 											<div className='text-sm text-zinc-400 truncate'>{conv.lastMessage || 'Brak wiadomości'}</div>
 										</div>
 									</motion.div>

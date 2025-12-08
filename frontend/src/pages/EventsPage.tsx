@@ -26,7 +26,6 @@ import {
 	Loader2,
 	ArrowUpDown,
 	Plus,
-	AlertTriangle,
 } from 'lucide-react'
 
 dayjs.locale('pl')
@@ -512,123 +511,92 @@ const EventsPage = () => {
 						) : (
 							<>
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
-									{events.map(ev => {
-										const isBanned = ev.isBanned === true
-										return (
-											<article 
-												key={ev.eventId} 
-												className={`overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 ${
-													isBanned ? 'opacity-60 grayscale' : ''
-												}`}
-											>
-												{isBanned ? (
-													<div className='block relative h-40 bg-zinc-800 overflow-hidden'>
-														<div className='h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800'>
-															<div className='text-center text-zinc-500'>
-																<AlertTriangle className='mx-auto mb-2' size={32} />
-																<div className='text-sm font-medium'>Zablokowane</div>
-															</div>
-														</div>
-													</div>
-												) : (
-													<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
-														{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
-															<img
-																src={ev.imageUrl}
-																alt={ev.eventName}
-																onError={e => {
-																	const target = e.currentTarget as HTMLImageElement
-																	target.style.display = 'none'
-																	const fallback = target.nextElementSibling as HTMLElement
-																	if (fallback) fallback.style.display = 'flex'
-																}}
-																className='h-full w-full object-cover group-hover:scale-105 transition-transform duration-500'
-															/>
-														) : null}
-														<div
-															className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
-															style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}>
-															<div className='text-center text-zinc-400'>
-																<div className='text-4xl mb-2'>JoinMatch</div>
-																<div className='text-sm font-medium'>{ev.sportTypeName}</div>
-															</div>
-														</div>
-														<span className='absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-violet-200 ring-1 ring-violet-600/40'>
-															{ev.sportTypeName}
-														</span>
-													</Link>
-												)}
-												<div className='p-4'>
-													<div className='flex items-start justify-between'>
-														<h3 className={`font-semibold line-clamp-1 ${isBanned ? 'text-zinc-500' : 'text-white'}`}>
-															{isBanned ? (
-																<span>{ev.eventName}</span>
-															) : (
-																<Link to={`/event/${ev.eventId}`} className='hover:underline'>
-																	{ev.eventName}
-																</Link>
-															)}
-														</h3>
-														{!isBanned && (
-															<button onClick={() => handleSave(ev.eventId)} className='rounded-full p-2 ring-1 bg-zinc-800 hover:bg-zinc-700'>
-																{savedEventIds.has(ev.eventId) ? (
-																	<BookmarkCheck size={18} className='text-violet-400' />
-																) : (
-																	<Bookmark size={18} className='text-zinc-400' />
-																)}
-															</button>
-														)}
-													</div>
-													<div className='mt-2 text-sm text-zinc-500 space-y-1'>
-														<div className='flex items-center gap-2'>
-															<CalendarDays size={16} /> {parseEventDate(ev.eventDate).format('DD.MM.YYYY HH:mm')}
-														</div>
-														<div className='flex items-center gap-2'>
-															<MapPin size={16} /> {ev.sportObjectName}
-														</div>
-														<div className='flex items-center gap-2'>
-															<Users size={16} /> {(ev as any).bookedParticipants}/{ev.numberOfParticipants}
-														</div>
-														<div className='flex items-center gap-2'>
-															<Ticket size={16} />
-															{new Intl.NumberFormat('pl-PL', {
-																style: 'currency',
-																currency: (ev as any).currency || 'PLN',
-															}).format((ev as any).cost || 0)}
-														</div>
-													</div>
-													<div className='mt-4 flex justify-between'>
-														{isBanned ? (
-															<div className='text-zinc-500 text-sm'>Zablokowane</div>
-														) : (
-															<>
-																{(() => {
-																	const isJoined = joinedEventIds.has(ev.eventId)
-																	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
-																	return (
-																		<button
-																			onClick={() => handleJoin(ev.eventId)}
-																			disabled={isFull}
-																			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${isJoined
-																				? 'bg-red-600 text-white hover:bg-red-500'
-																				: isFull
-																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
-																					: 'bg-violet-600 text-white hover:bg-violet-500'
-																			}`}>
-																			{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
-																		</button>
-																	)
-																})()}
-																<Link to={`/event/${ev.eventId}`} className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
-																	Szczegóły <ChevronRight size={16} />
-																</Link>
-															</>
-														)}
+									{events.map(ev => (
+										<article key={ev.eventId} className='overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60'>
+											<Link to={`/event/${ev.eventId}`} className='block relative h-40 bg-zinc-800 overflow-hidden'>
+												{ev.imageUrl && ev.imageUrl.trim() !== '' ? (
+													<img
+														src={ev.imageUrl}
+														alt={ev.eventName}
+														onError={e => {
+															const target = e.currentTarget as HTMLImageElement
+															target.style.display = 'none'
+															const fallback = target.nextElementSibling as HTMLElement
+															if (fallback) fallback.style.display = 'flex'
+														}}
+														className='h-full w-full object-cover group-hover:scale-105 transition-transform duration-500'
+													/>
+												) : null}
+												<div
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+													style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}>
+													<div className='text-center text-zinc-400'>
+														<div className='text-4xl mb-2'>JoinMatch</div>
+														<div className='text-sm font-medium'>{ev.sportTypeName}</div>
 													</div>
 												</div>
-											</article>
-										)
-									})}
+												<span className='absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-violet-200 ring-1 ring-violet-600/40'>
+													{ev.sportTypeName}
+												</span>
+											</Link>
+											<div className='p-4'>
+												<div className='flex items-start justify-between'>
+													<h3 className='text-white font-semibold line-clamp-1'>
+														<Link to={`/event/${ev.eventId}`} className='hover:underline'>
+															{ev.eventName}
+														</Link>
+													</h3>
+													<button onClick={() => handleSave(ev.eventId)} className='rounded-full p-2 ring-1 bg-zinc-800 hover:bg-zinc-700'>
+														{savedEventIds.has(ev.eventId) ? (
+															<BookmarkCheck size={18} className='text-violet-400' />
+														) : (
+															<Bookmark size={18} className='text-zinc-400' />
+														)}
+													</button>
+												</div>
+												<div className='mt-2 text-sm text-zinc-300 space-y-1'>
+													<div className='flex items-center gap-2'>
+														<CalendarDays size={16} /> {parseEventDate(ev.eventDate).format('DD.MM.YYYY HH:mm')}
+													</div>
+													<div className='flex items-center gap-2'>
+														<MapPin size={16} /> {ev.sportObjectName}
+													</div>
+													<div className='flex items-center gap-2'>
+														<Users size={16} /> {(ev as any).bookedParticipants}/{ev.numberOfParticipants}
+													</div>
+													<div className='flex items-center gap-2'>
+														<Ticket size={16} />
+														{new Intl.NumberFormat('pl-PL', {
+															style: 'currency',
+															currency: (ev as any).currency || 'PLN',
+														}).format((ev as any).cost || 0)}
+													</div>
+												</div>
+												<div className='mt-4 flex justify-between'>
+													{(() => {
+														const isJoined = joinedEventIds.has(ev.eventId)
+														const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+														return (
+															<button
+																onClick={() => handleJoin(ev.eventId)}
+																disabled={isFull}
+																className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${isJoined
+																	? 'bg-red-600 text-white hover:bg-red-500'
+																	: isFull
+																		? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																		: 'bg-violet-600 text-white hover:bg-violet-500'
+																}`}>
+																{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+															</button>
+														)
+													})()}
+													<Link to={`/event/${ev.eventId}`} className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
+														Szczegóły <ChevronRight size={16} />
+													</Link>
+												</div>
+											</div>
+										</article>
+									))}
 								</div>
 
 								{/* Infinite scroll trigger */}

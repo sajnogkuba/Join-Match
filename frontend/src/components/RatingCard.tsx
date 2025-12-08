@@ -1,6 +1,5 @@
 import React from 'react'
 import Avatar from './Avatar'
-import { Link } from 'react-router-dom'
 import StarRatingDisplay from './StarRatingDisplay'
 import { parseLocalDate } from '../utils/formatDate'
 import { Edit, Trash2, CalendarDays } from 'lucide-react'
@@ -17,7 +16,6 @@ interface RatingCardProps {
 	onDelete: () => void
 	eventName?: string
 	eventId?: number
-	raterId: number
 }
 
 const RatingCard: React.FC<RatingCardProps> = ({
@@ -32,27 +30,17 @@ const RatingCard: React.FC<RatingCardProps> = ({
 	onDelete,
 	eventName,
 	eventId,
-	raterId,
 }) => {
 	return (
 		<div className='bg-zinc-800/50 p-4 rounded-xl border border-zinc-700'>
 			{/* Górna sekcja z użytkownikiem + datą */}
 			<div className='flex items-center justify-between mb-2'>
 				<div className='flex items-center gap-3'>
-					<Link to={`/profile/${raterId}`}>
-						<Avatar
-							src={raterAvatarUrl || null}
-							name={raterName}
-							size='sm'
-							className='ring-1 ring-zinc-700 hover:opacity-80 transition'
-						/>
-					</Link>
-					<Link to={`/profile/${raterId}`} className='text-white text-sm font-medium hover:text-violet-300 transition'>
-						<div className='leading-tight'>
-							<div className='text-white text-sm font-medium'>{raterName}</div>
-							{raterEmail && <div className='text-xs text-zinc-400'>{raterEmail}</div>}
-						</div>
-					</Link>
+					<Avatar src={raterAvatarUrl || null} name={raterName} size='sm' className='ring-1 ring-zinc-700' />
+					<div className='leading-tight'>
+						<div className='text-white text-sm font-medium'>{raterName}</div>
+						{raterEmail && <div className='text-xs text-zinc-400'>{raterEmail}</div>}
+					</div>
 				</div>
 				<div className='flex items-center gap-3'>
 					<span className='text-xs text-zinc-500'>{parseLocalDate(createdAt).format('DD.MM.YYYY HH:mm')}</span>

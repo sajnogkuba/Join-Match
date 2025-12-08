@@ -15,8 +15,7 @@ public record TeamDetailsDto(
         String leaderAvatarUrl,
         String photoUrl,
         Integer memberCount,
-        LocalDateTime createdAt,
-        Boolean isBanned
+        LocalDateTime createdAt
 ) {
     public static TeamDetailsDto fromTeam(Team team) {
         return new TeamDetailsDto(
@@ -29,9 +28,8 @@ public record TeamDetailsDto(
                 team.getLeader().getName(),
                 team.getLeader().getUrlOfPicture(),
                 team.getPhotoUrl(),
-                0,
-                team.getCreatedAt(),
-                team.getReportTeamSet().stream().anyMatch(report -> Boolean.TRUE.equals(report.getActive()))
+                0, // Assuming member count is not directly available in Team entity
+                team.getCreatedAt()
         );
     }
 }

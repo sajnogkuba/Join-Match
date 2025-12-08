@@ -6,7 +6,6 @@ import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.dto.Auth.*;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
 import com.joinmatch.backend.dto.Moderator.GetUsersDto;
-import com.joinmatch.backend.dto.Reports.UserReportDto;
 import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
@@ -160,14 +159,5 @@ public class UserController {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<GetUsersDto> result = userService.getUsersForModeration(pageable);
         return ResponseEntity.ok(result);
-    }
-    @PostMapping("/report/user")
-    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto){
-        try{
-            userService.reportUser(userReportDto);
-        }catch (IllegalArgumentException exception){
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().build();
     }
 }

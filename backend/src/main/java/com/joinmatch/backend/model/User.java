@@ -1,6 +1,5 @@
 package com.joinmatch.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -73,61 +72,27 @@ public class User {
     private List<EventRating> eventRatings = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private List<UserTeam> userTeams = new ArrayList<>();
 
-    @OneToMany(mappedBy = "suspectUser", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "userId", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReportUser> suspectUser = new HashSet<>();
 
-    @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "reporterUserId", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReportUser> userReportSender = new HashSet<>();
 
-    @OneToMany(mappedBy = "teamReporterUser",cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "teamReporterUserId",cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReportTeam> teamReportSender = new HashSet<>();
 
     @OneToMany(mappedBy = "reporterUser",cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Set<ReportEventRating> reportEventRatings = new HashSet<>();
 
-    @OneToMany(mappedBy = "userRatingReporter", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "userRatingReported", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReportUserRating> reportUserRatings = new HashSet<>();
-
     @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL,orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Set<ReportCompetition> reportCompetitions = new HashSet<>();
-
-    @OneToMany(mappedBy = "reporterUser", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private Set<ReportEvent> reportEvents = new HashSet<>();
     public List<JoinMatchToken> getTokens() {
         return Collections.unmodifiableList(tokens);
     }
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    @JsonIgnore
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<UserBadge> userBadges = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private Set<UserEvent> userEvents = new HashSet<>();
-
-    @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
-    private List<Event> createdEvents = new ArrayList<>();
-
-
 
     public void addToken(JoinMatchToken token) {
         tokens.add(token);
@@ -137,14 +102,6 @@ public class User {
     public void removeToken(JoinMatchToken token) {
         tokens.remove(token);
         token.setUser(null);
-    }
-
-    public int getJoinedEventsCount() {
-        return userEvents.size();
-    }
-
-    public int getCreatedEventsCount() {
-        return createdEvents.size();
     }
 
 

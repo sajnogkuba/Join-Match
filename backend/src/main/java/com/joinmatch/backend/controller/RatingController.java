@@ -4,8 +4,6 @@ import com.joinmatch.backend.dto.EventRating.EventRatingRequestDto;
 import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingRequestDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingResponseDto;
-import com.joinmatch.backend.dto.Reports.EventRatingReportDto;
-import com.joinmatch.backend.dto.Reports.UserRatingReportDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.service.RatingService;
@@ -113,22 +111,5 @@ public class RatingController {
         ratingService.deleteOrganizerRating(ratingId, userId);
         return ResponseEntity.noContent().build();
     }
-    @PostMapping("report/eventRating")
-    public ResponseEntity<Void> reportEventRating(@RequestBody EventRatingReportDto reportDto){
-        try {
-            ratingService.reportEventRating(reportDto);
-        }catch (IllegalArgumentException e){
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().build();
-    }
-    @PostMapping("/report/userRating")
-    public ResponseEntity<Void> reportUserRating(@RequestBody UserRatingReportDto userRatingReportDto){
-        try {
-            ratingService.reportUserRating(userRatingReportDto);
-        }catch (IllegalArgumentException e){
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok().build();
-    }
+
 }

@@ -1,21 +1,23 @@
 package com.joinmatch.backend.service;
 
-import com.joinmatch.backend.dto.Reports.TeamReportDto;
 import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
 import com.joinmatch.backend.dto.Team.TeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamResponseDto;
-import com.joinmatch.backend.model.*;
-import com.joinmatch.backend.repository.ReportTeamRepository;
+import com.joinmatch.backend.model.Sport;
+import com.joinmatch.backend.model.Team;
+import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.model.UserTeam;
 import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -24,7 +26,6 @@ public class TeamService {
     private final SportRepository sportRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final ReportTeamRepository reportTeamRepository;
 
     @Transactional
     public TeamResponseDto create(TeamRequestDto teamRequestDto) {
@@ -43,21 +44,9 @@ public class TeamService {
         ).ignoreCase());
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
         Page<Team> teams = teamRepository.findAll(sortedPageable);
-
-        List<Team> filtered = teams.getContent().stream()
-                .filter(event -> event.getReportTeamSet()
-                        .stream()
-                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
-                .toList();
-
-        Page<Team> filteredPage = new PageImpl<>(
-                filtered,
-                sortedPageable,
-                filtered.size()
-        );
-
-        return filteredPage.map(TeamResponseDto::fromTeam);
+        return teams.map(TeamResponseDto::fromTeam);
     }
 
     public Page<TeamResponseDto> findAllByLeaderId(Pageable pageable, String sortBy, String direction, Integer leaderId) {
@@ -137,21 +126,5 @@ public class TeamService {
         leader.getUserTeams().add(userTeam);
         userRepository.save(leader);
         return TeamResponseDto.fromTeam(savedTeam);
-    }
-
-    public void reportUserRating(TeamReportDto teamReportDto) {
-        Team team = teamRepository.findById(teamReportDto.IdTeam()).orElseThrow(() -> new IllegalArgumentException());
-        User user = userRepository.findByTokenValue(teamReportDto.token()).orElseThrow(() -> new IllegalArgumentException());
-        ReportTeam reportTeam = new ReportTeam();
-        reportTeam.setTeamReporterUser(user);
-        reportTeam.setDescription(teamReportDto.description());
-        reportTeam.setActive(false);
-        reportTeam.setReviewed(false);
-        reportTeam.setTeam(team);
-        team.getReportTeamSet().add(reportTeam);
-        user.getTeamReportSender().add(reportTeam);
-//        userRepository.save(user);
-//        teamRepository.save(team);
-        reportTeamRepository.save(reportTeam);
     }
 }

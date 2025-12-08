@@ -14,7 +14,6 @@ import {
 	UserMinus,
 	LogOut,
 	Trash2,
-	Flag,
 } from 'lucide-react'
 import { parseLocalDate } from '../utils/formatDate'
 
@@ -32,25 +31,23 @@ interface TeamInfoTabProps {
 	onLeaveTeam: () => void
 	onDeleteTeam: () => void
 	onOpenTeamChat: () => void
-	onReportTeam: () => void
 }
 
 const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
-													 team,
-													 teamMembers,
-													 membersLoading,
-													 showAllMembers,
-													 setShowAllMembers,
-													 isLeader,
-													 currentUserId,
-													 userEmail,
-													 onInviteClick,
-													 onRemoveMember,
-													 onLeaveTeam,
-													 onDeleteTeam,
-													 onOpenTeamChat,
-													 onReportTeam,
-												 }) => {
+	team,
+	teamMembers,
+	membersLoading,
+	showAllMembers,
+	setShowAllMembers,
+	isLeader,
+	currentUserId,
+	userEmail,
+	onInviteClick,
+	onRemoveMember,
+	onLeaveTeam,
+	onDeleteTeam,
+	onOpenTeamChat,
+}) => {
 	return (
 		<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
 			<section className='lg:col-span-2 space-y-6'>
@@ -196,17 +193,6 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 							</div>
 						)}
 					</div>
-				</div>
-
-				{/* 🔴 Zgłaszanie drużyny – POD informacjami */}
-				<div className='rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5'>
-					<button
-						onClick={onReportTeam}
-						className='w-full rounded-xl bg-rose-600/20 border border-rose-500/40 px-4 py-3 text-sm font-medium text-rose-200 hover:bg-rose-600/30 transition-colors inline-flex items-center justify-center gap-2'>
-						<Flag size={16} />
-						Zgłoś drużynę
-					</button>
-
 				</div>
 
 				{currentUserId && teamMembers.some(m => m.userId === currentUserId) && (

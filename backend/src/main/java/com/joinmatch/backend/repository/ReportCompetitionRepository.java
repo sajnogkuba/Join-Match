@@ -5,5 +5,4 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReportCompetitionRepository extends JpaRepository<ReportCompetition, Integer> {
-    long countByReviewedIsFalse();
 }

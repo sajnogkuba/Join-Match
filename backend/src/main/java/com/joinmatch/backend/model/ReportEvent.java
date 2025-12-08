@@ -21,18 +21,13 @@ public class ReportEvent {
 
     @ManyToOne
     @JoinColumn(name = "event_id", nullable = false)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Event reportedEvent;
 
     @Column(nullable = false)
     private Boolean active;
 
-    @ManyToOne
-    @JoinColumn (name = "reporter_user_id", nullable = false)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private User reporterUser;
+    @Column(name = "reporter_user_id", nullable = false)
+    private Integer reporterUserId;
 
     @Column(nullable = false)
     private Boolean reviewed;
