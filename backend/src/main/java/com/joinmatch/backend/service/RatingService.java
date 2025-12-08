@@ -4,6 +4,8 @@ import com.joinmatch.backend.dto.EventRating.EventRatingRequestDto;
 import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingRequestDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingResponseDto;
+import com.joinmatch.backend.dto.Reports.EventRatingReportDto;
+import com.joinmatch.backend.dto.Reports.UserRatingReportDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.model.*;
@@ -25,6 +27,8 @@ public class RatingService {
     private final EventRatingRepository eventRatingRepository;
     private final UserEventRepository userEventRepository;
     private final OrganizerRatingRepository organizerRatingRepository;
+    private final ReportEventRatingRepository reportEventRatingRepository;
+    private final ReportUserRatingRepository reportUserRatingRepository;
 
     @Transactional
     public UserRatingResponseDto addUserRating(UserRatingRequestDto request) {
@@ -66,6 +70,10 @@ public class RatingService {
     public List<UserRatingResponseDto> getRatingsByUser(Integer userId) {
         return userRatingRepository.findByRated_Id(userId)
                 .stream()
+                .filter(r ->
+                        r.getReportUserRatings().isEmpty() ||
+                                r.getReportUserRatings().stream().noneMatch(ReportUserRating::getActive)
+                )
                 .map(r -> new UserRatingResponseDto(
                         r.getUserRateId(),
                         r.getRater().getEmail(),
@@ -120,6 +128,10 @@ public class RatingService {
     public List<EventRatingResponseDto> getRatingsByEvent(Integer eventId) {
         return eventRatingRepository.findByEvent_EventId(eventId)
                 .stream()
+                .filter(r ->
+                        r.getReportEventRatings().isEmpty() ||
+                                r.getReportEventRatings().stream().noneMatch(ReportEventRating::getActive)
+                )
                 .map(r -> new EventRatingResponseDto(
                         r.getEventRatingId(),
                         r.getRating(),
@@ -307,5 +319,33 @@ public class RatingService {
 
         organizerRatingRepository.delete(rating);
     }
+    @Transactional
+    public void reportEventRating(EventRatingReportDto eventReportDto){
+        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+        EventRating referenceById = eventRatingRepository.getReferenceById(eventReportDto.idEventRating());
+        ReportEventRating reportEventRating = new ReportEventRating();
+        reportEventRating.setDescription(eventReportDto.description());
+        reportEventRating.setActive(false);
+        reportEventRating.setReviewed(false);
+        reportEventRating.setReporterUser(user);
+        reportEventRating.setEventRating(referenceById);
+        user.getReportEventRatings().add(reportEventRating);
+        referenceById.getReportEventRatings().add(reportEventRating);
+//        userRepository.save(user);
+//        eventRatingRepository.save(referenceById);
+        reportEventRatingRepository.save(reportEventRating);
+    }
 
+    public void reportUserRating(UserRatingReportDto userRatingReportDto) {
+        User user = userRepository.findByTokenValue(userRatingReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+        UserRating referenceById = userRatingRepository.getReferenceById(userRatingReportDto.idUserRating());
+        ReportUserRating reportUserRating = new ReportUserRating();
+        reportUserRating.setUserRating(referenceById);
+        reportUserRating.setUserRatingReporter(user);
+        reportUserRating.setActive(false);
+        reportUserRating.setDescription(userRatingReportDto.description());
+        reportUserRating.setReviewed(false);
+        reportUserRatingRepository.save(reportUserRating);
+//        userRepository.save(user);
+    }
 }

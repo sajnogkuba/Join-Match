@@ -3,6 +3,7 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.service.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,8 +77,40 @@ public class EventController {
     {
         return ResponseEntity.ok(eventService.getEventsForUser(token));
     }
+
+    @GetMapping("/byParticipant")
+    public ResponseEntity<Page<EventResponseDto>> getParticipatedEvents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "eventDate") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction,
+            @RequestParam String token)
+    {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<EventResponseDto> events = eventService.getParticipatedEvents(
+                pageable,
+                sortBy,
+                direction,
+                token
+        );
+
+        if (events.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(events);
+    }
     @GetMapping("/mutualEvents")
     public ResponseEntity<List<EventResponseDto>> getMutualEvents(@RequestParam Integer idLogUser, Integer idViewedUser){
         return ResponseEntity.ok(eventService.getMutualEvents(idLogUser,idViewedUser));
     }
+    @PostMapping("/report/event")
+    public ResponseEntity<Void> reportEvent(@RequestBody EventReportDto eventReportDto){
+        try {
+        eventService.reportEvent(eventReportDto);
+        }catch (IllegalArgumentException exception){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+
 }

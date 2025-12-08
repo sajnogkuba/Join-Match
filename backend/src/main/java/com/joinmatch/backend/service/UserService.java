@@ -9,14 +9,13 @@ import com.joinmatch.backend.dto.Auth.LoginRequest;
 import com.joinmatch.backend.dto.Auth.RegisterRequest;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
 import com.joinmatch.backend.dto.Moderator.GetUsersDto;
+import com.joinmatch.backend.dto.Reports.UserReportDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.JoinMatchToken;
+import com.joinmatch.backend.model.ReportUser;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
-import com.joinmatch.backend.repository.FriendRequestRepository;
-import com.joinmatch.backend.repository.FriendshipRepository;
-import com.joinmatch.backend.repository.JoinMatchTokenRepository;
-import com.joinmatch.backend.repository.UserRepository;
+import com.joinmatch.backend.repository.*;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
 import jakarta.transaction.Transactional;
@@ -41,10 +40,10 @@ public class UserService {
     private final JoinMatchTokenRepository joinMatchTokenRepository;
     private final FriendshipRepository friendshipRepository;
     private final GoogleTokenVerifier tokenVerifier;
+    private final ReportUserRepository reportUserRepository;
 
 
     public void register(RegisterRequest request) {
-        // Sprawdź, czy email już istnieje
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new RuntimeException("User already exists");
         }
@@ -315,4 +314,29 @@ public class UserService {
         TokenSupportObject tokenSupportObject = issueTokensFor(user);
        return new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
     }
+
+    public void reportUser(UserReportDto userReportDto) {
+        User user = userRepository.findByTokenValue(userReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
+        User suspect = userRepository.findById(userReportDto.reportedUserId()).orElseThrow(() -> new IllegalArgumentException("Brak usera"));
+        ReportUser reportUser = new ReportUser();
+        reportUser.setSuspectUser(suspect);
+        reportUser.setReporterUser(user);
+        reportUser.setActive(false);
+        reportUser.setDescription(userReportDto.description());
+        suspect.getSuspectUser().add(reportUser);
+        user.getUserReportSender().add(reportUser);
+//        userRepository.save(user);
+//        userRepository.save(suspect);
+        reportUserRepository.save(reportUser);
+    }
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email " + email));
+    }
+
+    public User findById(Integer id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id " + id));
+    }
+
 }

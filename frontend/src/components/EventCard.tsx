@@ -1,25 +1,7 @@
-// src/components/EventCard.tsx
 import React from 'react'
 import { Link } from 'react-router-dom'
-
-// Typ wydarzenia
-interface Participant {
-	initials: string
-	color: string
-}
-
-interface Event {
-	id: number
-	title: string
-	location: string
-	date: Date
-	spots: number
-	spotsLeft: number
-	rating: number
-	reviews: number
-	description: string
-	participants: Participant[]
-}
+import { MapPin, CalendarDays, Users, Banknote } from 'lucide-react'
+import type { Event } from '../Api/types'
 
 interface EventCardProps {
 	event: Event
@@ -27,7 +9,8 @@ interface EventCardProps {
 
 const EventCard: React.FC<EventCardProps> = ({ event }) => {
 	// Formatowanie daty
-	const formatDate = (date: Date) => {
+	const formatDate = (dateStr: string | Date) => {
+		const date = new Date(dateStr)
 		return new Intl.DateTimeFormat('pl-PL', {
 			day: 'numeric',
 			month: 'long',
@@ -36,92 +19,80 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
 		}).format(date)
 	}
 
+	// Skracanie opisu
+	const truncateDescription = (text?: string, length = 100) => {
+		if (!text) return 'Brak dodatkowego opisu.'
+		return text.length > length ? text.substring(0, length) + '...' : text
+	}
+
+	// Obliczanie wolnych miejsc
+	const spotsLeft = event.numberOfParticipants - event.bookedParticipants
+
 	return (
-		<div className='bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition'>
-			<div className='p-6'>
-				<div className='flex justify-between items-start mb-4'>
-					<div>
-						<h3 className='text-xl font-semibold text-gray-900 mb-1'>
-							<Link to={`/event/${event.id}`} className='hover:underline'>
-								{event.title}
-							</Link>
-						</h3>
-						<div className='flex items-center text-sm text-gray-600'>
-							<svg
-								xmlns='http://www.w3.org/2000/svg'
-								className='h-4 w-4 mr-1'
-								fill='none'
-								viewBox='0 0 24 24'
-								stroke='currentColor'>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d='M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z'
-								/>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d='M15 11a3 3 0 11-6 0 3 3 0 016 0z'
-								/>
-							</svg>
-							<span>{event.location}</span>
-						</div>
+		<div className='group relative flex flex-col bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 hover:shadow-xl hover:shadow-violet-900/10 transition-all duration-300 h-full'>
+			{/* Obrazek / Placeholder */}
+			<div className='h-48 w-full bg-zinc-800 overflow-hidden relative'>
+				{event.imageUrl ? (
+					<img
+						src={event.imageUrl}
+						alt={event.eventName}
+						className='w-full h-full object-cover group-hover:scale-105 transition duration-500'
+					/>
+				) : (
+					<div className='w-full h-full flex flex-col items-center justify-center text-zinc-600 bg-zinc-800/80'>
+						<span className='text-4xl'>⚽</span>
 					</div>
-					<div className='bg-gray-100 px-3 py-1 rounded-full text-sm font-medium'>
-						{event.spotsLeft} / {event.spots}
-					</div>
+				)}
+
+				{/* Badge Cena */}
+				<div className='absolute top-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-700/50 flex items-center gap-1.5'>
+					<Banknote size={14} className='text-emerald-400' />
+					<span className='text-sm font-semibold text-white'>{event.cost > 0 ? `${event.cost} PLN` : 'FREE'}</span>
 				</div>
 
-				<div className='flex items-center mb-4'>
-					<div className='flex items-center text-yellow-500 mr-2'>
-						{[...Array(5)].map((_, i) => (
-							<svg
-								key={i}
-								xmlns='http://www.w3.org/2000/svg'
-								className='h-4 w-4'
-								viewBox='0 0 20 20'
-								fill={i < Math.floor(event.rating) ? 'currentColor' : 'none'}
-								stroke='currentColor'>
-								<path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z' />
-							</svg>
-						))}
-					</div>
-					<span className='text-sm text-gray-600'>
-						{event.rating} ({event.reviews} reviews)
-					</span>
-				</div>
-
-				<p className='text-gray-700 mb-6'>{event.description}</p>
-
-				<div className='flex justify-between items-center'>
-					<div className='flex -space-x-2'>
-						{event.participants.slice(0, 4).map((participant, index) => (
-							<div
-								key={index}
-								className={`${participant.color} w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium border-2 border-white`}>
-								{participant.initials}
-							</div>
-						))}
-						{event.participants.length > 4 && (
-							<div className='bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center text-gray-600 text-xs font-medium border-2 border-white'>
-								+{event.participants.length - 4}
-							</div>
-						)}
-					</div>
-
-					<div className='text-sm text-gray-500'>{formatDate(event.date)}</div>
-				</div>
-
-				<div className='mt-6'>
-					<Link
-						to={`/event/${event.id}`}
-						className='block w-full text-center bg-purple-700 hover:bg-purple-800 text-white py-2 px-4 rounded-full transition'>
-						Zobacz więcej
-					</Link>
+				{/* Badge Sport */}
+				<div className='absolute top-3 left-3 bg-violet-600/90 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold text-white uppercase tracking-wide shadow-lg'>
+					{event.sportTypeName}
 				</div>
 			</div>
+
+			{/* Treść */}
+			<div className='p-5 flex flex-col flex-grow'>
+				<div className='mb-3'>
+					<h3 className='text-xl font-bold text-white leading-tight mb-1 group-hover:text-violet-400 transition-colors'>
+						<Link to={`/event/${event.eventId}`}>{event.eventName}</Link>
+					</h3>
+					<div className='flex items-center text-zinc-400 text-sm'>
+						<MapPin size={14} className='mr-1.5 text-zinc-500' />
+						<span className='truncate'>{event.city || event.sportObjectName}</span>
+					</div>
+				</div>
+
+				{/* Opis */}
+				<p className='text-zinc-400 text-sm mb-5 line-clamp-2 flex-grow'>{truncateDescription(event.description)}</p>
+
+				{/* Info dolne */}
+				<div className='flex items-center justify-between pt-4 border-t border-zinc-800/50 mt-auto'>
+					<div className='flex items-center text-zinc-300 text-sm'>
+						<CalendarDays size={16} className='mr-2 text-violet-400' />
+						{formatDate(event.eventDate)}
+					</div>
+
+					<div
+						className={`flex items-center gap-1.5 text-sm font-medium px-2.5 py-1 rounded-lg border ${
+							spotsLeft <= 3 && spotsLeft > 0
+								? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+								: 'bg-zinc-800 border-zinc-700 text-zinc-300'
+						}`}>
+						<Users size={14} />
+						<span>
+							{event.bookedParticipants}/{event.numberOfParticipants}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<Link to={`/event/${event.eventId}`} className='absolute inset-0 z-10' aria-label={`Zobacz ${event.eventName}`} />
 		</div>
 	)
 }

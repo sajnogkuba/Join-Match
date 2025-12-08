@@ -4,6 +4,8 @@ import com.joinmatch.backend.dto.Message.ChatMessageDto;
 import com.joinmatch.backend.dto.Message.ConversationDto;
 import com.joinmatch.backend.dto.Message.ConversationPreviewDto;
 import com.joinmatch.backend.model.Conversation;
+import com.joinmatch.backend.model.Message;
+import com.joinmatch.backend.repository.MessageRepository;
 import com.joinmatch.backend.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ public class ChatController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MessageRepository messageRepository;
 
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Payload ChatMessageDto chatMessage) {
@@ -64,6 +67,33 @@ public class ChatController {
     @PostMapping("/event/{eventId}")
     public ResponseEntity<ConversationDto> createEventChat(@PathVariable Integer eventId) {
         return ResponseEntity.ok(chatService.createEventConversation(eventId));
+    }
+
+    @PostMapping("/conversations/{conversationId}/read")
+    public ResponseEntity<Void> markRead(
+            @PathVariable Integer conversationId,
+            @RequestParam Integer userId,
+            @RequestParam(required = false) Integer lastMessageId
+    ) {
+        if (lastMessageId == null) {
+            Message last = messageRepository
+                    .findTopByConversationIdOrderByCreatedAtDesc(conversationId)
+                    .orElse(null);
+
+            if (last != null) {
+                lastMessageId = last.getId();
+            }
+        }
+
+        chatService.markMessagesAsRead(conversationId, userId, lastMessageId);
+        return ResponseEntity.ok().build();
+    }
+
+
+    @GetMapping("/conversations/unread-count")
+    @ResponseBody
+    public long getTotalUnread(@RequestParam Integer userId) {
+        return chatService.countTotalUnread(userId);
     }
 
 }

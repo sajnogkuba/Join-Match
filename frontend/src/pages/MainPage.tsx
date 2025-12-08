@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { motion } from 'framer-motion'
-import { MapPin, CalendarDays, Bookmark, Users } from 'lucide-react'
+import { MapPin, CalendarDays, Bookmark, Users, AlertTriangle } from 'lucide-react'
 import BackgroundImage from '../assets/Background.jpg'
 import AlertModal from '../components/AlertModal'
 import SportTypeFilter from '../components/SportTypeFilter'
@@ -264,81 +264,107 @@ const MainPage: React.FC = () => {
 						<div className="text-center py-16 text-red-400">{error}</div>
 					) : events.length > 0 ? (
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-							{events.map(event => (
-								<motion.div
-									key={event.eventId}
-									initial={{ opacity: 0, y: 30 }}
-									whileInView={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.4 }}
-									className="group relative overflow-hidden rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-violet-600/40 transition-all hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(139,92,246,0.2)]"
-								>
-									<Link to={`/event/${event.eventId}`} className="block relative h-48 w-full bg-zinc-800 overflow-hidden">
-										{event.imageUrl && event.imageUrl.trim() !== '' ? (
-											<img
-												src={event.imageUrl}
-												alt={event.eventName}
-												onError={e => {
-													const target = e.currentTarget as HTMLImageElement
-													target.style.display = 'none'
-													const fallback = target.nextElementSibling as HTMLElement
-													if (fallback) fallback.style.display = 'flex'
-												}}
-												className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-											/>
-										) : null}
-										<div 
-											className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${event.imageUrl && event.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
-											style={{ display: event.imageUrl && event.imageUrl.trim() !== '' ? 'none' : 'flex' }}
-										>
-											<div className="text-center text-zinc-400">
-												<div className="text-4xl mb-2">JoinMatch</div>
-												<div className="text-sm font-medium">{event.sportTypeName}</div>
+							{events.map(event => {
+								const isBanned = event.isBanned === true
+								return (
+									<motion.div
+										key={event.eventId}
+										initial={{ opacity: 0, y: 30 }}
+										whileInView={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.4 }}
+										className={`group relative overflow-hidden rounded-2xl bg-zinc-900/70 border border-zinc-800 transition-all ${
+											isBanned 
+												? "opacity-60 grayscale cursor-not-allowed" 
+												: "hover:border-violet-600/40 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(139,92,246,0.2)]"
+										}`}
+									>
+										{isBanned ? (
+											<div className="block relative h-48 w-full bg-zinc-800 overflow-hidden">
+												<div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800">
+													<div className="text-center text-zinc-500">
+														<AlertTriangle className="mx-auto mb-2" size={32} />
+														<div className="text-sm font-medium">Zablokowane</div>
+													</div>
+												</div>
+											</div>
+										) : (
+											<Link to={`/event/${event.eventId}`} className="block relative h-48 w-full bg-zinc-800 overflow-hidden">
+												{event.imageUrl && event.imageUrl.trim() !== '' ? (
+													<img
+														src={event.imageUrl}
+														alt={event.eventName}
+														onError={e => {
+															const target = e.currentTarget as HTMLImageElement
+															target.style.display = 'none'
+															const fallback = target.nextElementSibling as HTMLElement
+															if (fallback) fallback.style.display = 'flex'
+														}}
+														className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+													/>
+												) : null}
+												<div 
+													className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${event.imageUrl && event.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+													style={{ display: event.imageUrl && event.imageUrl.trim() !== '' ? 'none' : 'flex' }}
+												>
+													<div className="text-center text-zinc-400">
+														<div className="text-4xl mb-2">JoinMatch</div>
+														<div className="text-sm font-medium">{event.sportTypeName}</div>
+													</div>
+												</div>
+											</Link>
+										)}
+										<div className="p-5">
+											<h3 className={`text-lg font-semibold mb-1 ${isBanned ? "text-zinc-500" : "text-white"}`}>
+												{event.eventName}
+											</h3>
+											<p className="text-sm text-zinc-500 mb-2 flex items-center gap-2">
+												<MapPin size={14} /> {event.sportObjectName}
+											</p>
+											<p className="text-sm text-zinc-500 mb-2 flex items-center gap-2">
+												<CalendarDays size={14} /> {dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}
+											</p>
+											<p className="text-sm text-zinc-500 mb-3 flex items-center gap-2">
+												<Users size={14} /> {(event as any).bookedParticipants || 0}/{event.numberOfParticipants}
+											</p>
+											<div className="flex justify-between items-center">
+												{isBanned ? (
+													<div className="text-zinc-500 text-sm">Zablokowane</div>
+												) : (
+													<>
+														<button
+															onClick={() => handleSaveEvent(event.eventId)}
+															className={`flex items-center gap-1 text-sm ${savedEventIds.has(event.eventId)
+																? 'text-violet-400' : 'text-zinc-400 hover:text-white'
+																}`}
+														>
+															<Bookmark size={14} /> {savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}
+														</button>
+														{(() => {
+															const isJoined = joinedEventIds.has(event.eventId)
+															const isFull = ((event as any).bookedParticipants || 0) >= event.numberOfParticipants && !isJoined
+															return (
+																<button
+																	onClick={() => handleSignUp(event.eventId)}
+																	disabled={isFull}
+																	className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+																		isJoined
+																			? 'bg-red-600 hover:bg-red-500'
+																			: isFull
+																			? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																			: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
+																	}`}
+																>
+																	{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+																</button>
+															)
+														})()}
+													</>
+												)}
 											</div>
 										</div>
-									</Link>
-									<div className="p-5">
-										<h3 className="text-lg font-semibold text-white mb-1">{event.eventName}</h3>
-										<p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
-											<MapPin size={14} /> {event.sportObjectName}
-										</p>
-										<p className="text-sm text-zinc-400 mb-2 flex items-center gap-2">
-											<CalendarDays size={14} /> {dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}
-										</p>
-										<p className="text-sm text-zinc-400 mb-3 flex items-center gap-2">
-											<Users size={14} /> {(event as any).bookedParticipants || 0}/{event.numberOfParticipants}
-										</p>
-										<div className="flex justify-between items-center">
-											<button
-												onClick={() => handleSaveEvent(event.eventId)}
-												className={`flex items-center gap-1 text-sm ${savedEventIds.has(event.eventId)
-													? 'text-violet-400' : 'text-zinc-400 hover:text-white'
-													}`}
-											>
-												<Bookmark size={14} /> {savedEventIds.has(event.eventId) ? 'Zapisano' : 'Zapisz'}
-											</button>
-											{(() => {
-												const isJoined = joinedEventIds.has(event.eventId)
-												const isFull = ((event as any).bookedParticipants || 0) >= event.numberOfParticipants && !isJoined
-												return (
-													<button
-														onClick={() => handleSignUp(event.eventId)}
-														disabled={isFull}
-														className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-															isJoined
-																? 'bg-red-600 hover:bg-red-500'
-																: isFull
-																? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
-																: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
-														}`}
-													>
-														{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
-													</button>
-												)
-											})()}
-										</div>
-									</div>
-								</motion.div>
-							))}
+									</motion.div>
+								)
+							})}
 						</div>
 					) : (
 						<div className="text-center py-16 text-zinc-400">Brak wydarzeń spełniających kryteria.</div>

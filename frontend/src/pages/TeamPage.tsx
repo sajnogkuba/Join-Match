@@ -11,6 +11,7 @@ import Avatar from '../components/Avatar'
 import SportTypeFilter from '../components/SportTypeFilter'
 import TeamInfoTab from '../components/TeamInfoTab'
 import TeamDiscussionTab from '../components/TeamDiscussionTab'
+import ReportTeamModal from '../components/ReportTeamModal'
 import { MapPin, Users, Loader2, AlertTriangle, Search, X, UserPlus, Clock, Pencil, Camera, Check } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -52,6 +53,9 @@ const TeamPage: React.FC = () => {
 	const [deletingTeam, setDeletingTeam] = useState(false)
 	const [deleteTeamReason, setDeleteTeamReason] = useState('')
 
+	// 🔴 Zgłaszanie drużyny – modal
+	const [showReportTeamModal, setShowReportTeamModal] = useState(false)
+
 	// States for team editing
 	const [isEditing, setIsEditing] = useState(false)
 	const [editedName, setEditedName] = useState('')
@@ -65,6 +69,7 @@ const TeamPage: React.FC = () => {
 	const [saveError, setSaveError] = useState<string | null>(null)
 	const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 	const [activeTab, setActiveTab] = useState<'informacje' | 'dyskusja'>('informacje')
+	const [showBannedAlert, setShowBannedAlert] = useState(false)
 
 	// Check URL query parameter for tab
 	useEffect(() => {
@@ -85,6 +90,12 @@ const TeamPage: React.FC = () => {
 			try {
 				const { data } = await api.get<TeamDetails>(`/team/${id}`)
 				setTeam(data)
+
+				if (data.isBanned) {
+					setShowBannedAlert(true)
+					setLoading(false)
+					return
+				}
 			} catch (err) {
 				console.error('❌ Błąd pobierania szczegółów drużyny:', err)
 				setError('Nie udało się pobrać szczegółów drużyny')
@@ -170,7 +181,6 @@ const TeamPage: React.FC = () => {
 			})
 		} catch (error: any) {
 			console.error('Error sending team request:', error)
-			// Można dodać toast notification tutaj
 			if (error.response?.status === 400 || error.response?.status === 409) {
 				alert('Nie można wysłać zaproszenia. Użytkownik może już mieć zaproszenie do tej drużyny.')
 			} else {
@@ -277,7 +287,6 @@ const TeamPage: React.FC = () => {
 					params: { receiverId: currentUserId, page: 0, size: 100 },
 				})
 				.then(({ data }) => {
-					// Znajdź zaproszenie dla tej drużyny ze statusem PENDING
 					if (data && data.content && Array.isArray(data.content)) {
 						const pendingRequest = data.content.find(req => req.teamId === team.idTeam && req.status === 'PENDING')
 						setUserTeamRequest(pendingRequest || null)
@@ -333,9 +342,7 @@ const TeamPage: React.FC = () => {
 	const handleAcceptTeamRequest = async (requestId: number) => {
 		try {
 			await api.patch(`/team-request/${requestId}/accept`)
-			// Po akceptacji usunąć zaproszenie i odświeżyć listę członków
 			setUserTeamRequest(null)
-			// Odśwież listę członków
 			await fetchTeamMembers()
 		} catch (error: any) {
 			console.error('Error accepting team request:', error)
@@ -346,7 +353,6 @@ const TeamPage: React.FC = () => {
 	const handleRejectTeamRequest = async (requestId: number) => {
 		try {
 			await api.delete(`/team-request/${requestId}`)
-			// Po odrzuceniu usunąć zaproszenie
 			setUserTeamRequest(null)
 		} catch (error: any) {
 			console.error('Error rejecting team request:', error)
@@ -360,7 +366,6 @@ const TeamPage: React.FC = () => {
 		setLeavingTeam(true)
 		try {
 			await api.delete(`/user-team/${team.idTeam}/members/${currentUserId}/quit`)
-			// Po sukcesie przekieruj do strony drużyn
 			navigate('/teams')
 		} catch (error: any) {
 			console.error('Error leaving team:', error)
@@ -383,7 +388,6 @@ const TeamPage: React.FC = () => {
 					reason: removeMemberReason.trim() || null,
 				},
 			})
-			// Po sukcesie odśwież listę członków
 			await fetchTeamMembers()
 			setShowRemoveMemberModal(false)
 			setMemberToRemove(null)
@@ -428,17 +432,14 @@ const TeamPage: React.FC = () => {
 	const handleEnterEditMode = async () => {
 		if (!team) return
 
-		// Fetch sport types to find current sport ID
 		try {
 			const { data } = await api.get<SportType[]>('/sport-type')
-			// Find sport ID by name
 			const currentSport = data.find(s => s.name === team.sportType)
 			setEditedSportTypeId(currentSport?.id || null)
 		} catch (error) {
 			console.error('Error fetching sport types:', error)
 		}
 
-		// Initialize edit values
 		setEditedName(team.name)
 		setEditedDescription(team.description || '')
 		setEditedCity(team.city)
@@ -469,11 +470,9 @@ const TeamPage: React.FC = () => {
 	const handleSaveTeam = async () => {
 		if (!team) return
 
-		// Clear previous messages
 		setSaveError(null)
 		setSaveSuccess(null)
 
-		// Validation
 		if (!editedName.trim() || editedName.trim().length < 2) {
 			setSaveError('Nazwa drużyny musi mieć co najmniej 2 znaki.')
 			return
@@ -503,7 +502,6 @@ const TeamPage: React.FC = () => {
 		try {
 			let photoUrl = team.photoUrl
 
-			// Upload new photo if selected
 			if (selectedFile) {
 				setUploadingImage(true)
 				const formData = new FormData()
@@ -515,7 +513,6 @@ const TeamPage: React.FC = () => {
 				setUploadingImage(false)
 			}
 
-			// Call PUT endpoint to update team
 			await api.put(`/team/${team.idTeam}`, {
 				name: editedName.trim(),
 				city: editedCity.trim(),
@@ -525,14 +522,11 @@ const TeamPage: React.FC = () => {
 				photoUrl,
 			})
 
-			// Refresh team data from server
 			const { data: teamDetails } = await api.get<TeamDetails>(`/team/${team.idTeam}`)
 			setTeam(teamDetails)
 
-			// Show success message
 			setSaveSuccess('Zmiany zostały zapisane pomyślnie!')
 
-			// Exit edit mode after a short delay
 			setTimeout(() => {
 				handleCancelEdit()
 				setSaveSuccess(null)
@@ -562,6 +556,24 @@ const TeamPage: React.FC = () => {
 					</div>
 				</div>
 			</main>
+		)
+	}
+
+	if (team?.isBanned || showBannedAlert) {
+		return (
+			<>
+				<div className='min-h-screen bg-[#1f2632]' />
+				<AlertModal
+					isOpen={true}
+					onClose={() => {
+						setShowBannedAlert(false)
+						navigate(-1)
+					}}
+					title='Drużyna zablokowana'
+					message='Niestety ta drużyna została zablokowana, więc nie można wyświetlić jej szczegółów.'
+					variant='error'
+				/>
+			</>
 		)
 	}
 
@@ -841,6 +853,7 @@ const TeamPage: React.FC = () => {
 								alert('Nie udało się otworzyć czatu drużyny.')
 							}
 						}}
+						onReportTeam={() => setShowReportTeamModal(true)}
 					/>
 				)}
 				{activeTab === 'dyskusja' && (
@@ -1045,7 +1058,6 @@ const TeamPage: React.FC = () => {
 				</div>
 			)}
 
-			{/* Modal potwierdzenia opuszczania drużyny */}
 			<AlertModal
 				isOpen={showLeaveTeamModal}
 				onClose={() => setShowLeaveTeamModal(false)}
@@ -1059,7 +1071,6 @@ const TeamPage: React.FC = () => {
 				isLoading={leavingTeam}
 			/>
 
-			{/* Modal potwierdzenia usunięcia członka */}
 			<AlertModal
 				isOpen={showRemoveMemberModal}
 				onClose={() => {
@@ -1087,7 +1098,6 @@ const TeamPage: React.FC = () => {
 				textInputRequired={false}
 			/>
 
-			{/* Modal potwierdzenia usunięcia drużyny */}
 			<AlertModal
 				isOpen={showDeleteTeamModal}
 				onClose={() => {
@@ -1112,6 +1122,13 @@ const TeamPage: React.FC = () => {
 				textInputValue={deleteTeamReason}
 				onTextInputChange={setDeleteTeamReason}
 				textInputRequired={false}
+			/>
+
+			<ReportTeamModal
+				isOpen={showReportTeamModal}
+				onClose={() => setShowReportTeamModal(false)}
+				teamId={team.idTeam}
+				teamName={team.name}
 			/>
 		</main>
 	)

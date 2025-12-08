@@ -17,7 +17,9 @@ public class ReportUser {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User userId;
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User suspectUser;
 
     @Column(length = 100)
     private String description;
@@ -29,5 +31,7 @@ public class ReportUser {
 
     @ManyToOne
     @JoinColumn(name = "reporter_user_id", nullable = false)
-    private User reporterUserId;
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User reporterUser;
 }

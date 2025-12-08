@@ -12,6 +12,10 @@ import RatingCard from '../components/RatingCard'
 import StarRatingInput from '../components/StarRatingInput'
 import { formatEventDate, parseEventDate } from '../utils/formatDate'
 import type { EventRatingResponse } from '../Api/types/Rating'
+import ReportEventModal from '../components/ReportEventModal'
+import ReportRatingModal from '../components/ReportRatingModal'
+import AlertModal from '../components/AlertModal'
+import InviteToEventModal from '../components/InviteToEventModal'
 import {
 	Share2,
 	Shield,
@@ -24,6 +28,11 @@ import {
 	AlertTriangle,
 	MessageCircle,
 	CalendarDays,
+	Flag,
+	Check,
+	X,
+	CheckCircle,
+	XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
@@ -34,21 +43,38 @@ const EventPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 
+	const [showReportModal, setShowReportModal] = useState(false)
+	const [isSendingReport, setIsSendingReport] = useState(false)
+
+	const [showRatingReportModal, setShowRatingReportModal] = useState(false)
+	const [ratingToReport, setRatingToReport] = useState<EventRatingResponse | null>(null)
+	const [isSendingRatingReport, setIsSendingRatingReport] = useState(false)
+
 	const [event, setEvent] = useState<EventDetails | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
-	// user email will be fetched from backend using access token
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 
 	const [participants, setParticipants] = useState<Participant[]>([])
+	const confirmedParticipants = participants.filter(p => p.attendanceStatusName === 'Zapisany')
+	const pendingParticipants = participants.filter(p => p.attendanceStatusName === 'Oczekujący')
+	const rejectedParticipants = participants.filter(p => p.attendanceStatusName === 'Odrzucony')
+	const invitedParticipants = participants.filter(p => p.attendanceStatusName === 'Zaproszony')
+	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
+	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
+	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
+
+	const visibleParticipantsCount = confirmedParticipants.length
+
 	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
-	const [showShareToast, setShowShareToast] = useState(false)
 	const [showShareModal, setShowShareModal] = useState(false)
 	const [showDetailsAccordion, setShowDetailsAccordion] = useState(false)
 	const [showParticipants, setShowParticipants] = useState(false)
+	const [showInviteModal, setShowInviteModal] = useState(false)
+	const [isSendingInvite, setIsSendingInvite] = useState(false)
 
 	const [eventRatings, setEventRatings] = useState<EventRatingResponse[]>([])
 	const [isSending, setIsSending] = useState(false)
@@ -59,12 +85,130 @@ const EventPage: React.FC = () => {
 	const [editRatingValue, setEditRatingValue] = useState<number>(0)
 	const [editRatingComment, setEditRatingComment] = useState<string>('')
 	const [hasRatedOrganizer, setHasRatedOrganizer] = useState(false)
+	const [showBannedAlert, setShowBannedAlert] = useState(false)
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+
+	const getSkillLevelValue = (level?: string) => {
+		switch (level?.toLowerCase()) {
+			case 'amator':
+				return 1
+			case 'rekreacyjny':
+				return 2
+			case 'średniozaawansowany':
+				return 3
+			case 'zaawansowany':
+				return 4
+			case 'profesjonalista':
+				return 5
+			default:
+				return 1
+		}
+	}
+
+	// --- HANDLER: ZGŁOSZENIE WYDARZENIA ---
+	const handleSubmitReport = async (message: string) => {
+		if (!id) return
+
+		const token = localStorage.getItem('accessToken')
+		if (!token) {
+			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.')
+			return
+		}
+
+		try {
+			setIsSendingReport(true)
+
+			await axiosInstance.post('/event/report/event', {
+				token,
+				idEvent: Number(id),
+				description: message,
+			})
+
+			toast.success('Dziękujemy, zgłoszenie zostało wysłane do moderacji.')
+			setShowReportModal(false)
+		} catch (e: any) {
+			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e)
+			if (e?.response?.status === 400) {
+				toast.error('Nie udało się wysłać zgłoszenia (400).')
+			} else {
+				toast.error('Nie udało się wysłać zgłoszenia.')
+			}
+		} finally {
+			setIsSendingReport(false)
+		}
+	}
+
+	const handleSubmitRatingReport = async (message: string) => {
+		if (!ratingToReport) return
+
+		const token = localStorage.getItem('accessToken')
+		if (!token) {
+			toast.error('Musisz być zalogowany, aby zgłosić ocenę.')
+			return
+		}
+
+		try {
+			setIsSendingRatingReport(true)
+			await axiosInstance.post('/ratings/report/eventRating', {
+				token,
+				idEventRating: ratingToReport.id,
+				description: message,
+			})
+
+			toast.success('Dziękujemy, zgłoszenie oceny zostało wysłane do moderacji.')
+			setShowRatingReportModal(false)
+			setRatingToReport(null)
+		} catch (e: any) {
+			console.error('❌ Błąd wysyłania zgłoszenia oceny wydarzenia:', e)
+			if (e?.response?.status === 400) {
+				toast.error('Nie udało się wysłać zgłoszenia (400).')
+			} else {
+				toast.error('Nie udało się wysłać zgłoszenia oceny.')
+			}
+		} finally {
+			setIsSendingRatingReport(false)
+		}
+	}
+
+	const handleAcceptInvitation = async () => {
+		if (!userEmail || !id) return
+		try {
+			await axiosInstance.post('/user-event/invitation/accept', {
+				userEmail,
+				eventId: Number(id),
+			})
+			toast.success('Zaproszenie przyjęte! Witamy w wydarzeniu.')
+			await fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd akceptacji zaproszenia:', err)
+			toast.error('Nie udało się zaakceptować zaproszenia.')
+		}
+	}
+
+	const handleDeclineInvitation = async () => {
+		if (!userEmail || !id) return
+		try {
+			await axiosInstance.post('/user-event/invitation/decline', {
+				userEmail,
+				eventId: Number(id),
+			})
+			toast.success('Zaproszenie odrzucone.')
+			await fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd odrzucania zaproszenia:', err)
+			toast.error('Nie udało się odrzucić zaproszenia.')
+		}
+	}
+
+	const openRatingReportModal = (rating: EventRatingResponse) => {
+		setRatingToReport(rating)
+		setShowRatingReportModal(true)
+	}
 
 	useEffect(() => {
 		const checkOrganizerRated = async () => {
@@ -124,7 +268,8 @@ const EventPage: React.FC = () => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
 			setParticipants(data || [])
-			if (userEmail && data?.some(p => p.userEmail === userEmail)) setJoined(true)
+			if (userEmail && data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany'))
+				setJoined(true)
 			else setJoined(false)
 		} catch (err) {
 			console.error('❌ Błąd pobierania uczestników:', err)
@@ -136,6 +281,7 @@ const EventPage: React.FC = () => {
 		try {
 			const res = await axiosInstance.get(`/ratings/event/${id}`)
 			setEventRatings(res.data || [])
+			console.log('EVENT RATINGS:', res.data)
 		} catch (e) {
 			console.error('❌ Błąd pobierania ocen wydarzenia:', e)
 			setEventRatings([])
@@ -182,6 +328,32 @@ const EventPage: React.FC = () => {
 			window.open(url, '_blank')
 		} else {
 			toast.error('Brak danych lokalizacji dla tego obiektu')
+		}
+	}
+
+	const handleApproveUser = async (userId: number) => {
+		try {
+			await axiosInstance.post(`/user-event/${id}/approve`, null, {
+				params: { userId },
+			})
+			toast.success('Użytkownik zaakceptowany!')
+			fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd akceptacji:', err)
+			toast.error('Nie udało się zaakceptować użytkownika.')
+		}
+	}
+
+	const handleRejectUser = async (userId: number) => {
+		try {
+			await axiosInstance.post(`/user-event/${id}/reject`, null, {
+				params: { userId },
+			})
+			toast.success('Użytkownik odrzucony.')
+			fetchParticipants(Number(id))
+		} catch (err) {
+			console.error('❌ Błąd odrzucania:', err)
+			toast.error('Nie udało się odrzucić użytkownika.')
 		}
 	}
 
@@ -264,7 +436,6 @@ const EventPage: React.FC = () => {
 		if (id) fetchEventRatings()
 	}, [id])
 
-	// ---------------- FETCH EVENT + PARTICIPANTS ----------------
 	useEffect(() => {
 		if (!id) {
 			setError('Nieprawidłowy identyfikator wydarzenia')
@@ -277,9 +448,14 @@ const EventPage: React.FC = () => {
 				const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
 				setEvent(data)
 
+				if (data.isBanned) {
+					setShowBannedAlert(true)
+					setLoading(false)
+					return
+				}
+
 				await fetchParticipants(Number(id))
 
-				// sprawdź, czy zapisany
 				if (userEmail) {
 					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
 					if (savedRes.data?.some?.((s: any) => s.eventId === Number(id))) {
@@ -297,28 +473,26 @@ const EventPage: React.FC = () => {
 		fetchEvent()
 	}, [id, userEmail])
 
-	// ---------------- JOIN / LEAVE EVENT ----------------
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
 		try {
-			if (joined) {
+			if (joined || isPending) {
 				await axiosInstance.delete(`/user-event`, {
-					data: { userEmail, eventId: Number(id), attendanceStatusId: 1 },
+					data: { userEmail, eventId: Number(id) },
 				})
 			} else {
-				await axiosInstance.post(`/user-event`, {
+				await axiosInstance.post(`/user-event/request`, {
 					userEmail,
 					eventId: Number(id),
-					attendanceStatusId: 1,
 				})
 			}
+
 			await fetchParticipants(Number(id))
 		} catch (err) {
 			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
 		}
 	}
 
-	// ---------------- SHARE ----------------
 	const handleShare = async () => {
 		try {
 			const url = window.location.href
@@ -332,14 +506,11 @@ const EventPage: React.FC = () => {
 				document.execCommand('copy')
 				document.body.removeChild(el)
 			}
-			setShowShareToast(true)
-			setTimeout(() => setShowShareToast(false), 2000)
 		} catch (e) {
 			console.error('Nie udało się skopiować linku', e)
 		}
 	}
 
-	// ---------------- SAVE / UNSAVE EVENT ----------------
 	const handleSaveEvent = async () => {
 		if (!userEmail || !id) return
 		try {
@@ -379,7 +550,28 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// ---------------- UTILS ----------------
+	const handleSendInvite = async (targetEmail: string) => {
+		if (!id || !currentUserId) return
+
+		try {
+			setIsSendingInvite(true)
+
+			await axiosInstance.post('/user-event/invite', {
+				senderId: currentUserId,
+				targetEmail,
+				eventId: Number(id),
+			})
+
+			toast.success('Zaproszenie wysłane!')
+			setShowInviteModal(false)
+		} catch (err) {
+			console.error('❌ Błąd wysyłania zaproszenia:', err)
+			toast.error('Nie udało się wysłać zaproszenia.')
+		} finally {
+			setIsSendingInvite(false)
+		}
+	}
+
 	const formatPrice = (cost: number, currency: string) =>
 		new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(cost)
 
@@ -392,18 +584,42 @@ const EventPage: React.FC = () => {
 		if (!level) return 'bg-zinc-600/20 text-zinc-300'
 
 		switch (level.toLowerCase()) {
+			case 'amator':
 			case 'niski':
 				return 'bg-emerald-500/15 text-emerald-300'
+			case 'rekreacyjny':
 			case 'średni':
 				return 'bg-amber-500/15 text-amber-300'
+			case 'średniozaawansowany':
+			case 'zaawansowany':
 			case 'wysoki':
 				return 'bg-rose-500/15 text-rose-300'
+			case 'profesjonalista':
+				return 'bg-violet-500/15 text-violet-300'
 			default:
 				return 'bg-zinc-600/20 text-zinc-300'
 		}
 	}
 
-	// ---------------- LOADING / ERROR ----------------
+	const handleTogglePayment = async (participantId: number, currentStatus: boolean, e: React.MouseEvent) => {
+		e.preventDefault()
+		if (!id || !currentUserId || event?.ownerId !== currentUserId) return
+
+		try {
+			const token = localStorage.getItem('accessToken')
+			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null, {
+				params: { token },
+			})
+
+			setParticipants(prev => prev.map(p => (p.userId === participantId ? { ...p, isPaid: !currentStatus } : p)))
+
+			toast.success(currentStatus ? 'Oznaczono jako nieopłacone' : 'Oznaczono jako opłacone')
+		} catch (err) {
+			console.error('Błąd zmiany statusu płatności:', err)
+			toast.error('Nie udało się zmienić statusu płatności')
+		}
+	}
+
 	if (loading)
 		return (
 			<div className='min-h-screen grid place-items-center bg-[#1f2632]'>
@@ -412,6 +628,23 @@ const EventPage: React.FC = () => {
 					Ładowanie wydarzenia…
 				</div>
 			</div>
+		)
+
+	if (event?.isBanned || showBannedAlert)
+		return (
+			<>
+				<div className='min-h-screen bg-[#1f2632]' />
+				<AlertModal
+					isOpen={true}
+					onClose={() => {
+						setShowBannedAlert(false)
+						navigate(-1)
+					}}
+					title='Wydarzenie zbanowane'
+					message='Niestety to wydarzenie zostało zablokowane, więc nie można wyświetlić jego szczegółów.'
+					variant='error'
+				/>
+			</>
 		)
 
 	if (error || !event)
@@ -432,18 +665,18 @@ const EventPage: React.FC = () => {
 			</div>
 		)
 
-	const spotsLeft = Math.max(0, event.numberOfParticipants - participants.length)
-	const progressPercentage = Math.min(100, (participants.length / Math.max(1, event.numberOfParticipants)) * 100)
+	const spotsLeft = Math.max(0, event.numberOfParticipants - confirmedParticipants.length)
+	const progressPercentage = Math.min(
+		100,
+		(confirmedParticipants.length / Math.max(1, event.numberOfParticipants)) * 100
+	)
 
-	// ---------------- UI ----------------
 	return (
 		<>
 			<main className='mx-auto max-w-7xl px-4 py-8 md:px-8 mt-20'>
 				<div className='rounded-3xl bg-black/60 p-5 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] ring-1 ring-zinc-800'>
-					{/* --- Nagłówek z miniaturą zdjęcia --- */}
 					<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5'>
 						<div className='flex flex-col sm:flex-row sm:items-center gap-5'>
-							{/* Miniaturka wydarzenia */}
 							{event.imageUrl && event.imageUrl.trim() !== '' ? (
 								<img
 									src={event.imageUrl}
@@ -461,7 +694,6 @@ const EventPage: React.FC = () => {
 								<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego organizatora.</p>
 							)}
 
-							{/* Tytuł i szczegóły */}
 							<div>
 								<h1 className='text-3xl font-semibold text-white'>{event.eventName}</h1>
 								{isEventPast && averageRating && (
@@ -475,7 +707,6 @@ const EventPage: React.FC = () => {
 							</div>
 						</div>
 
-						{/* Akcje */}
 						<div className='flex items-center gap-3 self-start sm:self-auto'>
 							<button
 								onClick={() => setShowShareModal(true)}
@@ -495,14 +726,12 @@ const EventPage: React.FC = () => {
 					<hr className='my-6 border-zinc-800' />
 
 					<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
-						{/* Main content */}
 						<section className='lg:col-span-2 space-y-6'>
-							{/* Zapełnienie */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-3 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Zapełnienie wydarzenia</h3>
 									<span className='text-violet-300 font-semibold'>
-										{participants.length}/{event.numberOfParticipants}
+										{confirmedParticipants.length}/{event.numberOfParticipants}
 									</span>
 								</div>
 								<div className='h-3 w-full overflow-hidden rounded-full bg-zinc-800'>
@@ -522,10 +751,9 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Uczestnicy */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-4 flex items-center justify-between'>
-									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({participants.length})</h3>
+									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({visibleParticipantsCount})</h3>
 									<button
 										onClick={() => setShowParticipants(s => !s)}
 										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
@@ -534,31 +762,110 @@ const EventPage: React.FC = () => {
 									</button>
 								</div>
 
-								<div className='mb-2 flex flex-wrap gap-2'>
-									{participants.slice(0, showParticipants ? participants.length : 8).map(p => (
+								{currentUserId === event?.ownerId && (
+									<button
+										onClick={() => setShowInviteModal(true)}
+										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200 ml-auto mb-3'>
+										+ Zaproś uczestnika
+									</button>
+								)}
+
+								{/* Pending participants - visible only to organizer */}
+								{currentUserId === event?.ownerId && pendingParticipants.length > 0 && (
+									<div className='rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 mb-4'>
+										<h4 className='text-white font-semibold mb-3'>
+											Oczekujący na akceptację ({pendingParticipants.length})
+										</h4>
+										<div className='space-y-3'>
+											{pendingParticipants.map(p => (
+												<div key={p.id} className='flex items-center justify-between bg-zinc-800/40 p-3 rounded-xl'>
+													<div className='flex items-center gap-3'>
+														<Avatar src={p.userAvatarUrl || null} name={p.userName} size='sm' />
+														<div>
+															<p className='text-white font-medium'>{p.userName}</p>
+															<p className='text-xs text-zinc-400'>{p.userEmail}</p>
+														</div>
+													</div>
+
+													<div className='flex gap-2'>
+														<button
+															onClick={() => handleApproveUser(p.userId)}
+															className='px-3 py-1 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-500'>
+															Akceptuj
+														</button>
+														<button
+															onClick={() => handleRejectUser(p.userId)}
+															className='px-3 py-1 rounded-lg bg-rose-600 text-white text-sm hover:bg-rose-500'>
+															Odrzuć
+														</button>
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+
+								<div className='mb-2 flex flex-col gap-2'>
+									{confirmedParticipants.slice(0, showParticipants ? confirmedParticipants.length : 8).map(p => (
 										<Link
 											key={p.id}
 											to={`/profile/${p.userId}`}
-											className='group flex items-center gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
-											<Avatar
-												src={p.userAvatarUrl || null}
-												name={p.userName}
-												size='sm'
-												className='ring-1 ring-zinc-700 shadow-sm'
-											/>
-											<div className='text-sm'>
-												<div className='font-medium text-white leading-tight'>
-													{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
-												</div>
-												{p.skillLevel && (
-													<div
-														className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-															p.skillLevel
-														)}`}>
-														{p.skillLevel}
+											className='group flex items-center justify-between rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
+											{/* Lewa strona: Avatar i Info */}
+											<div className='flex items-center gap-3'>
+												<Avatar
+													src={p.userAvatarUrl || null}
+													name={p.userName}
+													size='sm'
+													className='ring-1 ring-zinc-700 shadow-sm'
+												/>
+												<div className='text-sm'>
+													<div className='font-medium text-white leading-tight'>
+														{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
 													</div>
-												)}
+													{p.skillLevel && (
+														<div
+															className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+																p.skillLevel
+															)}`}>
+															{p.skillLevel}
+														</div>
+													)}
+												</div>
 											</div>
+
+											{event.cost > 0 && (
+												<div
+													onClick={e => {
+														if (currentUserId === event.ownerId) {
+															handleTogglePayment(p.userId, p.isPaid, e)
+														} else {
+															e.preventDefault()
+														}
+													}}
+													className={`
+        flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium select-none
+        transition-all
+        ${currentUserId === event.ownerId ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}
+        ${
+					p.isPaid
+						? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'
+						: 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
+				}
+      `}>
+													{p.isPaid ? (
+														<>
+															<CheckCircle size={14} className='shrink-0' />
+															<span>Opłacone</span>
+														</>
+													) : (
+														<>
+															<XCircle size={14} className='shrink-0' />
+															<span>Nieopłacone</span>
+														</>
+													)}
+												</div>
+											)}
 										</Link>
 									))}
 								</div>
@@ -573,7 +880,7 @@ const EventPage: React.FC = () => {
 								<p className='text-sm text-zinc-400 mb-4'>
 									Rozmawiaj z innymi uczestnikami wydarzenia w dedykowanym czacie grupowym.
 								</p>
-								{joined ? (
+								{joined || currentUserId === event.ownerId ? (
 									<button
 										onClick={async () => {
 											if (!id) return
@@ -601,23 +908,52 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Info grid */}
 							<div className='grid grid-cols-2 gap-4'>
+								{/* CENA */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Cena</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{formatPrice(event.cost, event.currency)}</p>
 								</div>
+
+								{/* PŁATNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Płatność</p>
-									<p className='mt-1 text-white text-lg font-semibold'>{event.paymentMethod}</p>
+									<p className='mt-1 text-white text-sm font-semibold wrap-break-word'>
+										{event.cost === 0
+											? 'Wydarzenie darmowe'
+											: event.paymentMethods && event.paymentMethods.length > 0
+											? event.paymentMethods.join(', ')
+											: 'Nie określono'}
+									</p>
 								</div>
+
+								{/* WIDOCZNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Widoczność</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{capitalizeFirst(event.eventVisibilityName)}</p>
 								</div>
+
+								{/* POZIOM TRUDNOŚCI */}
+								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
+									<p className='text-xs text-zinc-400'>Wymagany poziom</p>
+
+									<div className='flex flex-col gap-2 mt-2'>
+										{/* Plakietka z nazwą i kolorem */}
+										<div
+											className={`self-start inline-block rounded px-2 py-1 text-sm font-medium ${getSkillLevelColor(
+												event.skillLevel
+											)}`}>
+											{event.skillLevel}
+										</div>
+
+										{/* Twój komponent gwiazdek */}
+										<div title={`${getSkillLevelValue(event.skillLevel)}/5`}>
+											<StarRatingDisplay value={getSkillLevelValue(event.skillLevel)} size={18} max={5} />
+										</div>
+									</div>
+								</div>
 							</div>
 
-							{/* Lokalizacja */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Lokalizacja</h3>
 								<div className='mt-3 space-y-2 text-sm'>
@@ -637,7 +973,6 @@ const EventPage: React.FC = () => {
 								</button>
 							</div>
 
-							{/* Szczegóły */}
 							<div className='overflow-hidden rounded-2xl border border-zinc-800 bg-black/40'>
 								<button
 									onClick={() => setShowDetailsAccordion(s => !s)}
@@ -651,18 +986,16 @@ const EventPage: React.FC = () => {
 								{showDetailsAccordion && (
 									<div className='border-t border-zinc-800 px-5 py-4 text-sm leading-relaxed text-zinc-300'>
 										<h4 className='mb-2 font-semibold text-white'>Opis wydarzenia</h4>
-										<p>
-											To jest placeholder dla opisu wydarzenia. Tutaj organizator może dodać szczegółowe informacje,
-											zasady, wymagania oraz inne istotne detale.
+										<p className='whitespace-pre-line'>
+											{event.description ? event.description : 'Organizator nie dodał opisu dla tego wydarzenia.'}
 										</p>
 									</div>
 								)}
 							</div>
-							{/* --- Oceny wydarzenia --- */}
+
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-8'>
 								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
 
-								{/* Formularz oceny tylko jeśli użytkownik brał udział */}
 								{joined && isEventPast && !hasRated && (
 									<EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />
 								)}
@@ -677,7 +1010,6 @@ const EventPage: React.FC = () => {
 									<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś to wydarzenie.</p>
 								)}
 
-								{/* Lista ocen */}
 								{eventRatings.length ? (
 									<ul className='space-y-3 mt-6'>
 										{eventRatings.map(r => {
@@ -709,17 +1041,29 @@ const EventPage: React.FC = () => {
 															</div>
 														</div>
 													) : (
-														<RatingCard
-															rating={r.rating}
-															comment={r.comment}
-															raterName={r.userName}
-															raterAvatarUrl={participant?.userAvatarUrl || undefined}
-															raterEmail={participant?.userEmail}
-															createdAt={r.createdAt}
-															isMine={!!isMine}
-															onEdit={() => startEditEventRating(r)}
-															onDelete={() => deleteEventRating(r.id)}
-														/>
+														<>
+															<RatingCard
+																rating={r.rating}
+																comment={r.comment}
+																raterName={r.userName}
+																raterAvatarUrl={participant?.userAvatarUrl || undefined}
+																raterEmail={participant?.userEmail}
+																createdAt={r.createdAt}
+																isMine={!!isMine}
+																onEdit={() => startEditEventRating(r)}
+																onDelete={() => deleteEventRating(r.id)}
+																raterId={r.id}
+															/>
+															<div className='mt-2 flex justify-end'>
+																<button
+																	type='button'
+																	onClick={() => openRatingReportModal(r)}
+																	className='inline-flex items-center gap-1 text-xs text-rose-300 hover:text-rose-200'>
+																	<Flag size={12} />
+																	Zgłoś ocenę
+																</button>
+															</div>
+														</>
 													)}
 												</li>
 											)
@@ -729,7 +1073,7 @@ const EventPage: React.FC = () => {
 									<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen dla tego wydarzenia.</p>
 								)}
 							</div>
-							{/* --- Ocena organizatora --- */}
+
 							{joined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
 								<EventRatingForm
 									title='Oceń organizatora'
@@ -776,20 +1120,53 @@ const EventPage: React.FC = () => {
 							)}
 						</section>
 
-						{/* Sidebar */}
 						<aside className='space-y-6 lg:sticky lg:top-6'>
-							{/* Akcja dołączenia */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
-									<button
-										onClick={handleJoinEvent}
-										className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
-											joined
-												? 'bg-rose-600 hover:bg-rose-500'
-												: 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30'
-										}`}>
-										{joined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
-									</button>
+									// If the current user was invited, show accept/decline UI
+									isInvited ? (
+										<div className='space-y-3'>
+											<div className='rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 text-center'>
+												<p className='text-violet-200 text-sm font-medium'>
+													Organizator zaprosił Cię do tego wydarzenia!
+												</p>
+											</div>
+											<div className='grid grid-cols-2 gap-3'>
+												<button
+													onClick={handleAcceptInvitation}
+													className='flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-500 transition'>
+													<Check size={18} /> Przyjmij
+												</button>
+												<button
+													onClick={handleDeclineInvitation}
+													className='flex items-center justify-center gap-2 rounded-xl bg-zinc-700 px-4 py-3 font-semibold text-white hover:bg-zinc-600 transition'>
+													<X size={18} /> Odrzuć
+												</button>
+											</div>
+										</div>
+									) : // 2. NOWE: Czy ODRZUCONY
+									isRejected ? (
+										<div className='w-full rounded-2xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-center'>
+											<p className='text-red-400 text-sm font-medium'>
+												Twoje zgłoszenie zostało odrzucone przez organizatora.
+											</p>
+										</div>
+									) : // 3. Reszta starej logiki (Oczekujący / Dołącz)
+									isPending ? (
+										<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 text-zinc-400'>
+											Twoja prośba oczekuje na akceptację…
+										</button>
+									) : (
+										<button
+											onClick={handleJoinEvent}
+											className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
+												joined
+													? 'bg-rose-600 hover:bg-rose-500'
+													: 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30'
+											}`}>
+											{joined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
+										</button>
+									)
 								) : spotsLeft <= 0 ? (
 									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
 										Brak wolnych miejsc
@@ -801,7 +1178,6 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{/* Organizator */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Organizator</h3>
 								<div className='mt-4 flex items-center gap-3'>
@@ -834,17 +1210,26 @@ const EventPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* Akcje */}
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Akcje</h3>
 								<div className='mt-4 space-y-3'>
-									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
-										<Bookmark size={16} /> Zapisz wydarzenie
+									<button
+										onClick={handleSaveEvent}
+										className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
+										{saved ? <BookmarkCheck size={16} className='text-violet-400' /> : <Bookmark size={16} />}
+										{saved ? 'Zapisano wydarzenie' : 'Zapisz wydarzenie'}
+									</button>
+									<button
+										onClick={() => setShowInviteModal(true)}
+										className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
+										<UserRound size={16} /> Zaproś do wydarzenia
 									</button>
 									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800'>
 										<CalendarDays size={16} /> Dodaj do kalendarza
 									</button>
-									<button className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
+									<button
+										onClick={() => setShowReportModal(true)}
+										className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
 										<AlertTriangle size={16} /> Zgłoś wydarzenie
 									</button>
 								</div>
@@ -854,7 +1239,6 @@ const EventPage: React.FC = () => {
 				</div>
 			</main>
 
-			{/* Share Modal */}
 			{showShareModal && (
 				<div className='fixed inset-0 z-50 grid place-items-center bg-black/70 p-4'>
 					<div className='w-full max-w-md rounded-2xl bg-zinc-900/90 p-5 ring-1 ring-zinc-800'>
@@ -902,12 +1286,43 @@ const EventPage: React.FC = () => {
 				</div>
 			)}
 
-			{/* Share toast */}
-			{showShareToast && (
-				<div className='fixed bottom-4 right-4 z-50 inline-flex items-center gap-2 rounded-lg bg-black/70 px-3 py-2 text-sm text-emerald-200 ring-1 ring-emerald-700/40'>
-					<span className='h-2 w-2 rounded-full bg-emerald-400' />
-					Link skopiowany do schowka!
-				</div>
+			{showReportModal && event && (
+				<ReportEventModal
+					isOpen={showReportModal}
+					onClose={() => setShowReportModal(false)}
+					event={event}
+					onSubmit={handleSubmitReport}
+					isSubmitting={isSendingReport}
+				/>
+			)}
+
+			{showInviteModal && (
+				<InviteToEventModal
+					isOpen={showInviteModal}
+					onClose={() => setShowInviteModal(false)}
+					onSubmit={handleSendInvite}
+					isSubmitting={isSendingInvite}
+					eventId={event.eventId}
+				/>
+			)}
+
+			{showRatingReportModal && ratingToReport && (
+				<ReportRatingModal
+					isOpen={showRatingReportModal}
+					onClose={() => {
+						setShowRatingReportModal(false)
+						setRatingToReport(null)
+					}}
+					rating={{
+						id: ratingToReport.id,
+						userName: ratingToReport.userName,
+						raterAvatarUrl: participants.find(p => p.userName === ratingToReport.userName)?.userAvatarUrl ?? undefined,
+						rating: ratingToReport.rating,
+						comment: ratingToReport.comment,
+					}}
+					onSubmit={handleSubmitRatingReport}
+					isSubmitting={isSendingRatingReport}
+				/>
 			)}
 		</>
 	)

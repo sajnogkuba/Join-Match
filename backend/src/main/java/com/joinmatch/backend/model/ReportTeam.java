@@ -1,10 +1,7 @@
 package com.joinmatch.backend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "report_team")
@@ -28,9 +25,13 @@ public class ReportTeam {
 
     @ManyToOne
     @JoinColumn(name = "team_id", nullable = false)
-    private Team teamId;
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Team team;
 
     @ManyToOne
     @JoinColumn(name = "reporter_user_id", nullable = false)
-    private User teamReporterUserId;
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User teamReporterUser;
 }

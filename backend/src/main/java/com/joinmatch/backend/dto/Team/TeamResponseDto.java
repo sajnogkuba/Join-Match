@@ -10,7 +10,8 @@ public record TeamResponseDto(
         String description,
         Integer leaderId,
         String leaderName,
-        String photoUrl
+        String photoUrl,
+        Boolean isBanned
 ) {
     public static TeamResponseDto fromTeam(Team team) {
         return new TeamResponseDto(
@@ -21,7 +22,8 @@ public record TeamResponseDto(
                 team.getDescription(),
                 team.getLeader().getId(),
                 team.getLeader().getName(),
-                team.getPhotoUrl()
+                team.getPhotoUrl(),
+                team.getReportTeamSet().stream().anyMatch(report -> Boolean.TRUE.equals(report.getActive()))
         );
     }
 }

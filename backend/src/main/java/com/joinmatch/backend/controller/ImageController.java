@@ -30,4 +30,11 @@ public class ImageController {
         return ResponseEntity.ok(s3Service.uploadFile(file, "team"));
     }
 
+    @PostMapping("/upload/sport")
+    public ResponseEntity<String> uploadSportImage(@RequestParam("file") MultipartFile file) {
+        String test = s3Service.uploadFile(file, "sport");
+        System.out.println(test);
+        return ResponseEntity.ok(test);
+    }
+
 }
