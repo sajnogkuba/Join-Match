@@ -153,6 +153,7 @@ public class EventServiceTest {
     void create_shouldSaveEvent() {
         EventRequestDto req = new EventRequestDto(
                 "New Event",
+                "Description",
                 10,
                 BigDecimal.valueOf(30),
                 "owner@gmail.com",
@@ -162,7 +163,8 @@ public class EventServiceTest {
                 LocalDateTime.now(),
                 5,
                 3,
-                "img.png"
+                "img.png",
+                List.of()
         );
 
         User owner = mockUser(7);
