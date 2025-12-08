@@ -2,6 +2,7 @@ package com.joinmatch.backend.dto.Event;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record EventDetailsResponseDto (
         Integer eventId,

@@ -70,6 +70,10 @@ public class RatingService {
     public List<UserRatingResponseDto> getRatingsByUser(Integer userId) {
         return userRatingRepository.findByRated_Id(userId)
                 .stream()
+                .filter(r ->
+                        r.getReportUserRatings().isEmpty() ||
+                                r.getReportUserRatings().stream().noneMatch(ReportUserRating::getActive)
+                )
                 .map(r -> new UserRatingResponseDto(
                         r.getUserRateId(),
                         r.getRater().getEmail(),
@@ -124,6 +128,10 @@ public class RatingService {
     public List<EventRatingResponseDto> getRatingsByEvent(Integer eventId) {
         return eventRatingRepository.findByEvent_EventId(eventId)
                 .stream()
+                .filter(r ->
+                        r.getReportEventRatings().isEmpty() ||
+                                r.getReportEventRatings().stream().noneMatch(ReportEventRating::getActive)
+                )
                 .map(r -> new EventRatingResponseDto(
                         r.getEventRatingId(),
                         r.getRating(),

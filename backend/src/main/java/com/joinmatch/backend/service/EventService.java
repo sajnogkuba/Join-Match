@@ -8,15 +8,12 @@ import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
@@ -33,6 +30,17 @@ public class EventService {
     private final EventVisibilityRepository eventVisibilityRepository;
     private final ReportEventRepository reportEventRepository;
 
+    private String mapSkillLevelToString(Integer level) {
+        if (level == null) return "Nieokreślony";
+        return switch (level) {
+            case 1 -> "Amator";
+            case 2 -> "Rekreacyjny";
+            case 3 -> "Średniozaawansowany";
+            case 4 -> "Zaawansowany";
+            case 5 -> "Profesjonalista";
+            default -> "Inny (" + level + ")";
+        };
+    }
 
     public Page<EventResponseDto> getAll(
             Pageable pageable,
@@ -65,7 +73,19 @@ public class EventService {
 
         Page<Event> events = eventRepository.findAll(spec, sortedPageable);
 
-        return events.map(EventResponseDto::fromEvent);
+        List<Event> filtered = events.getContent().stream()
+                .filter(event -> event.getReportEvents()
+                        .stream()
+                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
+                .toList();
+
+        Page<Event> filteredPage = new PageImpl<>(
+                filtered,
+                sortedPageable,
+                filtered.size()
+        );
+
+        return filteredPage.map(EventResponseDto::fromEvent);
     }
 
     @Transactional(readOnly = true)
@@ -129,6 +149,7 @@ public class EventService {
         EventVisibility eventVisibility = eventVisibilityRepository.findById(eventRequestDto.eventVisibilityId())
                 .orElseThrow(() -> new IllegalArgumentException("EventVisibility with id " + eventRequestDto.eventVisibilityId() + " not found"));
         event.setEventName(eventRequestDto.eventName());
+        event.setDescription(eventRequestDto.description());
         event.setNumberOfParticipants(eventRequestDto.numberOfParticipants());
         event.setCost(eventRequestDto.cost());
         event.setOwner(owner);
@@ -139,6 +160,7 @@ public class EventService {
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
         event.setImageUrl(eventRequestDto.imageUrl());
+        event.setPaymentMethods(eventRequestDto.paymentMethods());
 
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);
@@ -171,5 +193,20 @@ public class EventService {
 //        userRepository.save(user);
 //        eventRepository.save(referenceById);
         reportEventRepository.save(reportEvent);
+    }
+
+    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, String token) {
+        Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        var user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User with token " + token + " not found"));
+        Page<Event> events = eventRepository.findAllParticipatedByUserId(user.getId(), sortedPageable);
+        return events.map(EventResponseDto::fromEvent);
+    }
+    public Event findById(Integer id){
+        return eventRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + id + " not found"));
     }
 }

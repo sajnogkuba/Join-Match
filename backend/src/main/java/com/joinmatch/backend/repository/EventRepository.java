@@ -1,6 +1,8 @@
 package com.joinmatch.backend.repository;
 
 import com.joinmatch.backend.model.Event;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -31,4 +33,16 @@ WHERE
 """)
     List<Event> findMutualEvents(@Param("viewerId") Integer viewerId,
                                  @Param("targetId") Integer targetId);
+
+    @Query("""
+        SELECT e
+        FROM Event e
+        JOIN UserEvent ue ON ue.event = e
+        WHERE ue.user.id = :id
+    """)
+    Page<Event> findAllParticipatedByUserId(Integer id, Pageable sortedPageable);
+
+    @Query("SELECT COUNT(e) FROM Event e WHERE e.owner.id = :userId")
+    int countCreatedEvents(@Param("userId") Integer userId);
+
 }

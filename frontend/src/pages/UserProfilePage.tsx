@@ -15,6 +15,7 @@ import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 import UserReportForm from '../components/UserReportForm'
+import BadgesSection from '../components/BadgesSection'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -592,6 +593,7 @@ const UserProfilePage = () => {
 															isMine={r.raterName === currentUserName}
 															onEdit={() => startEditUserRating(r)}
 															onDelete={() => deleteUserRating(r.id)}
+															raterId={r.id}
 														/>
 													</li>
 												)
@@ -671,6 +673,7 @@ const UserProfilePage = () => {
 															onDelete={() => deleteOrganizerRating(r.id)}
 															eventName={r.eventName}
 															eventId={r.eventId}
+															raterId={r.raterId}
 														/>
 													</li>
 												)
@@ -680,6 +683,12 @@ const UserProfilePage = () => {
 										<p className='text-zinc-500 text-sm italic mt-4'>Brak ocen jako organizator.</p>
 									)}
 								</section>
+							)}
+
+							{activeTab === 'Odznaki' && (
+								<div className="flex-1">
+									<BadgesSection userId={id ? parseInt(id) : null} />
+								</div>
 							)}
 
 							{activeTab === 'Zgłoś użytkownika' && (
