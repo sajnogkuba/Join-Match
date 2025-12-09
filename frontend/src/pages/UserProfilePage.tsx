@@ -8,6 +8,7 @@ import UserProfileSidebar from '../components/UserProfileSidebar'
 import UserRatingForm from '../components/UserRatingForm'
 import type { UsersResponse } from '../Api/types/User'
 import type { UserRatingResponse, OrganizerRatingResponse } from '../Api/types/Rating'
+import type { SportTypeOption } from '../Api/types/Sports'
 import { toast } from 'sonner'
 import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare } from 'lucide-react'
 import RatingCard from '../components/RatingCard'
@@ -66,6 +67,7 @@ const UserProfilePage = () => {
 
 	const [mutualEvents, setMutualEvents] = useState<any[]>([])
 	const [isLoadingMutual, setIsLoadingMutual] = useState(false)
+	const [sportUrlMap, setSportUrlMap] = useState<Map<number, string>>(new Map())
 
 	const fetchUserRatings = async () => {
 		try {
@@ -327,6 +329,19 @@ const UserProfilePage = () => {
 		}
 	}, [currentUserId, id])
 
+	useEffect(() => {
+		api
+			.get<SportTypeOption[]>('/sport-type')
+			.then(({ data }) => {
+				const map = new Map<number, string>()
+				data.forEach((sport) => {
+					map.set(sport.id, sport.url)
+				})
+				setSportUrlMap(map)
+			})
+			.catch(() => {})
+	}, [])
+
 	const handleAddFriend = async () => {
 		if (!currentUserId || !id) return
 		try {
@@ -447,16 +462,36 @@ const UserProfilePage = () => {
 										Data urodzenia: {new Date(user.dateOfBirth).toLocaleDateString('pl-PL')}
 									</p>
 									<p className='mt-2 text-sm text-zinc-400'>Sporty:</p>
-									<ul className='mt-2 space-y-2'>
-										{user.sports.map(s => (
-											<li key={s.id} className='flex items-center justify-between bg-zinc-800/50 px-4 py-2 rounded-lg'>
-												<span>{s.name}</span>
-												<div className='flex items-center gap-2'>
-													<StarRatingDisplay value={toFiveScale(levelToNumber(s.level))} />
-													<span className='text-sm text-zinc-400 ml-1'>Poziom: {levelToNumber(s.level)}</span>
-												</div>
-											</li>
-										))}
+									<ul className='mt-2 space-y-3'>
+										{user.sports.map(s => {
+											const sportUrl = sportUrlMap.get(s.id)
+											return (
+												<li
+													key={s.id}
+													className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3'
+												>
+													<div className='flex items-center gap-3 min-w-0'>
+														{sportUrl ? (
+															<img
+																src={sportUrl}
+																alt={s.name}
+																className='h-10 w-10 rounded-full object-cover border border-zinc-700 flex-shrink-0'
+															/>
+														) : (
+															<div className='h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex-shrink-0 flex items-center justify-center text-xs text-zinc-400'>
+																img
+															</div>
+														)}
+														<div className='min-w-0'>
+															<p className='text-white font-medium leading-tight truncate'>{s.name}</p>
+															<div className='flex items-center gap-1 mt-0.5'>
+																<StarRatingDisplay value={toFiveScale(levelToNumber(s.level))} size={14} />
+															</div>
+														</div>
+													</div>
+												</li>
+											)
+										})}
 									</ul>
 
 									<div className='mt-6 flex gap-3 flex-wrap'>
