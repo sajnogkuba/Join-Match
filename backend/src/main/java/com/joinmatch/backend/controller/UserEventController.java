@@ -3,7 +3,7 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.dto.Notification.EventInviteRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
-import com.joinmatch.backend.model.Event;
+import org.springframework.data.domain.Page;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.EventService;
@@ -12,6 +12,9 @@ import com.joinmatch.backend.service.UserEventService;
 import com.joinmatch.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,8 +41,20 @@ public class UserEventController {
     }
 
     @GetMapping("/by-user-email")
-    public ResponseEntity<List<UserEventResponseDto>> getUserEventsByUserEmail(@RequestParam String userEmail) {
-        List<UserEventResponseDto> userEvents = userEventService.getUserEventsByUserEmail(userEmail);
+    public ResponseEntity<Page<UserEventResponseDto>> getUserEventsByUserEmail(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "ASC") String direction,
+            @RequestParam String userEmail
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<UserEventResponseDto> userEvents = userEventService.getUserEventsByUserEmail(
+                pageable,
+                sortBy,
+                direction,
+                userEmail);
+
         if (userEvents.isEmpty()) {
             return ResponseEntity.noContent().build();
         }

@@ -13,6 +13,10 @@ import com.joinmatch.backend.repository.UserEventRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -85,6 +89,24 @@ public class UserEventService {
         notificationService.sendEventJoinAccepted(user, event);
     }
 
+    public Page<UserEventResponseDto> getUserEventsByUserEmail(
+            Pageable pageable,
+            String sortBy,
+            String direction,
+            String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<UserEvent> userEvents = userEventRepository.findByUserId(user.getId(), sortedPageable);
+        return userEvents.map(UserEventResponseDto::fromUserEvent);
+    }
+
     @Transactional
     public void rejectUser(Integer eventId, Integer userId) {
 
@@ -102,15 +124,6 @@ public class UserEventService {
         userEventRepository.save(ue);
 
         notificationService.sendEventJoinRejected(user, event);
-    }
-
-    public List<UserEventResponseDto> getUserEventsByUserEmail(String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return userEventRepository.findByUserId(user.getId())
-                .stream()
-                .map(UserEventResponseDto::fromUserEvent)
-                .toList();
     }
 
     public List<UserEventResponseDto> getUserEventsByEventId(Integer eventId) {

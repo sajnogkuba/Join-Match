@@ -36,3 +36,6 @@ export type { TeamMember } from "./TeamMember";
 
 // ReactionType types
 export type { ReactionTypeResponseDto } from "./ReactionType";
+
+// Participant types
+export type { Participant, UserEventResponseDto, UserEventPageResponse } from "./Participant";
