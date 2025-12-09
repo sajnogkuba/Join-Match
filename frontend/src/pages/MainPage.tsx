@@ -9,7 +9,7 @@ import SportTypeFilter from '../components/SportTypeFilter'
 import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
 import type { UserSportsResponse } from '../Api/types/Sports'
-import { parseEventDate } from '../utils/formatDate'
+import { formatEventDate, parseEventDate } from '../utils/formatDate'
 
 // Typ odpowiedzi z backendu (Spring Page)
 type EventsPageResponse = {
@@ -335,7 +335,7 @@ const MainPage: React.FC = () => {
 												<MapPin size={14} /> {event.sportObjectName}
 											</p>
 											<p className="text-sm text-zinc-500 mb-2 flex items-center gap-2">
-												<CalendarDays size={14} /> {dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}
+												<CalendarDays size={14} /> {formatEventDate(event.eventDate)}
 											</p>
 											<p className="text-sm text-zinc-500 mb-3 flex items-center gap-2">
 												<Users size={14} /> {(event as any).bookedParticipants || 0}/{event.numberOfParticipants}
