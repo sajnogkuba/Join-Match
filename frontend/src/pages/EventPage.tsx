@@ -822,14 +822,22 @@ const EventPage: React.FC = () => {
 													<div className='font-medium text-white leading-tight'>
 														{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
 													</div>
-													{p.skillLevel && (
-														<div
-															className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-																p.skillLevel
-															)}`}>
-															{p.skillLevel}
-														</div>
-													)}
+													<div className='mt-1 flex items-center gap-2'>
+														{p.sportRating && (
+															<div className='flex items-center gap-1.5' title={`Poziom zaawansowania w ${event.sportTypeName}: ${p.sportRating}/5`}>
+																<StarRatingDisplay value={p.sportRating} size={14} max={5} />
+																<span className='text-xs text-zinc-400'>{event.sportTypeName}</span>
+															</div>
+														)}
+														{p.skillLevel && (
+															<div
+																className={`inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+																	p.skillLevel
+																)}`}>
+																{p.skillLevel}
+															</div>
+														)}
+													</div>
 												</div>
 											</div>
 
@@ -1179,6 +1187,34 @@ const EventPage: React.FC = () => {
 										Wydarzenie niedostępne
 									</button>
 								)}
+							</div>
+
+							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+								<h3 className='text-white text-lg font-semibold mb-4'>Sport</h3>
+								<div className='flex items-center gap-4'>
+									{event.sportTypeURL ? (
+										<img
+											src={event.sportTypeURL}
+											alt={event.sportTypeName}
+											className='h-16 w-16 rounded-xl object-cover border border-zinc-700 shadow-md'
+											onError={e => {
+												e.currentTarget.style.display = 'none'
+												const fallback = e.currentTarget.nextElementSibling as HTMLElement
+												if (fallback) fallback.style.display = 'flex'
+											}}
+										/>
+									) : null}
+									<div
+										className={`flex items-center justify-center h-16 w-16 rounded-xl border border-zinc-700 bg-zinc-800/50 ${
+											event.sportTypeURL ? 'hidden' : ''
+										}`}
+										style={{ display: event.sportTypeURL ? 'none' : 'flex' }}>
+										<span className='text-2xl'>{event.sportTypeName}</span>
+									</div>
+									<div>
+										<div className='font-semibold text-white text-lg'>{event.sportTypeName.charAt(0).toUpperCase() + event.sportTypeName.slice(1)}</div>
+									</div>
+								</div>
 							</div>
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>

@@ -10,4 +10,5 @@ export interface Participant {
 	eventId: number
 	eventName: string
 	isPaid: boolean
+	sportRating?: number | null
 }

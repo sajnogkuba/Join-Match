@@ -109,6 +109,7 @@ public class EventService {
                 e.getScoreTeam2(),
 
                 e.getSportEv().getName(),
+                e.getSportEv().getURL(),
                 e.getSportObject().getName(),
 
                 e.getSportObject().getObjectId(),

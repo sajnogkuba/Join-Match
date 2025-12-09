@@ -18,6 +18,7 @@ public record EventDetailsResponseDto (
      Integer scoreTeam2,
 
      String sportTypeName,
+        String sportTypeURL,
      String sportObjectName,
 
      Integer sportObjectId,
