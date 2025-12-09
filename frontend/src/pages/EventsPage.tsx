@@ -109,8 +109,20 @@ const EventsPage = () => {
 	useEffect(() => {
 		if (!userEmail) return
 		axiosInstance
-			.get('/user-event/by-user-email', { params: { userEmail } })
-			.then(({ data }) => setJoinedEventIds(new Set((data || []).map((ue: any) => ue.eventId))))
+			.get('/user-event/by-user-email', { 
+				params: { 
+					userEmail,
+					page: 0,
+					size: 1000, // Pobierz dużo, żeby mieć wszystkie dołączone wydarzenia
+					sortBy: 'id',
+					direction: 'ASC'
+				} 
+			})
+			.then(({ data }) => {
+				if (data?.content) {
+					setJoinedEventIds(new Set(data.content.map((ue: any) => ue.eventId)))
+				}
+			})
 			.catch(e => console.error('Nie udało się pobrać dołączonych wydarzeń:', e))
 	}, [userEmail])
 

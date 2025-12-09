@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
@@ -9,8 +9,9 @@ import UserRatingForm from '../components/UserRatingForm'
 import type { UsersResponse } from '../Api/types/User'
 import type { UserRatingResponse, OrganizerRatingResponse } from '../Api/types/Rating'
 import type { SportTypeOption } from '../Api/types/Sports'
+import type { UserEventResponseDto, UserEventPageResponse } from '../Api/types/Participant'
 import { toast } from 'sonner'
-import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare } from 'lucide-react'
+import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react'
 import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
@@ -30,7 +31,7 @@ const UserProfilePage = () => {
 	const [user, setUser] = useState<UsersResponse | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [errorMsg, setErrorMsg] = useState<string | null>(null)
-	const [events, setEvents] = useState<any[]>([])
+	const [events, setEvents] = useState<UserEventResponseDto[]>([])
 	const [userRatings, setUserRatings] = useState<UserRatingResponse[]>([])
 	const [organizerRatings, setOrganizerRatings] = useState<OrganizerRatingResponse[]>([])
 	const [activeTab, setActiveTab] = useState<string>('Informacje')
@@ -38,6 +39,11 @@ const UserProfilePage = () => {
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
 	const [viewerEvents, setViewerEvents] = useState<any[]>([])
+	const [eventsPage, setEventsPage] = useState(0)
+	const [eventsPageSize, setEventsPageSize] = useState(12)
+	const [eventsTotalPages, setEventsTotalPages] = useState(0)
+	const [eventsTotalElements, setEventsTotalElements] = useState(0)
+	const [eventsLoading, setEventsLoading] = useState(false)
 	const [isSending, setIsSending] = useState(false)
 	const [isSendingReport, setIsSendingReport] = useState(false)
 	const [friendsCount, setFriendsCount] = useState<number>(0)
@@ -61,9 +67,6 @@ const UserProfilePage = () => {
 	const toFiveScale = (n: number) => (n > 5 ? n / 2 : n)
 
 	const [friendStatus, setFriendStatus] = useState<FriendStatus>({ isFriend: false })
-
-	const EVENTS_PREVIEW = 3
-	const [showAllEvents, setShowAllEvents] = useState(false)
 
 	const [mutualEvents, setMutualEvents] = useState<any[]>([])
 	const [isLoadingMutual, setIsLoadingMutual] = useState(false)
@@ -266,10 +269,8 @@ const UserProfilePage = () => {
 				else setFriendStatus({ isFriend: false })
 
 				const targetEmail = profileRes.data.email
-				const targetEventsRes = await api.get(`/user-event/by-user-email`, {
-					params: { userEmail: targetEmail },
-				})
-				setEvents(targetEventsRes.data || [])
+				// Pobierz pierwszą stronę wydarzeń
+				await fetchEventsPage(targetEmail, 0, 12)
 
 				try {
 					const friendsRes = await api.get(`/friends/${profileRes.data.id}`)
@@ -289,9 +290,19 @@ const UserProfilePage = () => {
 				const viewerEmail = currentRes.data.email
 				if (viewerEmail) {
 					const viewerEventsRes = await api.get(`/user-event/by-user-email`, {
-						params: { userEmail: viewerEmail },
+						params: { 
+							userEmail: viewerEmail,
+							page: 0,
+							size: 1000, // Pobierz dużo, żeby mieć wszystkie wydarzenia
+							sortBy: 'id',
+							direction: 'ASC'
+						},
 					})
-					setViewerEvents(viewerEventsRes.data || [])
+					if (viewerEventsRes.data?.content) {
+						setViewerEvents(viewerEventsRes.data.content)
+					} else {
+						setViewerEvents([])
+					}
 				}
 			} catch {
 				setErrorMsg('Nie udało się pobrać profilu użytkownika.')
@@ -322,6 +333,50 @@ const UserProfilePage = () => {
 		}
 		fetchMutual()
 	}, [currentUserId, user?.id])
+
+	const fetchEventsPage = useCallback(async (userEmail: string, page: number, size: number) => {
+		setEventsLoading(true)
+		try {
+			const targetEventsRes = await api.get<UserEventPageResponse>(`/user-event/by-user-email`, {
+				params: { 
+					userEmail,
+					page,
+					size,
+					sortBy: 'id',
+					direction: 'ASC'
+				},
+			})
+			if (targetEventsRes.data) {
+				setEvents(targetEventsRes.data.content || [])
+				setEventsPage(targetEventsRes.data.number)
+				setEventsTotalPages(targetEventsRes.data.totalPages)
+				setEventsTotalElements(targetEventsRes.data.totalElements)
+			} else {
+				setEvents([])
+				setEventsPage(0)
+				setEventsTotalPages(0)
+				setEventsTotalElements(0)
+			}
+		} catch (error) {
+			console.error('Błąd pobierania wydarzeń:', error)
+			setEvents([])
+		} finally {
+			setEventsLoading(false)
+		}
+	}, [])
+
+	const handleEventsPageChange = (newPage: number) => {
+		if (user?.email && newPage >= 0 && newPage < eventsTotalPages) {
+			fetchEventsPage(user.email, newPage, eventsPageSize)
+		}
+	}
+
+	const handleEventsPageSizeChange = (newSize: number) => {
+		if (user?.email) {
+			setEventsPageSize(newSize)
+			fetchEventsPage(user.email, 0, newSize)
+		}
+	}
 
 	useEffect(() => {
 		if (currentUserId && id && currentUserId === parseInt(id)) {
@@ -523,13 +578,34 @@ const UserProfilePage = () => {
 
 							{activeTab === 'Historia wydarzeń' && (
 								<section>
-									<h3 className='text-lg font-semibold text-white mb-3'>Historia wydarzeń</h3>
-									{events.length ? (
+									<div className='flex items-center justify-between mb-3'>
+										<h3 className='text-lg font-semibold text-white'>Historia wydarzeń</h3>
+										{eventsTotalElements > 0 && (
+											<div className='flex items-center gap-2'>
+												<label className='text-sm text-zinc-400'>Pokaż:</label>
+												<select
+													value={eventsPageSize}
+													onChange={(e) => handleEventsPageSizeChange(Number(e.target.value))}
+													className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600'
+												>
+													<option value={6}>6</option>
+													<option value={12}>12</option>
+													<option value={24}>24</option>
+													<option value={48}>48</option>
+												</select>
+											</div>
+										)}
+									</div>
+									{eventsLoading ? (
+										<div className='text-center py-8'>
+											<p className='text-sm text-zinc-400'>Ładowanie...</p>
+										</div>
+									) : events.length ? (
 										<>
 											<ul className='space-y-3'>
-												{(showAllEvents ? events : events.slice(0, EVENTS_PREVIEW)).map(e => (
+												{events.map(e => (
 													<li
-														key={e.eventId}
+														key={e.id}
 														className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
 														<span className='text-white'>{e.eventName}</span>
 														<a href={`/event/${e.eventId}`} className='text-violet-400 hover:text-violet-300 text-sm'>
@@ -538,13 +614,29 @@ const UserProfilePage = () => {
 													</li>
 												))}
 											</ul>
-											{events.length > EVENTS_PREVIEW && (
-												<div className='mt-3 text-center'>
-													<button
-														onClick={() => setShowAllEvents(s => !s)}
-														className='inline-flex items-center gap-2 rounded-lg bg-zinc-800/60 px-4 py-2 text-sm text-violet-300 hover:bg-zinc-800 transition'>
-														{showAllEvents ? 'Pokaż mniej' : `Pokaż więcej (${events.length - EVENTS_PREVIEW})`}
-													</button>
+											{eventsTotalPages > 1 && (
+												<div className='mt-6 flex items-center justify-between'>
+													<div className='text-sm text-zinc-400'>
+														Strona {eventsPage + 1} z {eventsTotalPages} ({eventsTotalElements} {eventsTotalElements === 1 ? 'wydarzenie' : eventsTotalElements < 5 ? 'wydarzenia' : 'wydarzeń'})
+													</div>
+													<div className='flex items-center gap-2'>
+														<button
+															onClick={() => handleEventsPageChange(eventsPage - 1)}
+															disabled={eventsPage === 0}
+															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'
+														>
+															<ChevronLeft size={16} />
+															Poprzednia
+														</button>
+														<button
+															onClick={() => handleEventsPageChange(eventsPage + 1)}
+															disabled={eventsPage >= eventsTotalPages - 1}
+															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'
+														>
+															Następna
+															<ChevronRight size={16} />
+														</button>
+													</div>
 												</div>
 											)}
 										</>

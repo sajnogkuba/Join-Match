@@ -80,8 +80,20 @@ const MainPage: React.FC = () => {
 
 	useEffect(() => {
 		if (!userEmail) return
-		api.get('/user-event/by-user-email', { params: { userEmail } })
-			.then(({ data }) => setJoinedEventIds(new Set(data.map((x: any) => x.eventId))))
+		api.get('/user-event/by-user-email', { 
+			params: { 
+				userEmail,
+				page: 0,
+				size: 1000, // Pobierz dużo, żeby mieć wszystkie dołączone wydarzenia
+				sortBy: 'id',
+				direction: 'ASC'
+			} 
+		})
+			.then(({ data }) => {
+				if (data?.content) {
+					setJoinedEventIds(new Set(data.content.map((x: any) => x.eventId)))
+				}
+			})
 			.catch(() => {})
 		
 		// Fetch saved events
