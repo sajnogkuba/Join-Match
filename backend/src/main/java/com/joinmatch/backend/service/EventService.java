@@ -79,10 +79,12 @@ public class EventService {
                         .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
                 .toList();
 
+        long totalElements = events.getTotalElements();
+        
         Page<Event> filteredPage = new PageImpl<>(
                 filtered,
                 sortedPageable,
-                filtered.size()
+                totalElements
         );
 
         return filteredPage.map(EventResponseDto::fromEvent);

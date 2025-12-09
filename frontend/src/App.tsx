@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { LoadScript } from '@react-google-maps/api'
 import Layout from './components/Layout'
+import ScrollToTop from './components/ScrollToTop'
 import MainPage from './pages/MainPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -38,6 +39,7 @@ const App: React.FC = () => (
 			<ChatProviderWrapper>
 				<LoadScript googleMapsApiKey={GOOGLE_MAPS_KEY} libraries={['places']}>
 					<BrowserRouter>
+						<ScrollToTop />
 						<Routes>
 							<Route path='/' element={<Layout />}>
 								<Route index element={<MainPage />} />

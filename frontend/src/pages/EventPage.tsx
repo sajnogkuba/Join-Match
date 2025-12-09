@@ -473,6 +473,7 @@ const EventPage: React.FC = () => {
 
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
+		if (isEventPast) return // Nie można dołączać/opuszczać zakończonych wydarzeń
 		try {
 			if (joined || isPending) {
 				await axiosInstance.delete(`/user-event`, {
@@ -1120,7 +1121,11 @@ const EventPage: React.FC = () => {
 
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
-								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
+								{isEventPast ? (
+									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
+										Zakończone
+									</button>
+								) : event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
 									// If the current user was invited, show accept/decline UI
 									isInvited ? (
 										<div className='space-y-3'>

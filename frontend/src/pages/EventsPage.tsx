@@ -297,6 +297,20 @@ const EventsPage = () => {
 	const handleJoin = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
 		const isJoined = joinedEventIds.has(eventId)
+		const event = events.find(ev => ev.eventId === eventId)
+
+		// Sprawdź czy wydarzenie się zakończyło
+		if (event?.eventDate) {
+			const isEventPast = parseEventDate(event.eventDate).isBefore(dayjs())
+			if (isEventPast) {
+				setAlertModal({
+					isOpen: true,
+					title: "Wydarzenie zakończone",
+					message: "Nie można dołączać ani opuszczać zakończonych wydarzeń."
+				})
+				return
+			}
+		}
 
 		try {
 			if (isJoined) {
@@ -312,7 +326,6 @@ const EventsPage = () => {
 						: ev
 				))
 			} else {
-				const event = events.find(ev => ev.eventId === eventId)
 				const bookedParticipants = (event as any)?.bookedParticipants || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
 
@@ -605,17 +618,21 @@ const EventsPage = () => {
 																{(() => {
 																	const isJoined = joinedEventIds.has(ev.eventId)
 																	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+																	const isEventPast = ev.eventDate && parseEventDate(ev.eventDate).isBefore(dayjs())
 																	return (
 																		<button
 																			onClick={() => handleJoin(ev.eventId)}
-																			disabled={isFull}
-																			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${isJoined
-																				? 'bg-red-600 text-white hover:bg-red-500'
-																				: isFull
+																			disabled={isFull || isEventPast}
+																			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+																				isEventPast
+																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																					: isJoined
+																					? 'bg-red-600 text-white hover:bg-red-500'
+																					: isFull
 																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
 																					: 'bg-violet-600 text-white hover:bg-violet-500'
 																			}`}>
-																			{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+																			{isEventPast ? 'Zakończone' : isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
 																		</button>
 																	)
 																})()}

@@ -9,6 +9,7 @@ import SportTypeFilter from '../components/SportTypeFilter'
 import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
 import type { UserSportsResponse } from '../Api/types/Sports'
+import { parseEventDate } from '../utils/formatDate'
 
 // Typ odpowiedzi z backendu (Spring Page)
 type EventsPageResponse = {
@@ -107,6 +108,20 @@ const MainPage: React.FC = () => {
 		if (!userEmail) return navigate('/login')
 		
 		const isJoined = joinedEventIds.has(eventId)
+		const event = events.find(ev => ev.eventId === eventId)
+		
+		// Sprawdź czy wydarzenie się zakończyło
+		if (event?.eventDate) {
+			const isEventPast = parseEventDate(event.eventDate).isBefore(dayjs())
+			if (isEventPast) {
+				setAlertModal({
+					isOpen: true,
+					title: "Wydarzenie zakończone",
+					message: "Nie można dołączać ani opuszczać zakończonych wydarzeń."
+				})
+				return
+			}
+		}
 		
 		try {
 			if (isJoined) {
@@ -125,7 +140,6 @@ const MainPage: React.FC = () => {
 				))
 			} else {
 				// Check if event has available places
-				const event = events.find(ev => ev.eventId === eventId)
 				const bookedParticipants = (event as any)?.bookedParticipants || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
 				
@@ -342,19 +356,22 @@ const MainPage: React.FC = () => {
 														{(() => {
 															const isJoined = joinedEventIds.has(event.eventId)
 															const isFull = ((event as any).bookedParticipants || 0) >= event.numberOfParticipants && !isJoined
+															const isEventPast = event.eventDate && parseEventDate(event.eventDate).isBefore(dayjs())
 															return (
 																<button
 																	onClick={() => handleSignUp(event.eventId)}
-																	disabled={isFull}
+																	disabled={isFull || isEventPast}
 																	className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-																		isJoined
+																		isEventPast
+																			? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																			: isJoined
 																			? 'bg-red-600 hover:bg-red-500'
 																			: isFull
 																			? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
 																			: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
 																	}`}
 																>
-																	{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+																	{isEventPast ? 'Zakończone' : isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
 																</button>
 															)
 														})()}
