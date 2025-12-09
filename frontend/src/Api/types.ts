@@ -48,6 +48,7 @@ export type EventDetails = {
 	scoreTeam2: number | null
 
 	sportTypeName: string
+	sportTypeURL?: string | null
 	sportObjectName: string
 
 	sportObjectId: number
