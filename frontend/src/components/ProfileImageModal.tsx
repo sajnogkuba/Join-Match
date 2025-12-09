@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../Api/axios";
 import Avatar from "./Avatar";
+import { getCookie } from "../utils/cookies";
 import { Camera, Upload, X } from "lucide-react";
 
 interface ProfileImageModalProps {
@@ -46,7 +47,7 @@ const ProfileImageModal = ({
                 headers: { "Content-Type": "multipart/form-data" }
             });
             const photoUrl = uploadResponse.data;
-            const token = localStorage.getItem("accessToken");
+            const token = getCookie("accessToken");
             if (!token) throw new Error("Brak tokenu autoryzacji");
             await api.patch("/auth/user/photo", { token, photoUrl });
             onPhotoUpdated(photoUrl);

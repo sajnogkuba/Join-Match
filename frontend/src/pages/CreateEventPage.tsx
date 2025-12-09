@@ -1,8 +1,9 @@
 import { Navigate } from "react-router-dom";
 import CreateEventForm from "../components/CreateEventForm.tsx";
+import { getCookie } from "../utils/cookies";
 
 const CreateEventPage = () => {
-  const ownerEmail = localStorage.getItem("email");
+  const ownerEmail = getCookie("email");
 
   if (!ownerEmail) {
     return <Navigate to="/login" replace />;

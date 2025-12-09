@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../Api/axios";
 import { Check } from "lucide-react";
+import { getCookie } from "../utils/cookies";
 
 const PasswordSection = () => {
     const [oldPassword, setOldPassword] = useState("");
@@ -25,7 +26,7 @@ const PasswordSection = () => {
             return;
         }
 
-        const token = localStorage.getItem("accessToken") || "";
+        const token = getCookie("accessToken") || "";
 
         if (!token) {
             setErrorMsg("Brak tokenu — zaloguj się ponownie.");

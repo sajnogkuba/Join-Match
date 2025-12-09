@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, AlertTriangle, Loader2, Flag } from 'lucide-react'
 import api from '../Api/axios'
+import { getCookie } from '../utils/cookies'
 
 interface ReportTeamModalProps {
     isOpen: boolean
@@ -35,7 +36,7 @@ const ReportTeamModal: React.FC<ReportTeamModalProps> = ({ isOpen, onClose, team
             return
         }
 
-        const token = localStorage.getItem('accessToken')
+        const token = getCookie('accessToken')
         if (!token) {
             setError('Musisz być zalogowany, aby zgłosić drużynę.')
             return

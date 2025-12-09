@@ -1,5 +1,6 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.CookieUtil;
 import com.joinmatch.backend.config.JwtService;
 
 import com.joinmatch.backend.dto.*;
@@ -11,6 +12,8 @@ import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -40,31 +44,40 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         TokenSupportObject tokenSupportObject;
         try {
             tokenSupportObject = userService.login(request);
         }catch (IllegalArgumentException e){
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        JwtResponse response = new JwtResponse(tokenSupportObject.getToken(), tokenSupportObject.getRefreshToken(), request.email());
-        return ResponseEntity.ok(response);
+        CookieUtil.setAccessTokenCookie(response, tokenSupportObject.getToken());
+        CookieUtil.setRefreshTokenCookie(response, tokenSupportObject.getRefreshToken());
+        CookieUtil.setEmailCookie(response, request.email());
+        return ResponseEntity.ok(Map.of("email", request.email()));
     }
 
     @PostMapping("/refreshToken")
-    public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken) {
-        RefreshSupportObject refreshObject = userService.refreshToken(refreshToken.refreshToken());
-        JwtResponse response = new JwtResponse(refreshObject.getTokenSupportObject().getToken(), refreshObject.getTokenSupportObject().getRefreshToken(), refreshObject.getUser().getEmail());
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Void> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        String refreshTokenValue = CookieUtil.getCookieValue(request, "refreshToken");
+        if (refreshTokenValue == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        RefreshSupportObject refreshObject = userService.refreshToken(refreshTokenValue);
+        CookieUtil.setAccessTokenCookie(response, refreshObject.getTokenSupportObject().getToken());
+        CookieUtil.setRefreshTokenCookie(response, refreshObject.getTokenSupportObject().getRefreshToken());
+        CookieUtil.setEmailCookie(response, refreshObject.getUser().getEmail());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest) {
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest, HttpServletResponse response) {
         try {
             userService.logoutUser(logoutRequest.email());
         } catch (RuntimeException runtimeException) {
             return ResponseEntity.badRequest().build();
         }
+        CookieUtil.clearAllAuthCookies(response);
         return ResponseEntity.ok().build();
     }
     //TODO do przeniesienia do sportControllera

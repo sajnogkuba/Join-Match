@@ -14,6 +14,7 @@ import type { User } from "../Api/types/User";
 import MyEventsSection from "../components/MyEventsSection.tsx";
 import MyParticipationsSection from "../components/MyParticipationsSection.tsx";
 import BadgesSection from "../components/BadgesSection.tsx";
+import { getCookie } from "../utils/cookies";
 
 
 
@@ -33,7 +34,7 @@ const ProfilePage = () => {
     };
 
     const refreshMainSport = () => {
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token) return;
         
         api
@@ -46,7 +47,7 @@ const ProfilePage = () => {
     };
 
     const fetchFriendsCount = () => {
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token || !currentUser?.id) return;
         
         api
@@ -71,7 +72,7 @@ const ProfilePage = () => {
 
 
     useEffect(() => {
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token) {
             setErrorMsg("Brak tokenu — zaloguj się ponownie.");
             setLoading(false);

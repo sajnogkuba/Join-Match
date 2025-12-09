@@ -10,6 +10,7 @@ import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
 import type { UserSportsResponse } from '../Api/types/Sports'
 import { formatEventDate, parseEventDate } from '../utils/formatDate'
+import { getCookie } from '../utils/cookies'
 
 // Typ odpowiedzi z backendu (Spring Page)
 type EventsPageResponse = {
@@ -41,7 +42,7 @@ const MainPage: React.FC = () => {
 	}>({ isOpen: false, title: "", message: "" })
 	const navigate = useNavigate()
 
-	useEffect(() => setUserEmail(localStorage.getItem('email')), [])
+	useEffect(() => setUserEmail(getCookie('email')), [])
 
 	// Funkcja pobierająca eventy z backendu
 	const fetchEvents = useCallback(async () => {
@@ -102,7 +103,7 @@ const MainPage: React.FC = () => {
 			.catch(() => {})
 		
 		// Fetch user's sports
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (token) {
 			api.get<UserSportsResponse>('/sport-type/user', { params: { token } })
 				.then(({ data }) => {

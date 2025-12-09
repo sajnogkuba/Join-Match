@@ -1,12 +1,13 @@
 import axios, { AxiosError } from 'axios'
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import type { JwtResponse } from './types'
+import { getCookie } from '../utils/cookies'
 
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,
 });
 
 function parseJwt(token: string) {
@@ -36,7 +37,7 @@ export function setDisconnectWebSocket(disconnectFn: () => void) {
 export function scheduleTokenRefresh() {
     if (refreshTimeout) clearTimeout(refreshTimeout);
 
-    const accessToken = localStorage.getItem('accessToken');
+    const accessToken = getCookie('accessToken');
     if (!accessToken) return;
 
     const payload = parseJwt(accessToken);
@@ -60,29 +61,21 @@ export function scheduleTokenRefresh() {
 
 
 const refreshToken = async (): Promise<string> => {
-    const storedRefreshToken = localStorage.getItem('refreshToken');
-    if (!storedRefreshToken) {
-        throw new Error('Brak refresh tokena');
-    }
-
     try {
-        const response = await axios.post<JwtResponse>(
+        await axios.post(
             `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/refreshToken`,
-            { refreshToken: storedRefreshToken }
+            {},
+            { withCredentials: true }
         );
-        const newAccessToken = response.data.token;
-        const newRefreshToken = response.data.refreshToken;
-
-        localStorage.setItem('accessToken', newAccessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-
+        const newAccessToken = getCookie('accessToken');
+        if (!newAccessToken) {
+            throw new Error('Brak access tokena po odświeżeniu');
+        }
         scheduleTokenRefresh();
-
         return newAccessToken;
     } catch (error) {
         console.error('Błąd odświeżania tokena:', error);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
         throw error;
     }
 }
@@ -91,7 +84,7 @@ const refreshToken = async (): Promise<string> => {
 
 axiosInstance.interceptors.request.use(
 	(config: InternalAxiosRequestConfig) => {
-		const accessToken = localStorage.getItem('accessToken')
+		const accessToken = getCookie('accessToken')
 		if (accessToken && config.headers) {
 			config.headers.Authorization = `Bearer ${accessToken}`
 		}
@@ -116,8 +109,6 @@ axiosInstance.interceptors.response.use(
 				return axiosInstance(originalRequest)
 			} catch (refreshError) {
 				console.error('Błąd podczas ponownego logowania:', refreshError);
-				localStorage.removeItem('accessToken')
-				localStorage.removeItem('refreshToken')
 				if (disconnectWebSocket) {
 					disconnectWebSocket();
 				}
