@@ -12,6 +12,7 @@ import { PollModal } from './PollModal'
 import { EventLinkModal } from './EventLinkModal'
 import { PostList } from './PostList'
 import AlertModal from './AlertModal'
+import { getCookie } from '../utils/cookies'
 
 interface TeamDiscussionTabProps {
 	teamMembers: TeamMember[]
@@ -92,7 +93,7 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [showReplyEmojiPicker, setShowReplyEmojiPicker] = useState<Map<string, boolean>>(new Map())
 
 	useEffect(() => {
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (token) {
 			api.get<User>('/auth/user', { params: { token } })
 				.then(({ data }) => setCurrentUserId(data.id))

@@ -18,6 +18,7 @@ import { showRatingToast } from '../components/RatingToast'
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 import UserReportForm from '../components/UserReportForm'
 import BadgesSection from '../components/BadgesSection'
+import { getCookie } from '../utils/cookies'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -119,7 +120,7 @@ const UserProfilePage = () => {
 	const handleOpenChat = async () => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			const res = await api.post(`/conversations/direct?user1Id=${currentUserId}&user2Id=${parseInt(id)}`, null, {
 				headers: { Authorization: `Bearer ${token}` },
 			})
@@ -150,7 +151,7 @@ const UserProfilePage = () => {
 	const saveEditUserRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await api.put(
 				`/ratings/user/${ratingId}`,
 				{
@@ -174,7 +175,7 @@ const UserProfilePage = () => {
 
 	const deleteUserRating = async (ratingId: number) => {
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await api.delete(`/ratings/user/${ratingId}`, {
 				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
@@ -209,7 +210,7 @@ const UserProfilePage = () => {
 	const saveEditOrganizerRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await api.put(
 				`/ratings/organizer/${ratingId}`,
 				{
@@ -234,7 +235,7 @@ const UserProfilePage = () => {
 
 	const deleteOrganizerRating = async (ratingId: number) => {
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await api.delete(`/ratings/organizer/${ratingId}`, {
 				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
@@ -248,7 +249,7 @@ const UserProfilePage = () => {
 	}
 
 	useEffect(() => {
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (!token || !id) return
 
 		const fetchData = async () => {
@@ -427,7 +428,7 @@ const UserProfilePage = () => {
 	const handleSubmitUserReport = async (message: string) => {
 		if (!id) return
 
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (!token) {
 			toast.error("Brak tokenu – zaloguj się ponownie.")
 			return

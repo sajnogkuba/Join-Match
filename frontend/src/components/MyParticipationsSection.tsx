@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import dayjs, { Dayjs } from "dayjs";
 import { MapPin, CalendarDays, Users, Loader2, AlertTriangle } from "lucide-react";
 import api from "../Api/axios";
+import { getCookie } from "../utils/cookies";
 type EventStatus = "PLANNED" | "CANCELED" | "FINISHED";
 type EventDateWire = number[] | string | Date;
 
@@ -55,7 +56,7 @@ const MyParticipationsSection: React.FC = () => {
     const currentPageRef = useRef(0);
 
     const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token) {
             setError("Brak tokenu — zaloguj się ponownie.");
             setLoading(false);

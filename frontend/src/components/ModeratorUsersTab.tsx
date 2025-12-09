@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { Search, Filter, Eye, Ban, Undo2 } from "lucide-react";
 import axiosInstance from "../Api/axios.tsx";
+import { getCookie } from "../utils/cookies";
 
 type BackendUserDto = {
     id: number;
@@ -51,7 +52,7 @@ const ModeratorUsersTab: React.FC = () => {
 
     useEffect(() => {
         try {
-            const email = localStorage.getItem("email");
+            const email = getCookie("email");
             setLoggedEmail(email);
         } catch {
             setLoggedEmail(null);

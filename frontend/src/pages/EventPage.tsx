@@ -11,6 +11,7 @@ import StarRatingDisplay from '../components/StarRatingDisplay'
 import RatingCard from '../components/RatingCard'
 import StarRatingInput from '../components/StarRatingInput'
 import { formatEventDate, parseEventDate } from '../utils/formatDate'
+import { getCookie } from '../utils/cookies'
 import type { EventRatingResponse } from '../Api/types/Rating'
 import ReportEventModal from '../components/ReportEventModal'
 import ReportRatingModal from '../components/ReportRatingModal'
@@ -112,7 +113,7 @@ const EventPage: React.FC = () => {
 	const handleSubmitReport = async (message: string) => {
 		if (!id) return
 
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (!token) {
 			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.')
 			return
@@ -144,7 +145,7 @@ const EventPage: React.FC = () => {
 	const handleSubmitRatingReport = async (message: string) => {
 		if (!ratingToReport) return
 
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (!token) {
 			toast.error('Musisz być zalogowany, aby zgłosić ocenę.')
 			return
@@ -229,7 +230,7 @@ const EventPage: React.FC = () => {
 	// fetch user email from backend based on stored access token (similar to ProfilePage)
 	useEffect(() => {
 		const fetchUserEmail = async () => {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (!token) {
 				setUserEmail(null)
 				return
@@ -248,7 +249,7 @@ const EventPage: React.FC = () => {
 
 	useEffect(() => {
 		const fetchUser = async () => {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (!token) return
 			try {
 				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
@@ -393,7 +394,7 @@ const EventPage: React.FC = () => {
 	const saveEditEventRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await axiosInstance.put(
 				`/ratings/event/${ratingId}`,
 				{
@@ -417,7 +418,7 @@ const EventPage: React.FC = () => {
 
 	const deleteEventRating = async (ratingId: number) => {
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await axiosInstance.delete(`/ratings/event/${ratingId}`, {
 				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
@@ -533,7 +534,7 @@ const EventPage: React.FC = () => {
 	const handleMessageOrganizer = async () => {
 		if (!currentUserId || !event?.ownerId) return
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			const res = await axiosInstance.post(
 				`/conversations/direct?user1Id=${currentUserId}&user2Id=${event.ownerId}`,
 				null,
@@ -605,7 +606,7 @@ const EventPage: React.FC = () => {
 		if (!id || !currentUserId || event?.ownerId !== currentUserId) return
 
 		try {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null, {
 				params: { token },
 			})

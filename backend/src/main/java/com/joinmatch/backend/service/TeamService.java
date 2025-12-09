@@ -46,9 +46,9 @@ public class TeamService {
         Page<Team> teams = teamRepository.findAll(sortedPageable);
 
         List<Team> filtered = teams.getContent().stream()
-                .filter(event -> event.getReportTeamSet()
+                .filter(team -> team.getReportTeamSet() == null || team.getReportTeamSet()
                         .stream()
-                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
+                        .noneMatch(reportTeam -> Boolean.TRUE.equals(reportTeam.getActive())))
                 .toList();
 
         Page<Team> filteredPage = new PageImpl<>(

@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import axiosInstance from '../Api/axios'; // Twój plik z axiosInstance
-import type { JwtResponse } from '../Api/types'
+import axiosInstance from '../Api/axios';
 import {scheduleTokenRefresh} from '../Api/axios';
+import { getCookie, deleteCookie } from '../utils/cookies';
 
 interface AuthContextType {
   user: string | null;
   accessToken: string | null;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (token: string, refreshToken: string, email: string) => void;
+  loginWithGoogle: (email: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -21,9 +21,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Przy starcie aplikacji sprawdzamy, czy są tokeny
-    const storedToken = localStorage.getItem('accessToken');
-    const storedEmail = localStorage.getItem('email'); // Dodaj do loginu!
+    const storedToken = getCookie('accessToken');
+    const storedEmail = getCookie('email');
     if (storedToken && storedEmail) {
       setAccessToken(storedToken);
       setUser(storedEmail);
@@ -32,28 +31,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
 const login = async (email: string, password: string) => {
-	const response = await axiosInstance.post<JwtResponse>('/auth/login', { email, password });
-	const { token, refreshToken, email: responseEmail } = response.data;
-
-	localStorage.setItem('accessToken', token);
-	localStorage.setItem('refreshToken', refreshToken);
-	localStorage.setItem('email', responseEmail);
-
-	setAccessToken(token);
-	setUser(responseEmail);
-
-	scheduleTokenRefresh();
+	const response = await axiosInstance.post<{ email: string }>('/auth/login', { email, password });
+	const responseEmail = response.data.email;
+	
+	setTimeout(() => {
+		const accessToken = getCookie('accessToken');
+		const cookieEmail = getCookie('email') || responseEmail;
+		if (accessToken && cookieEmail) {
+			setAccessToken(accessToken);
+			setUser(cookieEmail);
+			scheduleTokenRefresh();
+		}
+	}, 100);
 };
 
-const loginWithGoogle = (token: string, refreshToken: string, email: string) => {
-  localStorage.setItem('accessToken', token);
-  localStorage.setItem('refreshToken', refreshToken);
-  localStorage.setItem('email', email);
-
-  setAccessToken(token);
-  setUser(email);
-
-  scheduleTokenRefresh();
+const loginWithGoogle = (email: string) => {
+  const accessToken = getCookie('accessToken');
+  if (accessToken) {
+    setAccessToken(accessToken);
+    setUser(email);
+    scheduleTokenRefresh();
+  }
 };
 
 
@@ -62,17 +60,15 @@ const loginWithGoogle = (token: string, refreshToken: string, email: string) => 
     try {
       await axiosInstance.post('/auth/logout', { email: user });
     } catch (e) {
-      // Ignoruj, jeśli błąd
     }
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('email');
+    deleteCookie('accessToken');
+    deleteCookie('refreshToken');
+    deleteCookie('email');
     setUser(null);
     setAccessToken(null);
-    window.location.href = '/login'; // Przekieruj usera
+    window.location.href = '/login';
   };
 
-  // **Automatyczne wylogowanie gdy backend odrzuci refresh lub wygaśnie sesja**
   useEffect(() => {
     const interceptor = axiosInstance.interceptors.response.use(
       resp => resp,

@@ -11,6 +11,7 @@ import type { UserSportsResponse } from '../Api/types/Sports'
 import AlertModal from '../components/AlertModal'
 import SportTypeFilter from '../components/SportTypeFilter'
 import { parseEventDate } from '../utils/formatDate'
+import { getCookie } from '../utils/cookies'
 import {
 	Map as MapIcon,
 	Grid as GridIcon,
@@ -86,7 +87,7 @@ const EventsPage = () => {
 	const currentPageRef = useRef(0)
 
 	useEffect(() => {
-		setUserEmail(localStorage.getItem('email'))
+		setUserEmail(getCookie('email'))
 	}, [])
 
 	// --- Pobieranie sport objects przy starcie ---
@@ -133,7 +134,7 @@ const EventsPage = () => {
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
 
-		const token = localStorage.getItem('accessToken')
+		const token = getCookie('accessToken')
 		if (token) {
 			axiosInstance.get<UserSportsResponse>('/sport-type/user', { params: { token } })
 				.then(({ data }) => {

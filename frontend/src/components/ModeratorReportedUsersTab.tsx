@@ -8,6 +8,7 @@ import React, {
 import { Search, Eye, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
+import { getCookie } from "../utils/cookies";
 
 type PageResponse<T> = {
     content: T[];
@@ -73,7 +74,7 @@ const ModeratorReportedUsersTab: React.FC = () => {
     const observerTargetRef = useRef<HTMLDivElement | null>(null);
 
     const loggedEmail =
-        typeof window !== "undefined" ? localStorage.getItem("email") : null;
+        typeof window !== "undefined" ? getCookie("email") : null;
 
     const getUserProfileLink = (
         email: string | null | undefined,

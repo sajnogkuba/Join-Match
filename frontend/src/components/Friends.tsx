@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Search, UserMinus, X, UserPlus, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios";
+import { getCookie } from "../utils/cookies";
 import type { User } from "../Api/types/User";
 import type { Friend, SearchResult, PendingRequest } from "../Api/types/Friends";
 import Avatar from "./Avatar";
@@ -145,7 +146,7 @@ const Friends = () => {
     const [friendToDelete, setFriendToDelete] = useState<Friend | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
+        const token = getCookie('accessToken');
         if (!token) return;
         axiosInstance.get<User>('/auth/user', { params: { token } }).then(response => {
             setCurrentUser(response.data);

@@ -8,6 +8,7 @@ import Avatar from './Avatar'
 import NotificationBell from './NotificationBell'
 import api from '../Api/axios'
 import ChatBell from './ChatBell'
+import { getCookie } from '../utils/cookies'
 
 type UserDetails = {
 	name: string
@@ -34,7 +35,7 @@ export const Navbar: React.FC = () => {
 	useEffect(() => {
 		if (isAuthenticated && user) {
 			setLoadingUserDetails(true)
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (token) {
 				api
 					.get<UserDetails>('/auth/user/details', { params: { token } })

@@ -7,6 +7,7 @@ import TeamRequestsList from '../components/TeamRequestsList'
 import TeamFilters, { type TeamFilters as TeamFiltersType } from '../components/TeamFilters'
 import api from '../Api/axios'
 import type { User } from '../Api/types/User'
+import { getCookie } from '../utils/cookies'
 
 type TeamsTab = 'all-teams' | 'owned-teams' | 'joined-teams' | 'pending-requests'
 
@@ -45,7 +46,7 @@ const TeamsPage: React.FC = () => {
 
 	useEffect(() => {
 		if ((activeTab === 'owned-teams' || activeTab === 'joined-teams' || activeTab === 'pending-requests') && isAuthenticated) {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (!token) {
 				setCurrentUserId(null)
 				return

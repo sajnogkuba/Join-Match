@@ -9,6 +9,7 @@ import type { SportObject } from '../Api/types/SportObject.ts'
 import { motion } from 'framer-motion'
 import { Upload, CalendarDays, MapPin, DollarSign, Users, AlignLeft } from 'lucide-react'
 import PlaceAutocomplete from './PlaceAutocomplete'
+import { getCookie } from '../utils/cookies'
 
 const inputBase =
 	'w-full px-4 py-3 rounded-xl bg-zinc-900/70 border border-zinc-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-600 focus:border-transparent transition'
@@ -54,7 +55,7 @@ export default function CreateEventForm() {
 	const [customPlace, setCustomPlace] = useState<google.maps.places.PlaceResult | null>(null)
 
 	useEffect(() => {
-		setOwnerEmail(localStorage.getItem('email'))
+		setOwnerEmail(getCookie('email'))
 	}, [])
 
 	const getComponent = (place: google.maps.places.PlaceResult | null, types: string[]): string => {

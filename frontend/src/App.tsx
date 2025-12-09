@@ -27,6 +27,7 @@ import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
 import PostPage from './pages/PostPage.tsx'
 import ModeratorPanelPage from "./pages/ModeratorPanelPage.tsx";
+import { getCookie } from './utils/cookies'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
@@ -85,7 +86,7 @@ const NotificationProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
 
 	React.useEffect(() => {
 		if (isAuthenticated) {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (token) {
 				api
 					.get('/auth/user', { params: { token } })
@@ -107,7 +108,7 @@ const ChatProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children
 
 	React.useEffect(() => {
 		if (isAuthenticated) {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (token) {
 				api
 					.get('/auth/user', { params: { token } })

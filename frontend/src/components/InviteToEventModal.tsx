@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { X, Search, UserPlus, Loader2 } from 'lucide-react'
 import axiosInstance from '../Api/axios'
 import Avatar from './Avatar'
+import { getCookie } from '../utils/cookies'
 
 import type { User } from '../Api/types/User'
 import type { Friend, SearchResult } from '../Api/types/Friends'
@@ -68,7 +69,7 @@ const InviteToEventModal: React.FC<InviteToEventModalProps> = ({
 
 		const load = async () => {
 			try {
-				const token = localStorage.getItem('accessToken')
+				const token = getCookie('accessToken')
 				if (!token) return
 
 				const { data: usr } = await axiosInstance.get<User>('/auth/user', {

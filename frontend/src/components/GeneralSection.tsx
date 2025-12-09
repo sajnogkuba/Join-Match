@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../Api/axios";
+import { getCookie } from "../utils/cookies";
 import StarRatingDisplay from "./StarRatingDisplay";
 import StarRatingInput from "./StarRatingInput";
 import type { SportTypeOption, UserSport, UserSportsResponse } from "../Api/types/Sports";
@@ -145,7 +146,7 @@ const AddSportModal = ({
         if (!sportId || !levelValid || !selected) return;
         setSaving(true);
         try {
-            const token = localStorage.getItem("accessToken") || "";
+            const token = getCookie("accessToken") || "";
             await api.post("/sport-type/user", {
                 token,
                 sportId,
@@ -369,7 +370,7 @@ const GeneralSection = ({
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token) return;
         api
             .get<UserSportsResponse>("/sport-type/user", { params: { token } })
@@ -423,7 +424,7 @@ const GeneralSection = ({
             return;
         }
 
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token) return;
 
         setErrorMessage(null);

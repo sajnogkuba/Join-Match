@@ -68,9 +68,9 @@ const RegisterPage = () => {
 				idToken,
 			});
 	
-			const { token, refreshToken, email } = res.data;
+			const { email } = res.data;
 	
-			loginWithGoogle(token, refreshToken, email);
+			loginWithGoogle(email);
 	
 			navigate("/");
 		} catch (err) {

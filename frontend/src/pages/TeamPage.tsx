@@ -17,6 +17,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { useAuth } from '../Context/authContext'
 import AlertModal from '../components/AlertModal'
+import { getCookie } from '../utils/cookies'
 
 dayjs.locale('pl')
 
@@ -109,7 +110,7 @@ const TeamPage: React.FC = () => {
 
 	useEffect(() => {
 		if (isAuthenticated) {
-			const token = localStorage.getItem('accessToken')
+			const token = getCookie('accessToken')
 			if (token) {
 				api
 					.get<User>('/auth/user', { params: { token } })

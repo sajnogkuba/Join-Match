@@ -4,6 +4,7 @@ import Avatar from "./Avatar";
 import StarRatingDisplay from "./StarRatingDisplay";
 import { parseLocalDate } from "../utils/formatDate";
 import type { UserRatingResponse } from "../Api/types/Rating";
+import { getCookie } from "../utils/cookies";
 import ReportRatingModal from "../components/ReportRatingModal";
 import { Flag } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +45,7 @@ const RatingsSection = ({ userId }: RatingsSectionProps) => {
     const handleSubmitReport = async (message: string) => {
         if (!ratingToReport) return;
 
-        const token = localStorage.getItem("accessToken");
+        const token = getCookie("accessToken");
         if (!token) {
             toast.error("Musisz być zalogowany, aby zgłosić opinię.");
             return;
