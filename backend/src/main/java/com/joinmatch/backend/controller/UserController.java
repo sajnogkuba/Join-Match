@@ -6,6 +6,7 @@ import com.joinmatch.backend.config.JwtService;
 import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.dto.Auth.*;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
+import com.joinmatch.backend.dto.Email.VerifyAccountRequest;
 import com.joinmatch.backend.dto.Moderator.GetUsersDto;
 import com.joinmatch.backend.dto.Reports.UserReportDto;
 import com.joinmatch.backend.service.SportService;
@@ -48,7 +49,7 @@ public class UserController {
         TokenSupportObject tokenSupportObject;
         try {
             tokenSupportObject = userService.login(request);
-        }catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         CookieUtil.setAccessTokenCookie(response, tokenSupportObject.getToken());
@@ -127,7 +128,7 @@ public class UserController {
 
     @GetMapping("/user")
     public ResponseEntity<UserResponseDto> getUser(@RequestParam String token) {
-        UserResponseDto user =  userService.getSimpleInfo(token);
+        UserResponseDto user = userService.getSimpleInfo(token);
         return ResponseEntity.ok(user);
     }
 
@@ -139,32 +140,35 @@ public class UserController {
         UsersResponseDto user = userService.getUserById(id, viewerId);
         return ResponseEntity.ok(user);
     }
+
     @PatchMapping("/block/user")
-    public ResponseEntity<Void> blockUser(@RequestBody BlockUserDto blockUserDto){
+    public ResponseEntity<Void> blockUser(@RequestBody BlockUserDto blockUserDto) {
         try {
-            userService.changeStatusOfBlock(blockUserDto.email(),true);
-        }catch (
+            userService.changeStatusOfBlock(blockUserDto.email(), true);
+        } catch (
                 IllegalArgumentException e
-        ){
+        ) {
             return ResponseEntity.notFound().build();
-        }catch (RuntimeException ex){
+        } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
     }
+
     @PatchMapping("/unlock/user")
-    public ResponseEntity<Void> unlockUser(@RequestBody BlockUserDto blockUserDto){
+    public ResponseEntity<Void> unlockUser(@RequestBody BlockUserDto blockUserDto) {
         try {
-            userService.changeStatusOfBlock(blockUserDto.email(),false);
-        }catch (
+            userService.changeStatusOfBlock(blockUserDto.email(), false);
+        } catch (
                 IllegalArgumentException e
-        ){
+        ) {
             return ResponseEntity.notFound().build();
-        }catch (RuntimeException ex){
+        } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
     }
+
     @GetMapping("/moderation")
     public ResponseEntity<Page<GetUsersDto>> getUsersForModeration(
             @RequestParam(defaultValue = "0") int page,
@@ -174,13 +178,24 @@ public class UserController {
         Page<GetUsersDto> result = userService.getUsersForModeration(pageable);
         return ResponseEntity.ok(result);
     }
+
     @PostMapping("/report/user")
-    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto){
-        try{
+    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto) {
+        try {
             userService.reportUser(userReportDto);
-        }catch (IllegalArgumentException exception){
+        } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyAccount(@RequestBody VerifyAccountRequest request) {
+        try {
+            userService.verifyUser(request.email(), request.code());
+            return ResponseEntity.ok("Account verified successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

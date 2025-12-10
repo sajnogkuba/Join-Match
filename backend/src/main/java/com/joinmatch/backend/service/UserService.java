@@ -41,6 +41,7 @@ public class UserService {
     private final FriendshipRepository friendshipRepository;
     private final GoogleTokenVerifier tokenVerifier;
     private final ReportUserRepository reportUserRepository;
+    private final EmailService emailService;
 
 
     public void register(RegisterRequest request) {
@@ -54,8 +55,13 @@ public class UserService {
         user.setDateOfBirth(LocalDate.parse(request.dateOfBirth()));
         user.setRole(Role.USER);
         user.setIsBlocked(false);
+        user.setIsVerified(false);
+        String code = generateVerificationCode();
+        user.setVerificationCode(code);
+
         userRepository.save(user);
-        // Można dodać logikę wysyłania e-maila weryfikacyjnego
+
+        emailService.sendVerificationEmail(user.getEmail(), code);
     }
 
     public TokenSupportObject login(LoginRequest request) {
@@ -63,6 +69,9 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
+        }
+        if (!user.getIsVerified()) {
+            throw new RuntimeException("Account is not verified. Please check your email for the code.");
         }
         if (user.getIsBlocked()) {
             throw new IllegalArgumentException("User is blocked");
@@ -337,6 +346,29 @@ public class UserService {
     public User findById(Integer id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id " + id));
+    }
+
+    public void verifyUser(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getIsVerified()) {
+            throw new RuntimeException("User already verified");
+        }
+
+        if (user.getVerificationCode() != null && user.getVerificationCode().equals(code)) {
+            user.setIsVerified(true);
+            user.setVerificationCode(null);
+            userRepository.save(user);
+        } else {
+            throw new RuntimeException("Invalid verification code");
+        }
+    }
+
+    private String generateVerificationCode() {
+        Random random = new Random();
+        int code = 100000 + random.nextInt(900000); // 6 digit code
+        return String.valueOf(code);
     }
 
 }

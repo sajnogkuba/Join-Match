@@ -38,6 +38,12 @@ public class User {
     @Column(name= "is_blocked", nullable = false)
     private Boolean isBlocked;
 
+    @Column(name = "verification_code", length = 64)
+    private String verificationCode;
+
+    @Column(name = "is_verified", nullable = false)
+    private Boolean isVerified = false;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 255)
