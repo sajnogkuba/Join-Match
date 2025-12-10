@@ -2,6 +2,19 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
   servlet:
     multipart:
       max-file-size: 10MB
