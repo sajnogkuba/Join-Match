@@ -171,7 +171,11 @@ public class EventService {
         return EventResponseDto.fromEvent(saved);
     }
 
-    public List<EventResponseDto> getEventsForUser(String token){
+    public List<EventResponseDto> getEventsForUser(HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         return eventRepository.findAllOwnedByUserToken(token)
                 .stream()
                 .map(EventResponseDto::fromEvent)
@@ -205,7 +209,11 @@ public class EventService {
         reportEventRepository.save(reportEvent);
     }
 
-    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, String token) {
+    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);

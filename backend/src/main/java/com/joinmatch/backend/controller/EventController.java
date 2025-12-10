@@ -1,6 +1,5 @@
 package com.joinmatch.backend.controller;
 
-import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
@@ -79,11 +78,11 @@ public class EventController {
     @GetMapping("/byUser")
     public ResponseEntity<List<EventResponseDto>> getEventsForUser(HttpServletRequest request)
     {
-        String token = TokenExtractor.extractToken(request);
-        if (token == null) {
+        try {
+            return ResponseEntity.ok(eventService.getEventsForUser(request));
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(eventService.getEventsForUser(token));
     }
 
     @GetMapping("/byParticipant")
@@ -94,22 +93,22 @@ public class EventController {
             @RequestParam(defaultValue = "DESC") String direction,
             HttpServletRequest request)
     {
-        String token = TokenExtractor.extractToken(request);
-        if (token == null) {
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<EventResponseDto> events = eventService.getParticipatedEvents(
+                    pageable,
+                    sortBy,
+                    direction,
+                    request
+            );
+
+            if (events.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(events);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        Pageable pageable = PageRequest.of(page, size);
-        Page<EventResponseDto> events = eventService.getParticipatedEvents(
-                pageable,
-                sortBy,
-                direction,
-                token
-        );
-
-        if (events.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(events);
     }
     @GetMapping("/mutualEvents")
     public ResponseEntity<List<EventResponseDto>> getMutualEvents(@RequestParam Integer idLogUser, Integer idViewedUser){
