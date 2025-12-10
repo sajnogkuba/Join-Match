@@ -142,6 +142,9 @@ public class TeamService {
     public void reportUserRating(TeamReportDto teamReportDto) {
         Team team = teamRepository.findById(teamReportDto.IdTeam()).orElseThrow(() -> new IllegalArgumentException());
         User user = userRepository.findByTokenValue(teamReportDto.token()).orElseThrow(() -> new IllegalArgumentException());
+        if(reportTeamRepository.existsByTeam_IdAndTeamReporterUser_IdAndActiveTrue(teamReportDto.IdTeam(), user.getId())){
+            throw new RuntimeException("Not allowed to multiple report");
+        }
         ReportTeam reportTeam = new ReportTeam();
         reportTeam.setTeamReporterUser(user);
         reportTeam.setDescription(teamReportDto.description());

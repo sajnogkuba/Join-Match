@@ -10,6 +10,7 @@ import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.service.RatingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -119,6 +120,8 @@ public class RatingController {
             ratingService.reportEventRating(reportDto);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
+        }catch (RuntimeException runtimeException){
+            ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok().build();
     }

@@ -185,6 +185,9 @@ public class EventService {
     public void reportEvent(EventReportDto eventReportDto){
         User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         Event referenceById = eventRepository.getReferenceById(eventReportDto.idEvent());
+        if(reportEventRepository.existsByReportedEvent_EventIdAndReporterUser_IdAndActiveTrue(eventReportDto.idEvent(), user.getId())){
+            throw new RuntimeException("You cannot report many times");
+        }
         ReportEvent reportEvent = new ReportEvent();
         reportEvent.setReportedEvent(referenceById);
         reportEvent.setReporterUser(user);

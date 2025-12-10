@@ -323,6 +323,9 @@ public class RatingService {
     public void reportEventRating(EventRatingReportDto eventReportDto){
         User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         EventRating referenceById = eventRatingRepository.getReferenceById(eventReportDto.idEventRating());
+        if(reportEventRatingRepository.existsByEventRating_EventRatingIdAndReporterUser_IdAndActiveTrue(eventReportDto.idEventRating(),user.getId())){
+            throw new RuntimeException("Cannot report multiple");
+        }
         ReportEventRating reportEventRating = new ReportEventRating();
         reportEventRating.setDescription(eventReportDto.description());
         reportEventRating.setActive(false);

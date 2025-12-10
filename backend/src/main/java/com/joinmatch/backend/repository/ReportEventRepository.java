@@ -10,4 +10,5 @@ import org.springframework.data.jpa.repository.Query;
 public interface ReportEventRepository extends JpaRepository<ReportEvent,Integer> {
     long countByReviewedIsFalse();
     Page<ReportEvent> findAllByOrderByIdDesc(Pageable pageable);
+    boolean existsByReportedEvent_EventIdAndReporterUser_IdAndActiveTrue(Integer eventId, Integer userId);
 }

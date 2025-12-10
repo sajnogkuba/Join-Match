@@ -55,18 +55,39 @@ const ReportTeamModal: React.FC<ReportTeamModalProps> = ({ isOpen, onClose, team
             setTimeout(() => {
                 resetStateAndClose()
             }, 1200)
-        } catch (err: any) {
-            console.error('Error reporting team:', err)
-            if (err.response?.status === 400) {
-                const msg = err.response?.data?.message || err.response?.data || 'Nieprawidłowe dane zgłoszenia.'
-                setError(msg)
-            } else {
-                setError('Nie udało się wysłać zgłoszenia. Spróbuj ponownie.')
-            }
-        } finally {
-            setSubmitting(false)
+        }  catch (err: any) {
+        console.error("❌ Błąd zgłoszenia drużyny:", err);
+
+        // 🔥 OBSŁUGA 403 — zgłoszenie już zaakceptowane → nie można zgłosić ponownie
+        if (err?.response?.status === 403) {
+            setError(
+                "Twoje zgłoszenie zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń."
+            );
+
+            // Zamknij modal po 1,5 sekundy
+            setTimeout(() => {
+                resetStateAndClose();
+            }, 1500);
+
+            return;
         }
+
+        // Obsługa 400
+        if (err?.response?.status === 400) {
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data ||
+                "Nieprawidłowe dane zgłoszenia.";
+            setError(msg);
+        } else {
+            // Pozostałe błędy
+            setError("Nie udało się wysłać zgłoszenia. Spróbuj ponownie.");
+        }
+    } finally {
+        setSubmitting(false);
     }
+
+}
 
     return (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
