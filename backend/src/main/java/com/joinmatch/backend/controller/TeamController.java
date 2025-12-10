@@ -9,6 +9,7 @@ import com.joinmatch.backend.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -99,6 +100,8 @@ public class TeamController {
             teamService.reportUserRating(teamReportDto);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
+        }catch (RuntimeException exception){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok().build();
     }

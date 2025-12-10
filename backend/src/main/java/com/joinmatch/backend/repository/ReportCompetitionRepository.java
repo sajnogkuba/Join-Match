@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReportCompetitionRepository extends JpaRepository<ReportCompetition, Integer> {
     long countByReviewedIsFalse();
+    boolean existsByCompetition_IdAndReporterUser_IdAndActiveTrue(Integer competitionId, Integer reporterId);
+
 }

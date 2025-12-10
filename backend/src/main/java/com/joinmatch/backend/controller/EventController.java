@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -109,6 +110,8 @@ public class EventController {
         eventService.reportEvent(eventReportDto);
         }catch (IllegalArgumentException exception){
             return ResponseEntity.badRequest().build();
+        }catch (RuntimeException exception){
+            return ResponseEntity.status(HttpStatusCode.FORBIDDEN).build();
         }
         return ResponseEntity.ok().build();
     }

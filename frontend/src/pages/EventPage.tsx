@@ -109,70 +109,99 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	// --- HANDLER: ZGŁOSZENIE WYDARZENIA ---
 	const handleSubmitReport = async (message: string) => {
-		if (!id) return
+		if (!id) return;
 
-		const token = getCookie('accessToken')
+		const token = getCookie('accessToken');
 		if (!token) {
-			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.')
-			return
+			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.');
+			return;
 		}
 
 		try {
-			setIsSendingReport(true)
+			setIsSendingReport(true);
 
 			await axiosInstance.post('/event/report/event', {
 				token,
 				idEvent: Number(id),
 				description: message,
-			})
+			});
 
-			toast.success('Dziękujemy, zgłoszenie zostało wysłane do moderacji.')
-			setShowReportModal(false)
+			toast.success('Dziękujemy, zgłoszenie zostało wysłane do moderacji.');
+			setShowReportModal(false);
+
 		} catch (e: any) {
-			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e)
-			if (e?.response?.status === 400) {
-				toast.error('Nie udało się wysłać zgłoszenia (400).')
-			} else {
-				toast.error('Nie udało się wysłać zgłoszenia.')
+			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e);
+
+			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie już zaakceptowane
+			if (e?.response?.status === 403) {
+				toast.error(
+					'Twoje zgłoszenie zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.'
+				);
+				setShowReportModal(false);
+				return;
 			}
+
+			// Dalsza obsługa błędów
+			if (e?.response?.status === 400) {
+				toast.error('Nie udało się wysłać zgłoszenia (400).');
+			} else {
+				toast.error('Nie udało się wysłać zgłoszenia.');
+			}
+
 		} finally {
-			setIsSendingReport(false)
+			setIsSendingReport(false);
 		}
-	}
+	};
+
 
 	const handleSubmitRatingReport = async (message: string) => {
-		if (!ratingToReport) return
+		if (!ratingToReport) return;
 
-		const token = getCookie('accessToken')
+		const token = getCookie('accessToken');
 		if (!token) {
-			toast.error('Musisz być zalogowany, aby zgłosić ocenę.')
-			return
+			toast.error('Musisz być zalogowany, aby zgłosić ocenę.');
+			return;
 		}
 
 		try {
-			setIsSendingRatingReport(true)
+			setIsSendingRatingReport(true);
+
 			await axiosInstance.post('/ratings/report/eventRating', {
 				token,
 				idEventRating: ratingToReport.id,
 				description: message,
-			})
+			});
 
-			toast.success('Dziękujemy, zgłoszenie oceny zostało wysłane do moderacji.')
-			setShowRatingReportModal(false)
-			setRatingToReport(null)
+			toast.success('Dziękujemy, zgłoszenie oceny zostało wysłane do moderacji.');
+			setShowRatingReportModal(false);
+			setRatingToReport(null);
+
 		} catch (e: any) {
-			console.error('❌ Błąd wysyłania zgłoszenia oceny wydarzenia:', e)
-			if (e?.response?.status === 400) {
-				toast.error('Nie udało się wysłać zgłoszenia (400).')
-			} else {
-				toast.error('Nie udało się wysłać zgłoszenia oceny.')
+			console.error('❌ Błąd wysyłania zgłoszenia oceny:', e);
+
+			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie tej oceny już zaakceptowane
+			if (e?.response?.status === 403) {
+				toast.error(
+					'Twoje zgłoszenie tej oceny zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.'
+				);
+				setShowRatingReportModal(false);
+				setRatingToReport(null);
+				return;
 			}
+
+			// Obsługa pozostałych błędów
+			if (e?.response?.status === 400) {
+				toast.error('Nie udało się wysłać zgłoszenia oceny (400).');
+			} else {
+				toast.error('Nie udało się wysłać zgłoszenia oceny.');
+			}
+
 		} finally {
-			setIsSendingRatingReport(false)
+			setIsSendingRatingReport(false);
 		}
-	}
+	};
+
 
 	const handleAcceptInvitation = async () => {
 		if (!userEmail || !id) return
