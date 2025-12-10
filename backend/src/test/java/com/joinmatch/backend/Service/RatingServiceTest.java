@@ -11,6 +11,8 @@ import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import com.joinmatch.backend.service.RatingService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +47,13 @@ class RatingServiceTest {
 
     @InjectMocks
     private RatingService ratingService;
+
+    private HttpServletRequest mockRequestWithToken(String token) {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", token);
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+        return request;
+    }
 
     // -------------------------------------------------------
     // addUserRating
@@ -682,12 +691,13 @@ class RatingServiceTest {
         eventRating.setReportEventRatings(new java.util.HashSet<>());
 
         EventRatingReportDto dto =
-                new EventRatingReportDto("TOKEN", 5, "desc");
+                new EventRatingReportDto(5, "desc");
 
         when(userRepository.findByTokenValue("TOKEN")).thenReturn(Optional.of(user));
         when(eventRatingRepository.getReferenceById(5)).thenReturn(eventRating);
 
-        ratingService.reportEventRating(dto);
+        HttpServletRequest request = mockRequestWithToken("TOKEN");
+        ratingService.reportEventRating(dto, request);
 
         assertEquals(1, user.getReportEventRatings().size());
         assertEquals(1, eventRating.getReportEventRatings().size());
@@ -705,12 +715,13 @@ class RatingServiceTest {
         UserRating rating = new UserRating();
 
         UserRatingReportDto dto =
-                new UserRatingReportDto("TOKEN", 10, "desc");
+                new UserRatingReportDto(10, "desc");
 
         when(userRepository.findByTokenValue("TOKEN")).thenReturn(Optional.of(user));
         when(userRatingRepository.getReferenceById(10)).thenReturn(rating);
 
-        ratingService.reportUserRating(dto);
+        HttpServletRequest request = mockRequestWithToken("TOKEN");
+        ratingService.reportUserRating(dto, request);
 
         ArgumentCaptor<ReportUserRating> captor = ArgumentCaptor.forClass(ReportUserRating.class);
         verify(reportUserRatingRepository).save(captor.capture());

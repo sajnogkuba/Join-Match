@@ -2,7 +2,6 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.config.CookieUtil;
 import com.joinmatch.backend.config.JwtService;
-import com.joinmatch.backend.config.TokenExtractor;
 
 import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.dto.Auth.*;
@@ -102,15 +101,11 @@ public class UserController {
 
     @GetMapping("/user/details")
     public ResponseEntity<UserResponseDto> getUserDetails(HttpServletRequest request) {
-        String token = TokenExtractor.extractToken(request);
-        if (token == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
         UserResponseDto simpleInfo;
         try {
-            simpleInfo = userService.getSimpleInfo(token);
+            simpleInfo = userService.getSimpleInfo(request);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         return ResponseEntity.ok().body(simpleInfo);
@@ -133,12 +128,12 @@ public class UserController {
 
     @GetMapping("/user")
     public ResponseEntity<UserResponseDto> getUser(HttpServletRequest request) {
-        String token = TokenExtractor.extractToken(request);
-        if (token == null) {
+        try {
+            UserResponseDto user = userService.getSimpleInfo(request);
+            return ResponseEntity.ok(user);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        UserResponseDto user = userService.getSimpleInfo(token);
-        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/user/{id}")

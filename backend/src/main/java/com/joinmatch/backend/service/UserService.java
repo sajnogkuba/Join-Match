@@ -153,7 +153,11 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public UserResponseDto getSimpleInfo(String token) {
+    public UserResponseDto getSimpleInfo(HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if (byTokenValue.isEmpty()) {
             throw new IllegalArgumentException("User Not Found");
