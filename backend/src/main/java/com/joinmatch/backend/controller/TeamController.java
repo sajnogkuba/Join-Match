@@ -95,9 +95,9 @@ public class TeamController {
         return ResponseEntity.ok(updatedTeam);
     }
     @PostMapping("/report/team")
-    public ResponseEntity<Void> reportTeam(@RequestBody TeamReportDto teamReportDto){
+    public ResponseEntity<Void> reportTeam(@RequestBody TeamReportDto teamReportDto, jakarta.servlet.http.HttpServletRequest request){
         try {
-            teamService.reportUserRating(teamReportDto);
+            teamService.reportUserRating(teamReportDto, request);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
         }catch (RuntimeException exception){

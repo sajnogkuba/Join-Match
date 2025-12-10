@@ -35,14 +35,11 @@ export const Navbar: React.FC = () => {
 	useEffect(() => {
 		if (isAuthenticated && user) {
 			setLoadingUserDetails(true)
-			const token = getCookie('accessToken')
-			if (token) {
-				api
-					.get<UserDetails>('/auth/user/details', { params: { token } })
-					.then(({ data }) => setUserDetails(data))
-					.catch(() => setUserDetails(null))
-					.finally(() => setLoadingUserDetails(false))
-			}
+			api
+				.get<UserDetails>('/auth/user/details')
+				.then(({ data }) => setUserDetails(data))
+				.catch(() => setUserDetails(null))
+				.finally(() => setLoadingUserDetails(false))
 		} else {
 			setUserDetails(null)
 			setLoadingUserDetails(false)

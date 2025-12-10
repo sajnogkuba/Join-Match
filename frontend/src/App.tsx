@@ -27,7 +27,6 @@ import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
 import PostPage from './pages/PostPage.tsx'
 import ModeratorPanelPage from "./pages/ModeratorPanelPage.tsx";
-import { getCookie } from './utils/cookies'
 
 const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
@@ -86,13 +85,10 @@ const NotificationProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
 
 	React.useEffect(() => {
 		if (isAuthenticated) {
-			const token = getCookie('accessToken')
-			if (token) {
-				api
-					.get('/auth/user', { params: { token } })
-					.then(response => setUserId(response.data.id))
-					.catch(() => setUserId(null))
-			}
+			api
+				.get('/auth/user')
+				.then(response => setUserId(response.data.id))
+				.catch(() => setUserId(null))
 		} else {
 			setUserId(null)
 		}
@@ -108,21 +104,18 @@ const ChatProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children
 
 	React.useEffect(() => {
 		if (isAuthenticated) {
-			const token = getCookie('accessToken')
-			if (token) {
-				api
-					.get('/auth/user', { params: { token } })
-					.then(response => {
-						setUserId(response.data.id)
+			api
+				.get('/auth/user')
+				.then(response => {
+					setUserId(response.data.id)
 
-						const nameFromAuth = (user as any)?.name || (user as any)?.username || null
-						setUserName(response.data.name || nameFromAuth)
-					})
-					.catch(() => {
-						setUserId(null)
-						setUserName(null)
-					})
-			}
+					const nameFromAuth = (user as any)?.name || (user as any)?.username || null
+					setUserName(response.data.name || nameFromAuth)
+				})
+				.catch(() => {
+					setUserId(null)
+					setUserName(null)
+				})
 		} else {
 			setUserId(null)
 			setUserName(null)

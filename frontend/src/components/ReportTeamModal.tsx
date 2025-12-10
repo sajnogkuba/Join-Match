@@ -36,17 +36,10 @@ const ReportTeamModal: React.FC<ReportTeamModalProps> = ({ isOpen, onClose, team
             return
         }
 
-        const token = getCookie('accessToken')
-        if (!token) {
-            setError('Musisz być zalogowany, aby zgłosić drużynę.')
-            return
-        }
-
         setSubmitting(true)
         try {
             // BE: POST /api/team/report/team
             await api.post('/team/report/team', {
-                token,          // String token
                 IdTeam: teamId, // Integer IdTeam (uwaga na wielkość liter)
                 description: trimmed,
             })

@@ -14,7 +14,7 @@ public class CookieUtil {
 
     public static void setAccessTokenCookie(HttpServletResponse response, String token) {
         Cookie cookie = new Cookie("accessToken", token);
-        cookie.setHttpOnly(false);
+        cookie.setHttpOnly(true);
         cookie.setSecure(SECURE);
         cookie.setPath(COOKIE_PATH);
         cookie.setMaxAge(ACCESS_TOKEN_MAX_AGE);
@@ -52,7 +52,7 @@ public class CookieUtil {
     }
 
     public static void clearCookie(HttpServletResponse response, String cookieName) {
-        boolean isHttpOnly = "refreshToken".equals(cookieName);
+        boolean isHttpOnly = "refreshToken".equals(cookieName) || "accessToken".equals(cookieName);
         Cookie cookie = new Cookie(cookieName, "");
         cookie.setHttpOnly(isHttpOnly);
         cookie.setSecure(SECURE);

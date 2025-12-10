@@ -26,13 +26,6 @@ const PasswordSection = () => {
             return;
         }
 
-        const token = getCookie("accessToken") || "";
-
-        if (!token) {
-            setErrorMsg("Brak tokenu — zaloguj się ponownie.");
-            return;
-        }
-
         setSubmitting(true);
         try {
             await api.patch("/auth/changePass", {

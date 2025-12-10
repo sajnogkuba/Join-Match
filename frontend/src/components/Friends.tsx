@@ -146,11 +146,9 @@ const Friends = () => {
     const [friendToDelete, setFriendToDelete] = useState<Friend | null>(null);
 
     useEffect(() => {
-        const token = getCookie('accessToken');
-        if (!token) return;
-        axiosInstance.get<User>('/auth/user', { params: { token } }).then(response => {
+        axiosInstance.get<User>('/auth/user').then(response => {
             setCurrentUser(response.data);
-        });
+        }).catch(() => {});
     }, []);
 
     useEffect(() => {

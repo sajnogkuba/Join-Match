@@ -110,10 +110,8 @@ const TeamPage: React.FC = () => {
 
 	useEffect(() => {
 		if (isAuthenticated) {
-			const token = getCookie('accessToken')
-			if (token) {
-				api
-					.get<User>('/auth/user', { params: { token } })
+			api
+					.get<User>('/auth/user')
 					.then(({ data }) => {
 						setCurrentUserId(data.id)
 						setUserEmail(data.email)
@@ -121,8 +119,7 @@ const TeamPage: React.FC = () => {
 					.catch(() => {
 						setCurrentUserId(null)
 						setUserEmail(null)
-					})
-			}
+					});
 		} else {
 			setCurrentUserId(null)
 			setUserEmail(null)

@@ -103,9 +103,7 @@ const MainPage: React.FC = () => {
 			.catch(() => {})
 		
 		// Fetch user's sports
-		const token = getCookie('accessToken')
-		if (token) {
-			api.get<UserSportsResponse>('/sport-type/user', { params: { token } })
+		api.get<UserSportsResponse>('/sport-type/user')
 				.then(({ data }) => {
 					const sportsMap = new Map<string, number>()
 					data.sports?.forEach((s: UserSportsResponse['sports'][number]) => {
@@ -113,8 +111,7 @@ const MainPage: React.FC = () => {
 					})
 					setUserSports(sportsMap)
 				})
-				.catch(() => {})
-		}
+				.catch(() => {});
 	}, [userEmail])
 
 	const handleSignUp = async (eventId: number) => {

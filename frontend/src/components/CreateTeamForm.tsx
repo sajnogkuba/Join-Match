@@ -32,14 +32,8 @@ export default function CreateTeamForm() {
 	const [uploadingImage, setUploadingImage] = useState(false)
 
 	useEffect(() => {
-		const token = getCookie('accessToken')
-		if (!token) {
-			setServerError('Brak tokenu autoryzacyjnego.')
-			return
-		}
-
 		// Pobierz leaderId
-		api.get<User>('/auth/user', { params: { token } })
+		api.get<User>('/auth/user')
 			.then(({ data }) => setLeaderId(data.id))
 			.catch(() => setServerError('Nie udało się pobrać danych użytkownika.'))
 	}, [])

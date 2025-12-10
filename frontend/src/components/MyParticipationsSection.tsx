@@ -56,13 +56,6 @@ const MyParticipationsSection: React.FC = () => {
     const currentPageRef = useRef(0);
 
     const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
-        const token = getCookie("accessToken");
-        if (!token) {
-            setError("Brak tokenu — zaloguj się ponownie.");
-            setLoading(false);
-            return;
-        }
-
         if (append) {
             setLoadingMore(true);
         } else {

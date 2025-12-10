@@ -146,9 +146,7 @@ const AddSportModal = ({
         if (!sportId || !levelValid || !selected) return;
         setSaving(true);
         try {
-            const token = getCookie("accessToken") || "";
             await api.post("/sport-type/user", {
-                token,
                 sportId,
                 rating: levelNum
             });
@@ -370,10 +368,8 @@ const GeneralSection = ({
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        const token = getCookie("accessToken");
-        if (!token) return;
         api
-            .get<UserSportsResponse>("/sport-type/user", { params: { token } })
+            .get<UserSportsResponse>("/sport-type/user")
             .then(({ data }) => {
                 const mapped: UserSport[] = (data.sports ?? []).map((s) => ({
                     id: s.sportId,
@@ -424,9 +420,6 @@ const GeneralSection = ({
             return;
         }
 
-        const token = getCookie("accessToken");
-        if (!token) return;
-
         setErrorMessage(null);
         setRemovingIndex(index);
 
@@ -437,7 +430,6 @@ const GeneralSection = ({
         try {
             await api.delete("/sport-type/user/sport", {
                 data: {
-                    token: token,
                     idSport: item.id,
                 },
             });

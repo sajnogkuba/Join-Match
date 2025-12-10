@@ -69,12 +69,7 @@ const InviteToEventModal: React.FC<InviteToEventModalProps> = ({
 
 		const load = async () => {
 			try {
-				const token = getCookie('accessToken')
-				if (!token) return
-
-				const { data: usr } = await axiosInstance.get<User>('/auth/user', {
-					params: { token },
-				})
+				const { data: usr } = await axiosInstance.get<User>('/auth/user')
 				setCurrentUser(usr)
 
 				setFriendsLoading(true)
