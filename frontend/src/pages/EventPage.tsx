@@ -11,7 +11,6 @@ import StarRatingDisplay from '../components/StarRatingDisplay'
 import RatingCard from '../components/RatingCard'
 import StarRatingInput from '../components/StarRatingInput'
 import { formatEventDate, parseEventDate } from '../utils/formatDate'
-import { getCookie } from '../utils/cookies'
 import type { EventRatingResponse } from '../Api/types/Rating'
 import ReportEventModal from '../components/ReportEventModal'
 import ReportRatingModal from '../components/ReportRatingModal'
@@ -112,17 +111,10 @@ const EventPage: React.FC = () => {
 	const handleSubmitReport = async (message: string) => {
 		if (!id) return;
 
-		const token = getCookie('accessToken');
-		if (!token) {
-			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.');
-			return;
-		}
-
 		try {
 			setIsSendingReport(true);
 
 			await axiosInstance.post('/event/report/event', {
-				token,
 				idEvent: Number(id),
 				description: message,
 			});
@@ -158,17 +150,11 @@ const EventPage: React.FC = () => {
 	const handleSubmitRatingReport = async (message: string) => {
 		if (!ratingToReport) return;
 
-		const token = getCookie('accessToken');
-		if (!token) {
-			toast.error('Musisz być zalogowany, aby zgłosić ocenę.');
-			return;
-		}
 
 		try {
 			setIsSendingRatingReport(true);
 
 			await axiosInstance.post('/ratings/report/eventRating', {
-				token,
 				idEventRating: ratingToReport.id,
 				description: message,
 			});
@@ -256,20 +242,14 @@ const EventPage: React.FC = () => {
 		checkOrganizerRated()
 	}, [currentUserId, event?.ownerId, id])
 
-	// fetch user email from backend based on stored access token (similar to ProfilePage)
 	useEffect(() => {
 		const fetchUserEmail = async () => {
-			const token = getCookie('accessToken')
-			if (!token) {
-				setUserEmail(null)
-				return
-			}
 			try {
-				const { data } = await axiosInstance.get('/auth/user/details', { params: { token } })
+				const { data } = await axiosInstance.get('/auth/user/details')
 				setUserEmail(data.email)
 			} catch (err) {
-				console.error('❌ Nie udało się pobrać danych użytkownika:', err)
 				setUserEmail(null)
+				setJoined(false)
 			}
 		}
 
@@ -278,30 +258,38 @@ const EventPage: React.FC = () => {
 
 	useEffect(() => {
 		const fetchUser = async () => {
-			const token = getCookie('accessToken')
-			if (!token) return
 			try {
-				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
+				const { data } = await axiosInstance.get('/auth/user')
 				setCurrentUserId(data.id)
 				setCurrentUserName(data.name)
 				setUserEmail(data.email)
 			} catch (err) {
-				console.error('❌ Błąd pobierania usera:', err)
+				setCurrentUserId(null)
+				setCurrentUserName(null)
+				setUserEmail(null)
+				setJoined(false)
 			}
 		}
 		fetchUser()
 	}, [])
 
+	useEffect(() => {
+		if (!currentUserId) {
+			setJoined(false)
+		}
+	}, [currentUserId])
+
 	const fetchParticipants = async (eventId: number) => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
 			setParticipants(data || [])
-			if (userEmail && data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany'))
+			if (userEmail && currentUserId && data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany'))
 				setJoined(true)
 			else setJoined(false)
 		} catch (err) {
 			console.error('❌ Błąd pobierania uczestników:', err)
 			setParticipants([])
+			setJoined(false)
 		}
 	}
 
@@ -423,7 +411,6 @@ const EventPage: React.FC = () => {
 	const saveEditEventRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = getCookie('accessToken')
 			await axiosInstance.put(
 				`/ratings/event/${ratingId}`,
 				{
@@ -433,7 +420,6 @@ const EventPage: React.FC = () => {
 					comment: editRatingComment,
 				},
 				{
-					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 					params: { userId: currentUserId },
 				}
 			)
@@ -447,9 +433,7 @@ const EventPage: React.FC = () => {
 
 	const deleteEventRating = async (ratingId: number) => {
 		try {
-			const token = getCookie('accessToken')
 			await axiosInstance.delete(`/ratings/event/${ratingId}`, {
-				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
 			showRatingToast({ type: 'delete', target: 'wydarzenia' })
@@ -563,13 +547,9 @@ const EventPage: React.FC = () => {
 	const handleMessageOrganizer = async () => {
 		if (!currentUserId || !event?.ownerId) return
 		try {
-			const token = getCookie('accessToken')
 			const res = await axiosInstance.post(
 				`/conversations/direct?user1Id=${currentUserId}&user2Id=${event.ownerId}`,
-				null,
-				{
-					headers: token ? { Authorization: `Bearer ${token}` } : {},
-				}
+				null
 			)
 			const conversationId = res.data?.id || res.data?.conversationId
 			navigate('/chat', { state: { conversationId, targetUserId: event.ownerId } })
@@ -635,10 +615,7 @@ const EventPage: React.FC = () => {
 		if (!id || !currentUserId || event?.ownerId !== currentUserId) return
 
 		try {
-			const token = getCookie('accessToken')
-			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null, {
-				params: { token },
-			})
+			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null)
 
 			setParticipants(prev => prev.map(p => (p.userId === participantId ? { ...p, isPaid: !currentStatus } : p)))
 
@@ -1164,7 +1141,13 @@ const EventPage: React.FC = () => {
 										Zakończone
 									</button>
 								) : event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
-									// If the current user was invited, show accept/decline UI
+									!currentUserId ? (
+										<Link
+											to="/login"
+											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
+											Zaloguj się, aby dołączyć
+										</Link>
+									) : // If the current user was invited, show accept/decline UI
 									isInvited ? (
 										<div className='space-y-3'>
 											<div className='rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 text-center'>
@@ -1197,6 +1180,12 @@ const EventPage: React.FC = () => {
 										<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 text-zinc-400'>
 											Twoja prośba oczekuje na akceptację…
 										</button>
+									) : !currentUserId ? (
+										<Link
+											to="/login"
+											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
+											Zaloguj się, aby dołączyć
+										</Link>
 									) : (
 										<button
 											onClick={handleJoinEvent}

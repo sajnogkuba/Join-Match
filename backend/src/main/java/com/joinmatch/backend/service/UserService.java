@@ -16,8 +16,10 @@ import com.joinmatch.backend.model.ReportUser;
 import com.joinmatch.backend.model.Role;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.*;
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -133,8 +135,12 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(ChangePassDto changePassDto) {
-        Optional<User> byTokenValue = userRepository.findByTokenValue(changePassDto.token());
+    public void changePassword(ChangePassDto changePassDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if (!byTokenValue.isPresent()) {
             throw new IllegalArgumentException("No users found");
         }
@@ -156,7 +162,11 @@ public class UserService {
         return UserResponseDto.fromUser(user);
     }
 
-    public void updateUserPhoto(String token, String photoUrl) {
+    public void updateUserPhoto(String photoUrl, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if (byTokenValue.isEmpty()) {
             throw new IllegalArgumentException("User Not Found");
@@ -324,8 +334,12 @@ public class UserService {
        return new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
     }
 
-    public void reportUser(UserReportDto userReportDto) {
-        User user = userRepository.findByTokenValue(userReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
+    public void reportUser(UserReportDto userReportDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("Brak uprawnien");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
         User suspect = userRepository.findById(userReportDto.reportedUserId()).orElseThrow(() -> new IllegalArgumentException("Brak usera"));
         ReportUser reportUser = new ReportUser();
         reportUser.setSuspectUser(suspect);
@@ -334,8 +348,6 @@ public class UserService {
         reportUser.setDescription(userReportDto.description());
         suspect.getSuspectUser().add(reportUser);
         user.getUserReportSender().add(reportUser);
-//        userRepository.save(user);
-//        userRepository.save(suspect);
         reportUserRepository.save(reportUser);
     }
     public User findByEmail(String email) {

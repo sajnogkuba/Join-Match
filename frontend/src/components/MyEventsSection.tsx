@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import dayjs, { Dayjs } from "dayjs";
 import { MapPin, CalendarDays, Users, AlertTriangle } from "lucide-react";
 import api from "../Api/axios";
-import { getCookie } from "../utils/cookies";
 type EventStatus = "PLANNED" | "CANCELED" | "FINISHED";
 type EventDateWire = number[] | string | Date;
 
@@ -40,18 +39,9 @@ const MyEventsSection: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const token = getCookie("accessToken");
-        if (!token) {
-            setError("Brak tokenu — zaloguj się ponownie.");
-            setLoading(false);
-            return;
-        }
-
         (async () => {
             try {
-                const { data } = await api.get<OwnedEvent[]>("/event/byUser", {
-                    params: { token },
-                });
+                const { data } = await api.get<OwnedEvent[]>("/event/byUser");
 
                 const sanitized = (data ?? []).map((e) => ({
                     ...e,

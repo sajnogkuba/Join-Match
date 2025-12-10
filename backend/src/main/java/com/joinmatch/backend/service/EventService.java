@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
@@ -8,6 +9,7 @@ import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
@@ -182,8 +184,12 @@ public class EventService {
                 .toList();
     }
     @Transactional
-    public void reportEvent(EventReportDto eventReportDto){
-        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+    public void reportEvent(EventReportDto eventReportDto, HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         Event referenceById = eventRepository.getReferenceById(eventReportDto.idEvent());
         if(reportEventRepository.existsByReportedEvent_EventIdAndReporterUser_IdAndActiveTrue(eventReportDto.idEvent(), user.getId())){
             throw new RuntimeException("You cannot report many times");
@@ -196,8 +202,6 @@ public class EventService {
         reportEvent.setDescription(eventReportDto.description());
         user.getReportEvents().add(reportEvent);
         referenceById.getReportEvents().add(reportEvent);
-//        userRepository.save(user);
-//        eventRepository.save(referenceById);
         reportEventRepository.save(reportEvent);
     }
 

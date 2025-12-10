@@ -120,10 +120,7 @@ const UserProfilePage = () => {
 	const handleOpenChat = async () => {
 		if (!currentUserId || !id) return
 		try {
-			const token = getCookie('accessToken')
-			const res = await api.post(`/conversations/direct?user1Id=${currentUserId}&user2Id=${parseInt(id)}`, null, {
-				headers: { Authorization: `Bearer ${token}` },
-			})
+			const res = await api.post(`/conversations/direct?user1Id=${currentUserId}&user2Id=${parseInt(id)}`, null)
 
 			const conversationId = res.data?.id || res.data?.conversationId
 
@@ -151,7 +148,6 @@ const UserProfilePage = () => {
 	const saveEditUserRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = getCookie('accessToken')
 			await api.put(
 				`/ratings/user/${ratingId}`,
 				{
@@ -175,9 +171,7 @@ const UserProfilePage = () => {
 
 	const deleteUserRating = async (ratingId: number) => {
 		try {
-			const token = getCookie('accessToken')
 			await api.delete(`/ratings/user/${ratingId}`, {
-				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
 			showRatingToast({ type: 'delete', target: 'użytkownika' })
@@ -210,7 +204,6 @@ const UserProfilePage = () => {
 	const saveEditOrganizerRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = getCookie('accessToken')
 			await api.put(
 				`/ratings/organizer/${ratingId}`,
 				{
@@ -235,9 +228,7 @@ const UserProfilePage = () => {
 
 	const deleteOrganizerRating = async (ratingId: number) => {
 		try {
-			const token = getCookie('accessToken')
 			await api.delete(`/ratings/organizer/${ratingId}`, {
-				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
 			showRatingToast({ type: 'delete', target: 'organizatora' })
@@ -249,13 +240,12 @@ const UserProfilePage = () => {
 	}
 
 	useEffect(() => {
-		const token = getCookie('accessToken')
-		if (!token || !id) return
+		if (!id) return
 
 		const fetchData = async () => {
 			setLoading(true)
 			try {
-				const currentRes = await api.get('/auth/user', { params: { token } })
+				const currentRes = await api.get('/auth/user')
 				setCurrentUserId(currentRes.data.id)
 				setCurrentUserName(currentRes.data.name)
 
@@ -428,16 +418,9 @@ const UserProfilePage = () => {
 	const handleSubmitUserReport = async (message: string) => {
 		if (!id) return
 
-		const token = getCookie('accessToken')
-		if (!token) {
-			toast.error("Brak tokenu – zaloguj się ponownie.")
-			return
-		}
-
 		setIsSendingReport(true)
 		try {
 			await api.post("/auth/report/user", {
-				token: token,
 				reportedUserId: parseInt(id),
 				description: message
 			})

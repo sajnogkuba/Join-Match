@@ -34,11 +34,8 @@ const ProfilePage = () => {
     };
 
     const refreshMainSport = () => {
-        const token = getCookie("accessToken");
-        if (!token) return;
-        
         api
-            .get<UserSportsResponse>("/sport-type/user", { params: { token } })
+            .get<UserSportsResponse>("/sport-type/user")
             .then(({ data }) => {
                 const mainSport = data.sports?.find((s) => s.isMain);
                 setMainSportName(mainSport?.name || "");
@@ -47,8 +44,7 @@ const ProfilePage = () => {
     };
 
     const fetchFriendsCount = () => {
-        const token = getCookie("accessToken");
-        if (!token || !currentUser?.id) return;
+        if (!currentUser?.id) return;
         
         api
             .get(`/friends/${currentUser.id}`)
@@ -72,19 +68,12 @@ const ProfilePage = () => {
 
 
     useEffect(() => {
-        const token = getCookie("accessToken");
-        if (!token) {
-            setErrorMsg("Brak tokenu — zaloguj się ponownie.");
-            setLoading(false);
-            return;
-        }
-
         api
-            .get<User>("/auth/user", { params: { token } })
+            .get<User>("/auth/user")
             .then(({ data: userData }) => {
                 setCurrentUser(userData);
                 
-                return api.get<SimpleUser>("/auth/user/details", { params: { token } });
+                return api.get<SimpleUser>("/auth/user/details");
             })
             .then(({ data: userDetails }) => {
                 setUser(userDetails);

@@ -2,6 +2,7 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.config.CookieUtil;
 import com.joinmatch.backend.config.JwtService;
+import com.joinmatch.backend.config.TokenExtractor;
 
 import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.dto.Auth.*;
@@ -84,9 +85,9 @@ public class UserController {
     //TODO do przeniesienia do sportControllera
 
     @PatchMapping("/changePass")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto) {
+    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto, HttpServletRequest request) {
         try {
-            userService.changePassword(changePassDto);
+            userService.changePassword(changePassDto, request);
         } catch (IllegalArgumentException illegalArgumentException) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
@@ -100,7 +101,11 @@ public class UserController {
     }
 
     @GetMapping("/user/details")
-    public ResponseEntity<UserResponseDto> getUserDetails(@RequestParam String token) {
+    public ResponseEntity<UserResponseDto> getUserDetails(HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         UserResponseDto simpleInfo;
         try {
             simpleInfo = userService.getSimpleInfo(token);
@@ -112,9 +117,9 @@ public class UserController {
     }
 
     @PatchMapping("/user/photo")
-    public ResponseEntity<String> updateUserPhoto(@RequestBody UpdateUserPhotoRequestDto request) {
+    public ResponseEntity<String> updateUserPhoto(@RequestBody UpdateUserPhotoRequestDto requestDto, HttpServletRequest request) {
         try {
-            userService.updateUserPhoto(request.token(), request.photoUrl());
+            userService.updateUserPhoto(requestDto.photoUrl(), request);
             return ResponseEntity.ok("Photo updated");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
@@ -127,7 +132,11 @@ public class UserController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<UserResponseDto> getUser(@RequestParam String token) {
+    public ResponseEntity<UserResponseDto> getUser(HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         UserResponseDto user = userService.getSimpleInfo(token);
         return ResponseEntity.ok(user);
     }
@@ -180,9 +189,9 @@ public class UserController {
     }
 
     @PostMapping("/report/user")
-    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto) {
+    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto, HttpServletRequest request) {
         try {
-            userService.reportUser(userReportDto);
+            userService.reportUser(userReportDto, request);
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().build();
         }

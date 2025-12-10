@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.EventRating.EventRatingRequestDto;
 import com.joinmatch.backend.dto.EventRating.EventRatingResponseDto;
 import com.joinmatch.backend.dto.OrganizerRating.OrganizerRatingRequestDto;
@@ -10,6 +11,7 @@ import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -320,8 +322,12 @@ public class RatingService {
         organizerRatingRepository.delete(rating);
     }
     @Transactional
-    public void reportEventRating(EventRatingReportDto eventReportDto){
-        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+    public void reportEventRating(EventRatingReportDto eventReportDto, HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         EventRating referenceById = eventRatingRepository.getReferenceById(eventReportDto.idEventRating());
         if(reportEventRatingRepository.existsByEventRating_EventRatingIdAndReporterUser_IdAndActiveTrue(eventReportDto.idEventRating(),user.getId())){
             throw new RuntimeException("Cannot report multiple");
@@ -334,13 +340,15 @@ public class RatingService {
         reportEventRating.setEventRating(referenceById);
         user.getReportEventRatings().add(reportEventRating);
         referenceById.getReportEventRatings().add(reportEventRating);
-//        userRepository.save(user);
-//        eventRatingRepository.save(referenceById);
         reportEventRatingRepository.save(reportEventRating);
     }
 
-    public void reportUserRating(UserRatingReportDto userRatingReportDto) {
-        User user = userRepository.findByTokenValue(userRatingReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+    public void reportUserRating(UserRatingReportDto userRatingReportDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         UserRating referenceById = userRatingRepository.getReferenceById(userRatingReportDto.idUserRating());
         ReportUserRating reportUserRating = new ReportUserRating();
         reportUserRating.setUserRating(referenceById);

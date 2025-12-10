@@ -1,6 +1,5 @@
 import axios, { AxiosError } from 'axios'
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import { getCookie } from '../utils/cookies'
 
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
@@ -10,88 +9,69 @@ const axiosInstance: AxiosInstance = axios.create({
     withCredentials: true,
 });
 
-function parseJwt(token: string) {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-            atob(base64)
-                .split('')
-                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-        );
-        return JSON.parse(jsonPayload);
-    } catch (e) {
-        return null;
-    }
-}
-    
-let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
-
 let disconnectWebSocket: (() => void) | null = null;
 
 export function setDisconnectWebSocket(disconnectFn: () => void) {
     disconnectWebSocket = disconnectFn;
 }
 
-export function scheduleTokenRefresh() {
-    if (refreshTimeout) clearTimeout(refreshTimeout);
-
-    const accessToken = getCookie('accessToken');
-    if (!accessToken) return;
-
-    const payload = parseJwt(accessToken);
-    if (!payload?.exp) return;
-
-    const expTime = payload.exp * 1000;
-    const now = Date.now();
-    const oneMinute = 60 * 1000;
-
-    const timeUntilRefresh = expTime - now - oneMinute;
-
-    if (timeUntilRefresh <= 0) {
-        refreshToken().then(() => scheduleTokenRefresh());
-    } else {
-        refreshTimeout = setTimeout(async () => {
-            await refreshToken();
-            scheduleTokenRefresh();
-        }, timeUntilRefresh);
-    }
-}
-
-
-const refreshToken = async (): Promise<string> => {
+const refreshToken = async (): Promise<void> => {
     try {
         await axios.post(
             `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/refreshToken`,
             {},
             { withCredentials: true }
         );
-        const newAccessToken = getCookie('accessToken');
-        if (!newAccessToken) {
-            throw new Error('Brak access tokena po odświeżeniu');
-        }
-        scheduleTokenRefresh();
-        return newAccessToken;
     } catch (error) {
         console.error('Błąd odświeżania tokena:', error);
-        window.location.href = '/login';
+        const currentPath = window.location.pathname
+        const publicPaths = ['/login', '/register', '/', '/events', '/teams', '/about', '/kontakt', '/faq', '/privacy', '/terms']
+        if (!publicPaths.includes(currentPath) && !currentPath.startsWith('/event/') && !currentPath.startsWith('/team/') && !currentPath.startsWith('/post/') && !currentPath.startsWith('/profile/')) {
+            window.location.href = '/login'
+        }
         throw error;
     }
 }
 
+const publicEndpoints = [
+	'/auth/user',
+	'/auth/login',
+	'/auth/register',
+	'/auth/verify',
+	'/event',
+	'/team',
+	'/post',
+	'/sport-type',
+	'/user',
+	'/badge',
+	'/friends',
+	'/user-event',
+	'/user-saved-event',
+	'/ratings',
+	'/conversations',
+	'/notifications'
+]
 
-
-axiosInstance.interceptors.request.use(
-	(config: InternalAxiosRequestConfig) => {
-		const accessToken = getCookie('accessToken')
-		if (accessToken && config.headers) {
-			config.headers.Authorization = `Bearer ${accessToken}`
-		}
-		return config
-	},
-	error => Promise.reject(error)
-)
+const isPublicEndpoint = (url: string | undefined): boolean => {
+	if (!url) return false
+	const path = url.replace(import.meta.env.VITE_API_URL || '', '')
+	const isPublic = publicEndpoints.some(endpoint => path.startsWith(endpoint))
+	const isProtected = path.includes('/auth/user/details') || 
+	                   path.includes('/auth/changePass') ||
+	                   path.includes('/auth/user/photo') ||
+	                   path.includes('/auth/report/') ||
+	                   path.includes('/team/report/') ||
+	                   path.includes('/event/report/') ||
+	                   path.includes('/ratings/report/') ||
+	                   path.includes('/user-event/request') ||
+	                   path.includes('/user-event/approve') ||
+	                   path.includes('/user-event/reject') ||
+	                   path.includes('/user-event/invite') ||
+	                   path.includes('/user-event/invitation/') ||
+	                   path.includes('/conversations/') ||
+	                   path.includes('/chat/')
+	return isPublic && !isProtected
+}
 
 axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => response,
@@ -99,20 +79,25 @@ axiosInstance.interceptors.response.use(
 		const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
 		if (error.response?.status === 401 && !originalRequest._retry) {
+			if (isPublicEndpoint(originalRequest.url)) {
+				return Promise.reject(error)
+			}
+
 			originalRequest._retry = true
 
 			try {
-				const newAccessToken = await refreshToken()
-				if (originalRequest.headers) {
-					originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
-				}
+				await refreshToken()
 				return axiosInstance(originalRequest)
 			} catch (refreshError) {
 				console.error('Błąd podczas ponownego logowania:', refreshError);
 				if (disconnectWebSocket) {
 					disconnectWebSocket();
 				}
-				window.location.href = '/login'
+				const currentPath = window.location.pathname
+				const publicPaths = ['/login', '/register', '/', '/events', '/teams', '/about', '/kontakt', '/faq', '/privacy', '/terms']
+				if (!publicPaths.includes(currentPath) && !currentPath.startsWith('/event/') && !currentPath.startsWith('/team/') && !currentPath.startsWith('/post/') && !currentPath.startsWith('/profile/')) {
+					window.location.href = '/login'
+				}
 				return Promise.reject(refreshError)
 			}
 		}

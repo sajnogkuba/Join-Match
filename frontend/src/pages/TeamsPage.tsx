@@ -46,13 +46,8 @@ const TeamsPage: React.FC = () => {
 
 	useEffect(() => {
 		if ((activeTab === 'owned-teams' || activeTab === 'joined-teams' || activeTab === 'pending-requests') && isAuthenticated) {
-			const token = getCookie('accessToken')
-			if (!token) {
-				setCurrentUserId(null)
-				return
-			}
 			setLoadingUserId(true)
-			api.get<User>('/auth/user', { params: { token } })
+			api.get<User>('/auth/user')
 				.then(({ data }) => setCurrentUserId(data.id))
 				.catch(() => setCurrentUserId(null))
 				.finally(() => setLoadingUserId(false))

@@ -1,8 +1,11 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Sport.*;
 import com.joinmatch.backend.service.SportService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
@@ -24,14 +27,18 @@ public class SportTypeController {
         return ResponseEntity.ok(events);
     }
     @GetMapping("/user")
-    public ResponseEntity<SportResponse> getSportsByUser(@RequestParam String token){
+    public ResponseEntity<SportResponse> getSportsByUser(HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         List<SportWithRatingDto> sports = sportService.getSportsForUser(token);
         return ResponseEntity.ok(new SportResponse(sports));
     }
     @PostMapping("/user")
-    public ResponseEntity<Void> addSportForUser(@RequestBody NewSportForUserDto newSportForUserDto){
+    public ResponseEntity<Void> addSportForUser(@RequestBody NewSportForUserDto newSportForUserDto, HttpServletRequest request){
         try {
-            sportService.addNewSportForUser(newSportForUserDto.token(), newSportForUserDto.sportId(), newSportForUserDto.rating());
+            sportService.addNewSportForUser(newSportForUserDto.sportId(), newSportForUserDto.rating(), request);
         }catch (IllegalArgumentException illegalArgumentException){
             return ResponseEntity.badRequest().build();
         }
@@ -52,9 +59,9 @@ public class SportTypeController {
         return ResponseEntity.ok().build();
     }
     @DeleteMapping("/user/sport")
-    public ResponseEntity<Void> removeSportForUser(@RequestBody RemoveSportDto removeSportDto){
+    public ResponseEntity<Void> removeSportForUser(@RequestBody RemoveSportDto removeSportDto, HttpServletRequest request){
         try{
-            sportService.removeSport(removeSportDto);
+            sportService.removeSport(removeSportDto, request);
         }catch (IllegalArgumentException exception){
             return ResponseEntity.badRequest().build();
         }

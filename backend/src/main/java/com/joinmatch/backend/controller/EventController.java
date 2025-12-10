@@ -1,13 +1,16 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.service.EventService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -74,8 +77,12 @@ public class EventController {
     }
 
     @GetMapping("/byUser")
-    public ResponseEntity<List<EventResponseDto>> getEventsForUser(@RequestParam String token)
+    public ResponseEntity<List<EventResponseDto>> getEventsForUser(HttpServletRequest request)
     {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(eventService.getEventsForUser(token));
     }
 
@@ -85,8 +92,12 @@ public class EventController {
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "eventDate") String sortBy,
             @RequestParam(defaultValue = "DESC") String direction,
-            @RequestParam String token)
+            HttpServletRequest request)
     {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         Pageable pageable = PageRequest.of(page, size);
         Page<EventResponseDto> events = eventService.getParticipatedEvents(
                 pageable,
@@ -105,9 +116,9 @@ public class EventController {
         return ResponseEntity.ok(eventService.getMutualEvents(idLogUser,idViewedUser));
     }
     @PostMapping("/report/event")
-    public ResponseEntity<Void> reportEvent(@RequestBody EventReportDto eventReportDto){
+    public ResponseEntity<Void> reportEvent(@RequestBody EventReportDto eventReportDto, HttpServletRequest request){
         try {
-        eventService.reportEvent(eventReportDto);
+        eventService.reportEvent(eventReportDto, request);
         }catch (IllegalArgumentException exception){
             return ResponseEntity.badRequest().build();
         }catch (RuntimeException exception){

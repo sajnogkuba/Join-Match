@@ -134,9 +134,7 @@ const EventsPage = () => {
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
 
-		const token = getCookie('accessToken')
-		if (token) {
-			axiosInstance.get<UserSportsResponse>('/sport-type/user', { params: { token } })
+		axiosInstance.get<UserSportsResponse>('/sport-type/user')
 				.then(({ data }) => {
 					const sportsMap = new Map<string, number>()
 					data.sports?.forEach((s: any) => {
@@ -144,8 +142,7 @@ const EventsPage = () => {
 					})
 					setUserSports(sportsMap)
 				})
-				.catch(e => console.error('Nie udało się pobrać sportów użytkownika:', e))
-		}
+				.catch(e => console.error('Nie udało się pobrać sportów użytkownika:', e));
 	}, [userEmail])
 
 	// Mapowanie SortKey na sortBy + direction

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import axiosInstance from '../Api/axios'
-import { scheduleTokenRefresh } from '../Api/axios'
 import { getCookie, deleteCookie } from '../utils/cookies'
 
 interface AuthContextType {
@@ -22,12 +21,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const [accessToken, setAccessToken] = useState<string | null>(null)
 
 	useEffect(() => {
-		const storedToken = getCookie('accessToken')
-		const storedEmail = getCookie('email')
-		if (storedToken && storedEmail) {
-			setAccessToken(storedToken)
-			setUser(storedEmail)
+		const checkAuth = async () => {
+			try {
+				const response = await axiosInstance.get<{ email: string }>('/auth/user')
+				setUser(response.data.email || null)
+				setAccessToken(null)
+			} catch {
+				setUser(null)
+				setAccessToken(null)
+			}
 		}
+		checkAuth()
 	}, [])
 
 	const login = async (email: string, password: string) => {
@@ -35,12 +39,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		const responseEmail = response.data.email
 
 		setTimeout(() => {
-			const accessToken = getCookie('accessToken')
 			const cookieEmail = getCookie('email') || responseEmail
-			if (accessToken && cookieEmail) {
-				setAccessToken(accessToken)
+			if (cookieEmail) {
 				setUser(cookieEmail)
-				scheduleTokenRefresh()
+				setAccessToken(null)
 			}
 		}, 100)
 	}
@@ -50,12 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	}
 
 	const loginWithGoogle = (email: string) => {
-		const accessToken = getCookie('accessToken')
-		if (accessToken) {
-			setAccessToken(accessToken)
-			setUser(email)
-			scheduleTokenRefresh()
-		}
+		setUser(email)
+		setAccessToken(null)
 	}
 
 	const logout = async () => {
@@ -67,15 +65,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		deleteCookie('email')
 		setUser(null)
 		setAccessToken(null)
-		window.location.href = '/login'
+		if (window.location.pathname !== '/login') {
+			window.location.href = '/login'
+		}
 	}
 
 	useEffect(() => {
 		const interceptor = axiosInstance.interceptors.response.use(
 			resp => resp,
 			err => {
-				if (err.response?.status === 401) {
-					logout()
+				if (err.response?.status === 401 && user) {
+					const url = err.config?.url || ''
+					if (!url.includes('/auth/user') && !url.includes('/auth/login') && !url.includes('/auth/register')) {
+						const currentPath = window.location.pathname
+						const publicPaths = ['/login', '/register', '/', '/events', '/teams', '/about', '/kontakt', '/faq', '/privacy', '/terms']
+						if (!publicPaths.includes(currentPath) && !currentPath.startsWith('/event/') && !currentPath.startsWith('/team/') && !currentPath.startsWith('/post/') && !currentPath.startsWith('/profile/')) {
+							logout()
+						}
+					}
 				}
 				return Promise.reject(err)
 			}

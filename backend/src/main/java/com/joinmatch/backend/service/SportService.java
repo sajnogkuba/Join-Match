@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Sport.*;
 import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.SportUser;
@@ -7,6 +8,7 @@ import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.SportUserRepository;
 import com.joinmatch.backend.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,7 +47,11 @@ public class SportService {
                 .toList();
     }
    @Transactional
-    public void addNewSportForUser(String token, Integer idSport, Integer rating){
+    public void addNewSportForUser(Integer idSport, Integer rating, HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if(byTokenValue.isEmpty()){
             throw new IllegalArgumentException("Not found user");
@@ -93,8 +99,12 @@ public class SportService {
         }
 
         @Transactional
-        public void removeSport(RemoveSportDto removeSportDto) {
-        User user = userRepository.findByTokenValue(removeSportDto.token()).orElseThrow( ()->
+        public void removeSport(RemoveSportDto removeSportDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow( ()->
         new IllegalArgumentException("User not found"));
         SportUser sportUser= sportUserRepository.findByUserIdAndSportId(user.getId(), removeSportDto.idSport()).orElseThrow(
                 () -> new IllegalArgumentException("Not found sport for this user")

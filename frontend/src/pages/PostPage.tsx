@@ -74,12 +74,9 @@ const PostPage: React.FC = () => {
 	const [showReplyEmojiPicker, setShowReplyEmojiPicker] = useState<Map<string, boolean>>(new Map())
 
 	useEffect(() => {
-		const token = getCookie('accessToken')
-		if (token) {
-			api.get<User>('/auth/user', { params: { token } })
+		api.get<User>('/auth/user')
 				.then(({ data }) => setCurrentUserId(data.id))
-				.catch(() => setCurrentUserId(null))
-		}
+				.catch(() => setCurrentUserId(null));
 	}, [])
 
 	useEffect(() => {
