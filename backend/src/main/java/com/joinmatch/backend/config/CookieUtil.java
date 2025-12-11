@@ -1,48 +1,61 @@
 package com.joinmatch.backend.config;
 
-import jakarta.servlet.http.Cookie;
+import org.springframework.http.ResponseCookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 
 public class CookieUtil {
 
-    private static final int ACCESS_TOKEN_MAX_AGE = 15 * 60;
+    private static final int ACCESS_TOKEN_MAX_AGE = 60;
     private static final int REFRESH_TOKEN_MAX_AGE = 4 * 60 * 60;
     private static final int EMAIL_MAX_AGE = 4 * 60 * 60;
-    private static final String COOKIE_PATH = "/";
+
+    // KONFIGURACJA DLA LOCALHOST (HTTP)
+    // Na produkcji (HTTPS) zmień: SECURE = true, SAME_SITE = "None"
     private static final boolean SECURE = false;
+    private static final String SAME_SITE = "Lax";
 
     public static void setAccessTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = new Cookie("accessToken", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(SECURE);
-        cookie.setPath(COOKIE_PATH);
-        cookie.setMaxAge(ACCESS_TOKEN_MAX_AGE);
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("accessToken", token)
+                .httpOnly(true)
+                .secure(SECURE)
+                .path("/")
+                .maxAge(ACCESS_TOKEN_MAX_AGE)
+                .sameSite(SAME_SITE)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     public static void setRefreshTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = new Cookie("refreshToken", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(SECURE);
-        cookie.setPath(COOKIE_PATH);
-        cookie.setMaxAge(REFRESH_TOKEN_MAX_AGE);
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", token)
+                .httpOnly(true)
+                .secure(SECURE)
+                .path("/")
+                .maxAge(REFRESH_TOKEN_MAX_AGE)
+                .sameSite(SAME_SITE)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     public static void setEmailCookie(HttpServletResponse response, String email) {
-        Cookie cookie = new Cookie("email", email);
-        cookie.setHttpOnly(false);
-        cookie.setSecure(SECURE);
-        cookie.setPath(COOKIE_PATH);
-        cookie.setMaxAge(EMAIL_MAX_AGE);
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("email", email)
+                .httpOnly(false) // false, żeby JS mógł to odczytać
+                .secure(SECURE)
+                .path("/")
+                .maxAge(EMAIL_MAX_AGE)
+                .sameSite(SAME_SITE)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     public static String getCookieValue(HttpServletRequest request, String cookieName) {
-        Cookie[] cookies = request.getCookies();
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
         if (cookies != null) {
-            for (Cookie cookie : cookies) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
                 if (cookieName.equals(cookie.getName())) {
                     return cookie.getValue();
                 }
@@ -51,20 +64,16 @@ public class CookieUtil {
         return null;
     }
 
-    public static void clearCookie(HttpServletResponse response, String cookieName) {
-        boolean isHttpOnly = "refreshToken".equals(cookieName) || "accessToken".equals(cookieName);
-        Cookie cookie = new Cookie(cookieName, "");
-        cookie.setHttpOnly(isHttpOnly);
-        cookie.setSecure(SECURE);
-        cookie.setPath(COOKIE_PATH);
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-    }
-
     public static void clearAllAuthCookies(HttpServletResponse response) {
-        clearCookie(response, "accessToken");
-        clearCookie(response, "refreshToken");
-        clearCookie(response, "email");
+        ResponseCookie access = ResponseCookie.from("accessToken", "")
+                .httpOnly(true).secure(SECURE).path("/").maxAge(0).sameSite(SAME_SITE).build();
+        ResponseCookie refresh = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true).secure(SECURE).path("/").maxAge(0).sameSite(SAME_SITE).build();
+        ResponseCookie email = ResponseCookie.from("email", "")
+                .httpOnly(false).secure(SECURE).path("/").maxAge(0).sameSite(SAME_SITE).build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, access.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refresh.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, email.toString());
     }
 }
-

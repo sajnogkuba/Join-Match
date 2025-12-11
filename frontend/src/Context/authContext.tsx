@@ -10,6 +10,7 @@ interface AuthContextType {
 	loginWithGoogle: (email: string) => void
 	logout: () => void
 	isAuthenticated: boolean
+	isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -20,14 +21,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const [user, setUser] = useState<string | null>(null)
 	const [accessToken, setAccessToken] = useState<string | null>(null)
 
+	const [isLoading, setIsLoading] = useState(true)
+
 	useEffect(() => {
 		const checkAuth = async () => {
 			try {
 				const response = await axiosInstance.get<{ email: string }>('/auth/user')
 				setUser(response.data.email || null)
-				setAccessToken(null)
-			} catch {
+			} catch (error) {
+				console.log('Brak aktywnej sesji')
 				setUser(null)
+			} finally {
+				setIsLoading(false)
 				setAccessToken(null)
 			}
 		}
@@ -70,25 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		}
 	}
 
-	useEffect(() => {
-		const interceptor = axiosInstance.interceptors.response.use(
-			resp => resp,
-			err => {
-				if (err.response?.status === 401 && user) {
-					const url = err.config?.url || ''
-					if (!url.includes('/auth/user') && !url.includes('/auth/login') && !url.includes('/auth/register')) {
-						const currentPath = window.location.pathname
-						const publicPaths = ['/login', '/register', '/', '/events', '/teams', '/about', '/kontakt', '/faq', '/privacy', '/terms']
-						if (!publicPaths.includes(currentPath) && !currentPath.startsWith('/event/') && !currentPath.startsWith('/team/') && !currentPath.startsWith('/post/') && !currentPath.startsWith('/profile/')) {
-							logout()
-						}
-					}
-				}
-				return Promise.reject(err)
-			}
-		)
-		return () => axiosInstance.interceptors.response.eject(interceptor)
-	}, [user])
+	// USUNĄŁEM STĄD CAŁY useEffect Z INTERCEPTOREM!
+	// To axios.ts zarządza cyklem życia tokena, nie Context.
 
 	return (
 		<AuthContext.Provider
@@ -99,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 				verifyAccount,
 				loginWithGoogle,
 				logout,
+				isLoading,
 				isAuthenticated: !!user,
 			}}>
 			{children}
