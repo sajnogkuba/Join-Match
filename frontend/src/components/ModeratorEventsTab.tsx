@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Filter, Eye, Check, X, Trash2 } from "lucide-react";
+import { Search, Eye, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -33,7 +33,7 @@ type EventReportItem = {
     eventId: number;
     eventName: string;
     eventImageUrl: string | null;
-    eventDate: string; // LocalDateTime -> ISO
+    eventDate: string;
 
     viewed: boolean;
     active: boolean;
@@ -92,12 +92,10 @@ const ModeratorEventsTab: React.FC = () => {
         []
     );
 
-    // pierwsze pobranie
     useEffect(() => {
         fetchReports(0, false);
     }, [fetchReports]);
 
-    // infinite scroll
     useEffect(() => {
         if (!hasNext) return;
 
@@ -143,24 +141,17 @@ const ModeratorEventsTab: React.FC = () => {
         });
     };
 
-    // ========= AKCJE – TYLKO UPDATE STANU PO 200 =========
+    // ========= AKCJE =========
 
     const handleAccept = async (id: number) => {
         try {
             await axiosInstance.patch(`/moderator/reportEvent/${id}/accept`);
             setReports((prev) =>
                 prev.map((r) =>
-                    r.id === id
-                        ? {
-                            ...r,
-                            active: true, // lub false, w zależności jak chcesz traktować "zaakceptowane"
-                            viewed: true,
-                        }
-                        : r
+                    r.id === id ? { ...r, active: true, viewed: true } : r
                 )
             );
-        } catch (e) {
-            console.error(e);
+        } catch {
             alert("Nie udało się zaakceptować zgłoszenia.");
         }
     };
@@ -170,68 +161,60 @@ const ModeratorEventsTab: React.FC = () => {
             await axiosInstance.patch(`/moderator/reportEvent/${id}/reject`);
             setReports((prev) =>
                 prev.map((r) =>
-                    r.id === id
-                        ? {
-                            ...r,
-                            active: false,
-                            viewed: true,
-                        }
-                        : r
+                    r.id === id ? { ...r, active: false, viewed: true } : r
                 )
             );
-        } catch (e) {
-            console.error(e);
+        } catch {
             alert("Nie udało się odrzucić zgłoszenia.");
         }
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDeleteReport = async (id: number) => {
         if (!window.confirm("Na pewno chcesz usunąć to zgłoszenie?")) return;
 
         try {
             await axiosInstance.delete(`/moderator/reportEvent/${id}/delete`);
             setReports((prev) => prev.filter((r) => r.id !== id));
-        } catch (e) {
-            console.error(e);
+        } catch {
             alert("Nie udało się usunąć zgłoszenia.");
         }
     };
 
-    // oczko – jeśli nowe => toggle-viewed, jeśli przeczytane => toqqle-unviewed
+    const handleDeleteEvent = async (eventId: number) => {
+        if (!window.confirm("Czy na pewno chcesz usunąć całe wydarzenie?")) return;
+
+        try {
+            await axiosInstance.delete(`/event/delete/event/${eventId}`);
+            setReports((prev) => prev.filter((r) => r.eventId !== eventId));
+        } catch {
+            alert("Nie udało się usunąć wydarzenia.");
+        }
+    };
+
     const handleToggleViewed = async (report: EventReportItem) => {
         const { id, viewed } = report;
 
         try {
             if (!viewed) {
-                // oznacz jako przeczytane
-                await axiosInstance.patch(
-                    `/moderator/reportEvent/${id}/toggle-viewed`
-                );
+                await axiosInstance.patch(`/moderator/reportEvent/${id}/toggle-viewed`);
                 setReports((prev) =>
-                    prev.map((r) =>
-                        r.id === id ? { ...r, viewed: true } : r
-                    )
+                    prev.map((r) => (r.id === id ? { ...r, viewed: true } : r))
                 );
             } else {
-                // oznacz jako nieprzeczytane
-                await axiosInstance.patch(
-                    `/moderator/reportEvent/${id}/toggle-unviewed`
-                );
+                await axiosInstance.patch(`/moderator/reportEvent/${id}/toggle-unviewed`);
                 setReports((prev) =>
-                    prev.map((r) =>
-                        r.id === id ? { ...r, viewed: false } : r
-                    )
+                    prev.map((r) => (r.id === id ? { ...r, viewed: false } : r))
                 );
             }
-        } catch (e) {
-            console.error(e);
+        } catch {
             alert("Nie udało się zmienić statusu przeczytania.");
         }
     };
 
     return (
         <section className="p-4 md:p-0">
-            {/* search + filtry */}
+
+            {/* Search */}
             <div className="flex items-center gap-2 mb-4">
                 <div className="relative flex-1">
                     <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -242,10 +225,6 @@ const ModeratorEventsTab: React.FC = () => {
                         className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-600"
                     />
                 </div>
-                <button className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800">
-                    <Filter className="h-4 w-4" />
-                    Filtry
-                </button>
             </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
@@ -261,13 +240,11 @@ const ModeratorEventsTab: React.FC = () => {
                         <th className="text-right px-4 py-3">Akcje</th>
                     </tr>
                     </thead>
+
                     <tbody>
                     {loading && reports.length === 0 && (
                         <tr>
-                            <td
-                                colSpan={5}
-                                className="px-4 py-6 text-center text-zinc-400"
-                            >
+                            <td colSpan={5} className="px-4 py-6 text-center text-zinc-400">
                                 Ładowanie…
                             </td>
                         </tr>
@@ -277,10 +254,8 @@ const ModeratorEventsTab: React.FC = () => {
                         const isUnseen = !r.viewed;
 
                         return (
-                            <tr
-                                key={r.id}
-                                className="border-t border-zinc-800"
-                            >
+                            <tr key={r.id} className="border-t border-zinc-800">
+
                                 {/* Zgłaszający */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
@@ -293,10 +268,7 @@ const ModeratorEventsTab: React.FC = () => {
                                         )}
                                         <div className="flex flex-col">
                                             <Link
-                                                to={getUserProfileLink(
-                                                    r.userEmail,
-                                                    r.reporterId
-                                                )}
+                                                to={getUserProfileLink(r.userEmail, r.reporterId)}
                                                 className={
                                                     isUnseen
                                                         ? "font-semibold text-white hover:text-violet-300 transition"
@@ -327,17 +299,31 @@ const ModeratorEventsTab: React.FC = () => {
                                                 className="h-10 w-16 rounded-lg object-cover"
                                             />
                                         )}
-                                        <div className="flex flex-col">
-                                            <Link
-                                                to={`/event/${r.eventId}`}
-                                                className={
-                                                    isUnseen
-                                                        ? "font-semibold text-white hover:text-violet-300 transition"
-                                                        : "font-medium text-zinc-100 hover:text-violet-300 transition"
-                                                }
-                                            >
-                                                {r.eventName}
-                                            </Link>
+
+                                        <div className="flex flex-col flex-1">
+                                            <div className="flex items-center gap-2">
+
+                                                <Link
+                                                    to={`/event/${r.eventId}`}
+                                                    className={
+                                                        isUnseen
+                                                            ? "font-semibold text-white hover:text-violet-300 transition"
+                                                            : "font-medium text-zinc-100 hover:text-violet-300 transition"
+                                                    }
+                                                >
+                                                    {r.eventName}
+                                                </Link>
+
+                                                {/* Śmietnik obok wydarzenia */}
+                                                <button
+                                                    onClick={() => handleDeleteEvent(r.eventId)}
+                                                    className="p-1 rounded-md border border-red-700 hover:bg-red-800/40 transition ml-1"
+                                                    title="Usuń wydarzenie"
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-400" />
+                                                </button>
+                                            </div>
+
                                             <span
                                                 className={
                                                     "text-xs text-zinc-400 " +
@@ -364,7 +350,7 @@ const ModeratorEventsTab: React.FC = () => {
                                     </p>
                                 </td>
 
-                                {/* Status – tylko aktywny / nieaktywny */}
+                                {/* Status */}
                                 <td className="px-4 py-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
@@ -377,9 +363,10 @@ const ModeratorEventsTab: React.FC = () => {
                                         </span>
                                 </td>
 
-                                {/* Akcje – ptaszek, krzyżyk, śmietnik, oko */}
+                                {/* Akcje */}
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
+
                                         {/* Akceptuj */}
                                         <button
                                             onClick={() => handleAccept(r.id)}
@@ -398,16 +385,16 @@ const ModeratorEventsTab: React.FC = () => {
                                             <X className="h-4 w-4" />
                                         </button>
 
-                                        {/* Usuń */}
+                                        {/* Usuń zgłoszenie */}
                                         <button
-                                            onClick={() => handleDelete(r.id)}
+                                            onClick={() => handleDeleteReport(r.id)}
                                             className="p-2 rounded-lg border border-zinc-700 hover:bg-zinc-800 transition"
                                             title="Usuń zgłoszenie"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
 
-                                        {/* Oznacz jako przeczytane / nieprzeczytane */}
+                                        {/* toggle read */}
                                         <button
                                             onClick={() => handleToggleViewed(r)}
                                             className={`p-2 rounded-lg border transition ${
@@ -432,7 +419,6 @@ const ModeratorEventsTab: React.FC = () => {
                 </table>
             </div>
 
-            {/* anchor do infinite scrolla */}
             <div
                 ref={observerTargetRef}
                 className="h-12 flex items-center justify-center text-xs text-zinc-500"

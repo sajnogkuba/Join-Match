@@ -31,7 +31,11 @@ public class EventService {
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
     private final ReportEventRepository reportEventRepository;
-
+    private final UserEventRepository userEventRepository;
+    private final ConversationRepository conversationRepository;
+    private final UserSavedEventRepository userSavedEventRepository;
+    private final EventRatingRepository eventRatingRepository;
+    private final ReportEventRatingRepository reportEventRatingRepository;
     private String mapSkillLevelToString(Integer level) {
         if (level == null) return "Nieokreślony";
         return switch (level) {
@@ -226,5 +230,31 @@ public class EventService {
     public Event findById(Integer id){
         return eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event with id " + id + " not found"));
+    }
+
+    @Transactional
+    public void deleteEvent(Integer idEvent) {
+        Event event = eventRepository.findById(idEvent)
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + idEvent + " not found"));
+        if (event.getUserEvents() != null && !event.getUserEvents().isEmpty()) {
+            userEventRepository.deleteAll(event.getUserEvents());
+            event.getUserEvents().clear();
+        }
+        if (event.getReportEvents() != null && !event.getReportEvents().isEmpty()) {
+            reportEventRepository.deleteAll(event.getReportEvents());
+            event.getReportEvents().clear();
+        }
+        if (event.getConversations() != null && !event.getConversations().isEmpty()) {
+            conversationRepository.deleteAll(event.getConversations());
+            event.getConversations().clear();
+        }
+        userSavedEventRepository.deleteAllByEvent_EventId(idEvent);
+        List<EventRating> ratings = eventRatingRepository.findAllByEvent_EventId(idEvent);
+
+        for (EventRating rating : ratings) {
+            reportEventRatingRepository.deleteAllByEventRating_EventRatingId(rating.getEventRatingId());
+        }
+        eventRatingRepository.deleteAll(ratings);
+        eventRepository.delete(event);
     }
 }
