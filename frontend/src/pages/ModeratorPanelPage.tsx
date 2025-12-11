@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     ShieldCheck,
     Users,
@@ -36,7 +37,10 @@ type TabKey =
     | "settings";
 
 const ModeratorPanelPage: React.FC = () => {
-    const [tab, setTab] = useState<TabKey>("dashboard");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const urlTab = searchParams.get("tab") as TabKey | null;
+
+    const [tab, setTab] = useState<TabKey>(urlTab || "dashboard");
 
     const tabs = [
         { key: "dashboard" as TabKey, label: "Dashboard", icon: <ShieldCheck className="h-4 w-4" /> },
@@ -53,6 +57,11 @@ const ModeratorPanelPage: React.FC = () => {
         },
         { key: "settings" as TabKey, label: "Ustawienia", icon: <Settings2 className="h-4 w-4" /> },
     ];
+    const handleTabChange = (key: TabKey) => {
+        setTab(key);
+        setSearchParams({ tab: key });
+    };
+
 
     return (
         <div className="min-h-screen bg-[#1f2632] text-zinc-300">
@@ -98,7 +107,7 @@ const ModeratorPanelPage: React.FC = () => {
                             {tabs.map((item) => (
                                 <button
                                     key={item.key}
-                                    onClick={() => setTab(item.key)}
+                                    onClick={() => handleTabChange(item.key)}
                                     className={`
                                         inline-flex items-center gap-2
                                         rounded-xl border transition
