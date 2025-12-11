@@ -125,5 +125,14 @@ public class EventController {
         }
         return ResponseEntity.ok().build();
     }
+    @DeleteMapping("delete/event/{idEvent}")
+    public ResponseEntity<Void> deleteEvent(@PathVariable Integer idEvent){
+        try {
+            eventService.deleteEvent(idEvent);
+        } catch (IllegalArgumentException e){
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
 
 }

@@ -11,4 +11,6 @@ public interface EventRatingRepository extends JpaRepository<EventRating, Intege
     List<EventRating> findByEvent_EventId(Integer eventId);
     List<EventRating> findByEvent(Event event);
     boolean existsByUserAndEvent(User user, Event event);
+    List<EventRating> findAllByEvent_EventId(Integer eventId);
+
 }
