@@ -75,9 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		}
 	}
 
-	// USUNĄŁEM STĄD CAŁY useEffect Z INTERCEPTOREM!
-	// To axios.ts zarządza cyklem życia tokena, nie Context.
-
 	return (
 		<AuthContext.Provider
 			value={{

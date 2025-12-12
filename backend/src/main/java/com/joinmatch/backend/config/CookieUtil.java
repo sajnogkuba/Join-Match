@@ -7,7 +7,7 @@ import org.springframework.http.HttpHeaders;
 
 public class CookieUtil {
 
-    private static final int ACCESS_TOKEN_MAX_AGE = 60;
+    private static final int ACCESS_TOKEN_MAX_AGE = 15 * 60;
     private static final int REFRESH_TOKEN_MAX_AGE = 4 * 60 * 60;
     private static final int EMAIL_MAX_AGE = 4 * 60 * 60;
 

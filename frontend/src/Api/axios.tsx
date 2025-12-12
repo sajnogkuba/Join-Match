@@ -29,11 +29,8 @@ const processQueue = (error: any, token: any = null) => {
 	failedQueue = []
 }
 
-// POPRAWIONA FUNKCJA REFRESH
 const refreshToken = async (): Promise<void> => {
 	try {
-		// Używamy axiosInstance zamiast axios, żeby zachować baseURL z konfiguracji
-		// Dzięki temu unikamy problemu "/api/api/..."
 		await axiosInstance.post('/auth/refreshToken')
 	} catch (error) {
 		console.error('Błąd wewnątrz funkcji refreshToken:', error)
@@ -42,8 +39,6 @@ const refreshToken = async (): Promise<void> => {
 }
 
 const publicEndpoints = [
-	// '/auth/user', // Dobrze, że to zakomentowałeś!
-	'/ws',
 	'/auth/login',
 	'/auth/register',
 	'/auth/verify',
@@ -66,7 +61,6 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
 	const path = url.replace(import.meta.env.VITE_API_URL || '', '')
 	const isPublic = publicEndpoints.some(endpoint => path.startsWith(endpoint))
 
-	// Lista wyjątków (ścieżki które zaczynają się jak publiczne, ale są chronione)
 	const isProtected =
 		path.includes('/auth/user/details') ||
 		path.includes('/auth/changePass') ||
@@ -83,8 +77,6 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
 		path.includes('/conversations/') ||
 		path.includes('/chat/')
 
-	// Jeśli to '/auth/user' (pobieranie danych zalogowanego), to isPublic=false (bo zakomentowane wyżej),
-	// więc funkcja zwróci false -> triggerując refresh token.
 	return isPublic && !isProtected
 }
 
@@ -93,7 +85,6 @@ axiosInstance.interceptors.response.use(
 	async (error: AxiosError) => {
 		const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-		// Zabezpieczenie przed pętlą: jeśli błąd dotyczy samego odświeżania, nie próbuj ponownie
 		if (originalRequest.url?.includes('/auth/refreshToken') || originalRequest.url?.includes('/auth/login')) {
 			return Promise.reject(error)
 		}
@@ -133,7 +124,6 @@ axiosInstance.interceptors.response.use(
 					disconnectWebSocket()
 				}
 
-				// Tutaj następuje ostateczne wylogowanie, jeśli refresh się nie udał
 				const currentPath = window.location.pathname
 				const publicPaths = [
 					'/login',
