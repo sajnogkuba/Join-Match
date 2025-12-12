@@ -23,6 +23,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 	const [isLoading, setIsLoading] = useState(true)
 
+	// Proaktywne pingowanie, żeby access token nie wygasał w trakcie pracy.
+	// Pinguje lekki endpoint chroniony; interceptor zajmie się refreshToken + kolejką, więc unikamy podwójnych refreshy.
+	useEffect(() => {
+		if (!user) return
+
+		let pingPromise: Promise<unknown> | null = null
+		const REFRESH_INTERVAL_MS = 10 * 60 * 1000 // co ~10 min (access = 15 min)
+
+		const pingSession = () => {
+			if (pingPromise) return
+			pingPromise = axiosInstance
+				.get('/auth/user')
+				.catch(() => {
+				})
+				.finally(() => {
+					pingPromise = null
+				})
+		}
+
+		const intervalId = window.setInterval(pingSession, REFRESH_INTERVAL_MS)
+		const onFocus = () => pingSession()
+		const onVisibility = () => {
+			if (document.visibilityState === 'visible') pingSession()
+		}
+
+		window.addEventListener('focus', onFocus)
+		document.addEventListener('visibilitychange', onVisibility)
+
+		return () => {
+			clearInterval(intervalId)
+			window.removeEventListener('focus', onFocus)
+			document.removeEventListener('visibilitychange', onVisibility)
+		}
+	}, [user])
+
 	useEffect(() => {
 		const checkAuth = async () => {
 			try {
@@ -91,3 +126,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		</AuthContext.Provider>
 	)
 }
+
