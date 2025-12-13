@@ -5,6 +5,7 @@ import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
+import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
@@ -20,6 +21,7 @@ import org.springframework.data.jpa.domain.Specification;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,6 +38,17 @@ public class EventService {
     private final UserSavedEventRepository userSavedEventRepository;
     private final EventRatingRepository eventRatingRepository;
     private final ReportEventRatingRepository reportEventRatingRepository;
+    private final OrganizerRatingRepository organizerRatingRepository;
+    private final NotificationService notificationService;
+
+    private void refundParticipants(Event event) {
+        event.getUserEvents().forEach(ue -> {
+            if (Boolean.TRUE.equals(ue.getIsPaid())) {
+                ue.setIsPaid(false);
+            }
+        });
+    }
+
     private String mapSkillLevelToString(Integer level) {
         if (level == null) return "Nieokreślony";
         return switch (level) {
@@ -109,7 +122,7 @@ public class EventService {
 
                 e.getCost(),
                 "PLN",
-                e.getStatus(),
+                e.getStatus().name(),
                 e.getEventDate(),
                 e.getScoreTeam1(),
                 e.getScoreTeam2(),
@@ -131,8 +144,8 @@ public class EventService {
                 e.getOwner().getName(),
                 e.getOwner().getUrlOfPicture(),
 
-                "Amator",
-                "Gotówka",
+                mapSkillLevelToString(e.getMinLevel()),
+                String.join(", ", e.getPaymentMethods()),
                 e.getImageUrl(),
 
                 e.getSportObject().getLatitude(),
@@ -145,6 +158,7 @@ public class EventService {
         @Transactional
     public EventResponseDto create(EventRequestDto eventRequestDto) {
         Event event = new Event();
+            event.setStatus(EventStatus.PLANNED);
         return getEventResponseDto(eventRequestDto, event);
     }
 
@@ -164,7 +178,7 @@ public class EventService {
         event.setOwner(owner);
         event.setSportObject(sportObject);
         event.setEventVisibility(eventVisibility);
-        event.setStatus(eventRequestDto.status());
+        event.setStatus(event.getStatus());
         event.setSportEv(sport);
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
@@ -257,4 +271,52 @@ public class EventService {
         eventRatingRepository.deleteAll(ratings);
         eventRepository.delete(event);
     }
+
+    @Transactional
+    public void cancelEvent(Integer eventId, String requesterEmail) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!event.getOwner().getId().equals(requester.getId())) {
+            throw new IllegalArgumentException("Only organizer can cancel event");
+        }
+
+        if (event.getStatus() == EventStatus.CANCELED) {
+            return;
+        }
+
+        boolean lessThan24h =
+                event.getEventDate().isBefore(LocalDateTime.now().plusHours(24));
+
+        event.setStatus(EventStatus.CANCELED);
+        eventRepository.save(event);
+
+        if (lessThan24h) {
+            addAutomaticOrganizerPenalty(event);
+        }
+
+        refundParticipants(event);
+        notificationService.sendEventCanceledNotification(event);
+    }
+
+    @Transactional
+    public void addAutomaticOrganizerPenalty(Event event) {
+        User systemUser = userRepository.findByEmail("system@joinmatch.pl")
+                .orElseThrow(() -> new IllegalStateException("System user missing"));
+
+        OrganizerRating rating = OrganizerRating.builder()
+                .rater(systemUser)
+                .organizer(event.getOwner())
+                .event(event)
+                .rating(1)
+                .comment("Odwołanie wydarzenia na mniej niż 24h przed jego rozpoczęciem.")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        organizerRatingRepository.save(rating);
+    }
+
 }

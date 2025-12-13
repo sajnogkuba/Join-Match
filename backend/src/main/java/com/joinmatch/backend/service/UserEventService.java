@@ -3,6 +3,7 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.Notification.EventInviteRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
+import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.AttendanceStatus;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.model.User;
@@ -222,6 +223,17 @@ public class UserEventService {
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
         Optional<UserEvent> existingUserEvent = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, user.getId());
+
+        if (event.getStatus() != EventStatus.PLANNED) {
+            throw new IllegalStateException("Nie można dołączyć do odwołanego wydarzenia");
+        }
+
+        Integer minLevel = event.getMinLevel();
+        Integer userLevel = user.getSportLevel(event.getSportEv().getId());
+
+        if (userLevel == null || userLevel < minLevel) {
+            throw new IllegalStateException("Nie spełniasz minimalnego poziomu zaawansowania");
+        }
 
         if (existingUserEvent.isPresent()) {
             UserEvent ue = existingUserEvent.get();

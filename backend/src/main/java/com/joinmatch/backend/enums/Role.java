@@ -1,4 +1,4 @@
-package com.joinmatch.backend.model;
+package com.joinmatch.backend.enums;
 
 public enum Role {
     USER,

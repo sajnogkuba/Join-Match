@@ -1,9 +1,12 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
+import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,6 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventController {
     private final EventService eventService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<Page<EventResponseDto>> getAllEvents(
@@ -133,6 +137,30 @@ public class EventController {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{eventId}/cancel")
+    public ResponseEntity<Void> cancelEvent(
+            @PathVariable Integer eventId,
+            HttpServletRequest request
+    ) {
+        try {
+            String token = TokenExtractor.extractToken(request);
+            if (token == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            User user = userRepository.findByTokenValue(token)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            eventService.cancelEvent(eventId, user.getEmail());
+            return ResponseEntity.noContent().build();
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
     }
 
 }

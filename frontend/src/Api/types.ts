@@ -1,3 +1,5 @@
+import { EventStatus } from './types/EventStatus'
+
 export interface JwtResponse {
 	token: string
 	refreshToken: string
@@ -17,7 +19,7 @@ export interface Event {
 	ownerId: number
 	sportObjectName: string
 	eventVisibilityId: number
-	status: 'planned' | 'ongoing' | 'finished'
+	status: EventStatus
 	scoreTeam1: number | null
 	scoreTeam2: number | null
 	eventDate: Date
@@ -42,7 +44,7 @@ export type EventDetails = {
 	bookedParticipants: number
 	cost: number
 	currency: string
-	status: 'planned' | 'in_progress' | 'finished' | 'cancelled'
+	status: EventStatus
 	eventDate: string
 	scoreTeam1: number | null
 	scoreTeam2: number | null
