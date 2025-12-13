@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
+import { EventStatus } from '../Api/types/EventStatus'
 
 dayjs.locale('pl')
 
@@ -108,86 +109,95 @@ const EventPage: React.FC = () => {
 		}
 	}
 
-	const handleSubmitReport = async (message: string) => {
-		if (!id) return;
+	const handleCancelEvent = async () => {
+		if (!event) return
+
+		const confirmed = window.confirm('Czy na pewno chcesz odwołać to wydarzenie?\n\nUczestnicy zostaną powiadomieni.')
+		if (!confirmed) return
 
 		try {
-			setIsSendingReport(true);
+			await axiosInstance.patch(`/event/${event.eventId}/cancel`)
+			toast.success('Wydarzenie zostało odwołane')
+
+			setEvent(prev => (prev ? { ...prev, status: EventStatus.CANCELED } : prev))
+		} catch (e: any) {
+			if (e?.response?.status === 403) {
+				toast.error('Nie masz uprawnień do odwołania tego wydarzenia')
+			} else {
+				toast.error('Nie udało się odwołać wydarzenia')
+			}
+		}
+	}
+
+	const handleSubmitReport = async (message: string) => {
+		if (!id) return
+
+		try {
+			setIsSendingReport(true)
 
 			await axiosInstance.post('/event/report/event', {
 				idEvent: Number(id),
 				description: message,
-			});
+			})
 
-			toast.success('Dziękujemy, zgłoszenie zostało wysłane do moderacji.');
-			setShowReportModal(false);
-
+			toast.success('Dziękujemy, zgłoszenie zostało wysłane do moderacji.')
+			setShowReportModal(false)
 		} catch (e: any) {
-			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e);
+			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e)
 
 			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie już zaakceptowane
 			if (e?.response?.status === 403) {
-				toast.error(
-					'Twoje zgłoszenie zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.'
-				);
-				setShowReportModal(false);
-				return;
+				toast.error('Twoje zgłoszenie zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.')
+				setShowReportModal(false)
+				return
 			}
 
 			// Dalsza obsługa błędów
 			if (e?.response?.status === 400) {
-				toast.error('Nie udało się wysłać zgłoszenia (400).');
+				toast.error('Nie udało się wysłać zgłoszenia (400).')
 			} else {
-				toast.error('Nie udało się wysłać zgłoszenia.');
+				toast.error('Nie udało się wysłać zgłoszenia.')
 			}
-
 		} finally {
-			setIsSendingReport(false);
+			setIsSendingReport(false)
 		}
-	};
-
+	}
 
 	const handleSubmitRatingReport = async (message: string) => {
-		if (!ratingToReport) return;
-
+		if (!ratingToReport) return
 
 		try {
-			setIsSendingRatingReport(true);
+			setIsSendingRatingReport(true)
 
 			await axiosInstance.post('/ratings/report/eventRating', {
 				idEventRating: ratingToReport.id,
 				description: message,
-			});
+			})
 
-			toast.success('Dziękujemy, zgłoszenie oceny zostało wysłane do moderacji.');
-			setShowRatingReportModal(false);
-			setRatingToReport(null);
-
+			toast.success('Dziękujemy, zgłoszenie oceny zostało wysłane do moderacji.')
+			setShowRatingReportModal(false)
+			setRatingToReport(null)
 		} catch (e: any) {
-			console.error('❌ Błąd wysyłania zgłoszenia oceny:', e);
+			console.error('❌ Błąd wysyłania zgłoszenia oceny:', e)
 
 			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie tej oceny już zaakceptowane
 			if (e?.response?.status === 403) {
-				toast.error(
-					'Twoje zgłoszenie tej oceny zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.'
-				);
-				setShowRatingReportModal(false);
-				setRatingToReport(null);
-				return;
+				toast.error('Twoje zgłoszenie tej oceny zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.')
+				setShowRatingReportModal(false)
+				setRatingToReport(null)
+				return
 			}
 
 			// Obsługa pozostałych błędów
 			if (e?.response?.status === 400) {
-				toast.error('Nie udało się wysłać zgłoszenia oceny (400).');
+				toast.error('Nie udało się wysłać zgłoszenia oceny (400).')
 			} else {
-				toast.error('Nie udało się wysłać zgłoszenia oceny.');
+				toast.error('Nie udało się wysłać zgłoszenia oceny.')
 			}
-
 		} finally {
-			setIsSendingRatingReport(false);
+			setIsSendingRatingReport(false)
 		}
-	};
-
+	}
 
 	const handleAcceptInvitation = async () => {
 		if (!userEmail || !id) return
@@ -283,7 +293,11 @@ const EventPage: React.FC = () => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
 			setParticipants(data || [])
-			if (userEmail && currentUserId && data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany'))
+			if (
+				userEmail &&
+				currentUserId &&
+				data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany')
+			)
 				setJoined(true)
 			else setJoined(false)
 		} catch (err) {
@@ -729,6 +743,13 @@ const EventPage: React.FC = () => {
 						</div>
 					</div>
 
+					{event.status === EventStatus.CANCELED && (
+						<div className='mt-6 mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300 flex items-center gap-2'>
+							<XCircle size={18} />
+							<span className='font-medium'>To wydarzenie zostało odwołane przez organizatora.</span>
+						</div>
+					)}
+
 					<hr className='my-6 border-zinc-800' />
 
 					<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
@@ -831,7 +852,9 @@ const EventPage: React.FC = () => {
 													</div>
 													<div className='mt-1 flex items-center gap-2'>
 														{p.sportRating && (
-															<div className='flex items-center gap-1.5' title={`Poziom zaawansowania w ${event.sportTypeName}: ${p.sportRating}/5`}>
+															<div
+																className='flex items-center gap-1.5'
+																title={`Poziom zaawansowania w ${event.sportTypeName}: ${p.sportRating}/5`}>
 																<StarRatingDisplay value={p.sportRating} size={14} max={5} />
 																<span className='text-xs text-zinc-400'>{event.sportTypeName}</span>
 															</div>
@@ -1136,14 +1159,18 @@ const EventPage: React.FC = () => {
 
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
-								{isEventPast ? (
+								{event.status === EventStatus.CANCELED ? (
+									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
+										Wydarzenie odwołane
+									</button>
+								) : isEventPast ? (
 									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
 										Zakończone
 									</button>
-								) : event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
+								) : event.status === EventStatus.PLANNED && spotsLeft > 0 ? (
 									!currentUserId ? (
 										<Link
-											to="/login"
+											to='/login'
 											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
 											Zaloguj się, aby dołączyć
 										</Link>
@@ -1182,7 +1209,7 @@ const EventPage: React.FC = () => {
 										</button>
 									) : !currentUserId ? (
 										<Link
-											to="/login"
+											to='/login'
 											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
 											Zaloguj się, aby dołączyć
 										</Link>
@@ -1231,7 +1258,9 @@ const EventPage: React.FC = () => {
 										<span className='text-2xl'>{event.sportTypeName}</span>
 									</div>
 									<div>
-										<div className='font-semibold text-white text-lg'>{event.sportTypeName.charAt(0).toUpperCase() + event.sportTypeName.slice(1)}</div>
+										<div className='font-semibold text-white text-lg'>
+											{event.sportTypeName.charAt(0).toUpperCase() + event.sportTypeName.slice(1)}
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1290,6 +1319,16 @@ const EventPage: React.FC = () => {
 										className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
 										<AlertTriangle size={16} /> Zgłoś wydarzenie
 									</button>
+
+									{currentUserId === event.ownerId && event.status === EventStatus.PLANNED && !isEventPast && (
+										<button
+											onClick={handleCancelEvent}
+											className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm
+													text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
+											<XCircle size={16} />
+											Odwołaj wydarzenie
+										</button>
+									)}
 								</div>
 							</div>
 						</aside>

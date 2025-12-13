@@ -1,6 +1,7 @@
 package com.joinmatch.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.joinmatch.backend.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -27,7 +28,7 @@ public class User {
     @Column(name = "email", nullable = false, length = 50, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false, length = 100)
+    @Column(name = "password", length = 100)
     private String password;
 
     @Column(name = "date_of_birth", nullable = false)
@@ -140,18 +141,14 @@ public class User {
         token.setUser(this);
     }
 
-    public void removeToken(JoinMatchToken token) {
-        tokens.remove(token);
-        token.setUser(null);
+    public Integer getSportLevel(Integer sportId) {
+        return sportUsers.stream()
+                .filter(su -> su.getSport().getId().equals(sportId))
+                .map(SportUser::getRating)
+                .findFirst()
+                .orElse(null);
     }
 
-    public int getJoinedEventsCount() {
-        return userEvents.size();
-    }
-
-    public int getCreatedEventsCount() {
-        return createdEvents.size();
-    }
 
 
 }

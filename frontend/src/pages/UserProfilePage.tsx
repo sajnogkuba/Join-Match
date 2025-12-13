@@ -18,7 +18,7 @@ import { showRatingToast } from '../components/RatingToast'
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 import UserReportForm from '../components/UserReportForm'
 import BadgesSection from '../components/BadgesSection'
-import { getCookie } from '../utils/cookies'
+import { isSystemUser } from '../utils/isSystemUser'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -156,10 +156,7 @@ const UserProfilePage = () => {
 					rating: editRatingValue,
 					comment: editRatingComment,
 				},
-				{
-					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-					params: { userId: currentUserId },
-				}
+				{ params: { userId: currentUserId } }
 			)
 			showRatingToast({ type: 'update', target: 'użytkownika' })
 			cancelEditUserRating()
@@ -213,10 +210,7 @@ const UserProfilePage = () => {
 					comment: editOrganizerRatingComment,
 					eventId: 0,
 				},
-				{
-					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-					params: { userId: currentUserId },
-				}
+				{ params: { userId: currentUserId } }
 			)
 			showRatingToast({ type: 'update', target: 'organizatora' })
 			cancelEditOrganizerRating()
@@ -252,6 +246,14 @@ const UserProfilePage = () => {
 				const profileRes = await api.get(`/auth/user/${id}`, {
 					params: { viewerId: currentRes.data.id },
 				})
+
+				// 🔒 Blokada profilu systemowego
+				if (isSystemUser(profileRes.data)) {
+					toast.info('To jest konto systemowe')
+					navigate(-1)
+					return
+				}
+
 				setUser(profileRes.data)
 
 				const relation = profileRes.data.relationStatus
@@ -281,12 +283,12 @@ const UserProfilePage = () => {
 				const viewerEmail = currentRes.data.email
 				if (viewerEmail) {
 					const viewerEventsRes = await api.get(`/user-event/by-user-email`, {
-						params: { 
+						params: {
 							userEmail: viewerEmail,
 							page: 0,
 							size: 1000, // Pobierz dużo, żeby mieć wszystkie wydarzenia
 							sortBy: 'id',
-							direction: 'ASC'
+							direction: 'ASC',
 						},
 					})
 					if (viewerEventsRes.data?.content) {
@@ -329,12 +331,12 @@ const UserProfilePage = () => {
 		setEventsLoading(true)
 		try {
 			const targetEventsRes = await api.get<UserEventPageResponse>(`/user-event/by-user-email`, {
-				params: { 
+				params: {
 					userEmail,
 					page,
 					size,
 					sortBy: 'id',
-					direction: 'ASC'
+					direction: 'ASC',
 				},
 			})
 			if (targetEventsRes.data) {
@@ -380,7 +382,7 @@ const UserProfilePage = () => {
 			.get<SportTypeOption[]>('/sport-type')
 			.then(({ data }) => {
 				const map = new Map<number, string>()
-				data.forEach((sport) => {
+				data.forEach(sport => {
 					map.set(sport.id, sport.url)
 				})
 				setSportUrlMap(map)
@@ -420,20 +422,19 @@ const UserProfilePage = () => {
 
 		setIsSendingReport(true)
 		try {
-			await api.post("/auth/report/user", {
+			await api.post('/auth/report/user', {
 				reportedUserId: parseInt(id),
-				description: message
+				description: message,
 			})
 
-			toast.success("Zgłoszenie zostało wysłane do moderatorów.")
+			toast.success('Zgłoszenie zostało wysłane do moderatorów.')
 		} catch (e) {
-			toast.error("Nie udało się wysłać zgłoszenia.")
+			toast.error('Nie udało się wysłać zgłoszenia.')
 			console.error(e)
 		} finally {
 			setIsSendingReport(false)
 		}
 	}
-
 
 	if (loading) return <div className='p-10 text-center text-zinc-400'>Ładowanie profilu...</div>
 	if (errorMsg) return <div className='p-10 text-center text-red-400'>{errorMsg}</div>
@@ -459,7 +460,13 @@ const UserProfilePage = () => {
 							<Avatar src={user.urlOfPicture} name={user.name} size='md' className='ring-4 ring-violet-700 shadow-xl' />
 							<div>
 								<p className='text-white font-semibold leading-tight'>
-									{user.name} <span className='text-zinc-400'>/ Profil</span>
+									{user.name}
+									{isSystemUser({ email: user.email, name: user.name }) && (
+										<span className='ml-2 rounded-md bg-violet-600/20 px-2 py-0.5 text-xs font-semibold text-violet-300'>
+											SYSTEM
+										</span>
+									)}{' '}
+									<span className='text-zinc-400'>/ Profil</span>
 								</p>
 								<p className='text-sm text-zinc-400'>Zaktualizuj swoje dane i zarządzaj kontem</p>
 							</div>
@@ -507,17 +514,16 @@ const UserProfilePage = () => {
 											return (
 												<li
 													key={s.id}
-													className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3'
-												>
+													className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3'>
 													<div className='flex items-center gap-3 min-w-0'>
 														{sportUrl ? (
 															<img
 																src={sportUrl}
 																alt={s.name}
-																className='h-10 w-10 rounded-full object-cover border border-zinc-700 flex-shrink-0'
+																className='h-10 w-10 rounded-full object-cover border border-zinc-700 shrink-0'
 															/>
 														) : (
-															<div className='h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex-shrink-0 flex items-center justify-center text-xs text-zinc-400'>
+															<div className='h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 shrink-0 flex items-center justify-center text-xs text-zinc-400'>
 																img
 															</div>
 														)}
@@ -569,9 +575,8 @@ const UserProfilePage = () => {
 												<label className='text-sm text-zinc-400'>Pokaż:</label>
 												<select
 													value={eventsPageSize}
-													onChange={(e) => handleEventsPageSizeChange(Number(e.target.value))}
-													className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600'
-												>
+													onChange={e => handleEventsPageSizeChange(Number(e.target.value))}
+													className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600'>
 													<option value={6}>6</option>
 													<option value={12}>12</option>
 													<option value={24}>24</option>
@@ -588,9 +593,7 @@ const UserProfilePage = () => {
 										<>
 											<ul className='space-y-3'>
 												{events.map(e => (
-													<li
-														key={e.id}
-														className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
+													<li key={e.id} className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
 														<span className='text-white'>{e.eventName}</span>
 														<a href={`/event/${e.eventId}`} className='text-violet-400 hover:text-violet-300 text-sm'>
 															Zobacz →
@@ -601,22 +604,26 @@ const UserProfilePage = () => {
 											{eventsTotalPages > 1 && (
 												<div className='mt-6 flex items-center justify-between'>
 													<div className='text-sm text-zinc-400'>
-														Strona {eventsPage + 1} z {eventsTotalPages} ({eventsTotalElements} {eventsTotalElements === 1 ? 'wydarzenie' : eventsTotalElements < 5 ? 'wydarzenia' : 'wydarzeń'})
+														Strona {eventsPage + 1} z {eventsTotalPages} ({eventsTotalElements}{' '}
+														{eventsTotalElements === 1
+															? 'wydarzenie'
+															: eventsTotalElements < 5
+															? 'wydarzenia'
+															: 'wydarzeń'}
+														)
 													</div>
 													<div className='flex items-center gap-2'>
 														<button
 															onClick={() => handleEventsPageChange(eventsPage - 1)}
 															disabled={eventsPage === 0}
-															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'
-														>
+															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
 															<ChevronLeft size={16} />
 															Poprzednia
 														</button>
 														<button
 															onClick={() => handleEventsPageChange(eventsPage + 1)}
 															disabled={eventsPage >= eventsTotalPages - 1}
-															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'
-														>
+															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
 															Następna
 															<ChevronRight size={16} />
 														</button>
@@ -797,7 +804,7 @@ const UserProfilePage = () => {
 							)}
 
 							{activeTab === 'Odznaki' && (
-								<div className="flex-1">
+								<div className='flex-1'>
 									<BadgesSection userId={id ? parseInt(id) : null} />
 								</div>
 							)}
