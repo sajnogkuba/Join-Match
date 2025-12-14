@@ -39,6 +39,7 @@ public record EventDetailsResponseDto (
      String imageUrl,
 
      Double latitude,
-     Double longitude
+     Double longitude,
+        Boolean isAttendanceChecked
 )
 {}

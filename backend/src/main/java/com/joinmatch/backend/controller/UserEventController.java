@@ -141,4 +141,18 @@ public class UserEventController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/{eventId}/attendance")
+    public ResponseEntity<Void> checkAttendance(
+            @PathVariable Integer eventId,
+            @RequestBody List<Integer> presentUserIds,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
+
+        userEventService.checkAttendance(eventId, presentUserIds, user.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
 }

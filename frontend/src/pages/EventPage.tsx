@@ -33,10 +33,12 @@ import {
 	X,
 	CheckCircle,
 	XCircle,
+	UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
 import { EventStatus } from '../Api/types/EventStatus'
+import AttendanceControlModal from '../components/AttendanceControlModal'
 
 dayjs.locale('pl')
 
@@ -46,6 +48,8 @@ const EventPage: React.FC = () => {
 
 	const [showReportModal, setShowReportModal] = useState(false)
 	const [isSendingReport, setIsSendingReport] = useState(false)
+
+	const [showAttendanceModal, setShowAttendanceModal] = useState(false)
 
 	const [showRatingReportModal, setShowRatingReportModal] = useState(false)
 	const [ratingToReport, setRatingToReport] = useState<EventRatingResponse | null>(null)
@@ -1297,6 +1301,43 @@ const EventPage: React.FC = () => {
 								</div>
 							</div>
 
+							{/* --- SEKCJA KONTROLI OBECNOŚCI --- */}
+							{currentUserId === event.ownerId &&
+								parseEventDate(event.eventDate).isBefore(dayjs()) &&
+								event.status !== EventStatus.CANCELED &&
+								(!event.isAttendanceChecked ? (
+									<div className='rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5 mb-6'>
+										<h3 className='text-violet-300 text-lg font-semibold mb-2 flex items-center gap-2'>
+											<UserCheck size={20} /> Strefa Organizatora
+										</h3>
+
+										<p className='text-xs text-zinc-400 mb-4'>
+											Wydarzenie się rozpoczęło. Sprawdź listę obecności, aby system mógł nagrodzić obecnych i ukarać
+											nieobecnych.
+										</p>
+
+										<button
+											onClick={() => setShowAttendanceModal(true)}
+											className='w-full inline-flex items-center justify-center gap-2 rounded-xl
+					bg-violet-600 hover:bg-violet-500
+					text-white font-semibold py-3 transition
+					shadow-lg shadow-violet-900/30'>
+											<UserCheck size={18} />
+											Sprawdź obecność
+										</button>
+									</div>
+								) : (
+									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 mb-6 flex items-center gap-3 opacity-90'>
+										<div className='bg-violet-500/15 p-2 rounded-full text-violet-300 ring-1 ring-violet-500/20'>
+											<Check size={20} />
+										</div>
+										<div>
+											<p className='text-zinc-200 font-medium text-sm'>Obecność sprawdzona</p>
+											<p className='text-zinc-500 text-xs'>Lista obecności została już zamknięta.</p>
+										</div>
+									</div>
+								))}
+
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Akcje</h3>
 								<div className='mt-4 space-y-3'>
@@ -1419,6 +1460,15 @@ const EventPage: React.FC = () => {
 					}}
 					onSubmit={handleSubmitRatingReport}
 					isSubmitting={isSendingRatingReport}
+				/>
+			)}
+
+			{showAttendanceModal && event && (
+				<AttendanceControlModal
+					isOpen={showAttendanceModal}
+					onClose={() => setShowAttendanceModal(false)}
+					eventId={event.eventId}
+					participants={confirmedParticipants}
 				/>
 			)}
 		</>
