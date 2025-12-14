@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../Context/authContext'
 import { useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
-import axiosInstance from '../Api/axios';
+import axiosInstance from '../Api/axios'
 
 const LoginPage = () => {
 	const [email, setEmail] = useState('')
@@ -23,9 +23,9 @@ const LoginPage = () => {
 			navigate('/')
 		} catch (err: any) {
 			if (err.response?.status === 403) {
-				setError("Twoje konto zostało zablokowane");
+				setError('Twoje konto zostało zablokowane')
 			} else {
-				setError("Nieprawidłowy email lub hasło");
+				setError('Nieprawidłowy email lub hasło')
 			}
 		}
 		setLoading(false)
@@ -33,27 +33,27 @@ const LoginPage = () => {
 
 	const handleGoogleSuccess = async (credentialResponse: any) => {
 		try {
-			const idToken = credentialResponse.credential;
-	
-			const res = await axiosInstance.post("/auth/google", {
+			const idToken = credentialResponse.credential
+
+			const res = await axiosInstance.post('/auth/google', {
 				idToken,
-			});
-	
-			const { email } = res.data;
-	
-			loginWithGoogle(email);
-	
-			navigate("/");
+			})
+
+			const { email } = res.data
+
+			loginWithGoogle(email)
+
+			navigate('/')
 		} catch (err) {
-			console.error("Google login error:", err);
+			console.error('Google login error:', err)
 		}
-	};
+	}
 
 	return (
-		<div className='min-h-screen bg-gray-900 flex items-center justify-center p-4'>
-			<div className='min-h-screen inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,40,200,0.1),transparent_60%)]'></div>
+		<div className='min-h-screen pt-24 bg-gray-900 flex items-center justify-center p-4'>
+			<div className='fixed inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,40,200,0.1),transparent_60%)] pointer-events-none'></div>
 			<div className='relative z-10 w-full max-w-md'>
-				<div className='bg-black/80 backdrop-blur-sm rounded-2xl border border-gray-700 p-8 shadow-2xl'>
+				<div className='bg-gradient-to-b from-zinc-900/80 to-black/80 backdrop-blur-sm rounded-2xl border border-white/10 p-8 shadow-[0_0_60px_-15px_rgba(168,85,247,0.35)]'>
 					<div className='text-center mb-8'>
 						<h1 className='text-3xl font-bold text-white mb-2'>Zaloguj się</h1>
 						<p className='text-gray-400'>Wróć do swojej sportowej przygody</p>
@@ -78,7 +78,7 @@ const LoginPage = () => {
 									type='email'
 									value={email}
 									onChange={e => setEmail(e.target.value)}
-									className='w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+									className='w-full pl-10 pr-4 py-3 bg-zinc-900/70 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-500/40 transition-colors'
 									placeholder='twoj@email.com'
 									required
 								/>
@@ -102,7 +102,7 @@ const LoginPage = () => {
 									type={showPassword ? 'text' : 'password'}
 									value={password}
 									onChange={e => setPassword(e.target.value)}
-									className='w-full pl-10 pr-12 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent'
+									className='w-full pl-10 pr-12 py-3 bg-zinc-900/70 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-purple-500/40 transition-colors'
 									placeholder='Twoje hasło'
 									required
 								/>
@@ -140,7 +140,7 @@ const LoginPage = () => {
 								<input
 									type='checkbox'
 									id='remember'
-									className='h-4 w-4 text-purple-600 bg-gray-800 border-gray-600 rounded focus:ring-purple-500'
+									className='h-4 w-4 text-purple-600 bg-zinc-900/70 border border-white/10 rounded focus:ring-purple-500'
 								/>
 								<label htmlFor='remember' className='ml-2 text-sm text-gray-300'>
 									Zapamiętaj mnie
@@ -155,7 +155,7 @@ const LoginPage = () => {
 						<button
 							type='submit'
 							disabled={loading}
-							className='w-full bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-4 rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 cursor-pointer'>
+							className='w-full bg-gradient-to-r from-purple-600 to-purple-800 text-white font-medium py-3 px-4 rounded-lg hover:from-purple-700 hover:to-purple-900 transition-all shadow-lg shadow-purple-900/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.01] active:scale-[0.99] duration-200'>
 							{loading ? 'Logowanie...' : 'Zaloguj się'}
 						</button>
 
@@ -164,27 +164,18 @@ const LoginPage = () => {
 								<div className='w-full border-t border-gray-600'></div>
 							</div>
 							<div className='relative flex justify-center text-sm'>
-								<span className='px-2 bg-black text-gray-400'>lub</span>
+								<span className='px-2 bg-black/80 text-gray-400'>lub</span>
 							</div>
 						</div>
 						<div className='flex justify-center'>
-							<div className='w-full'>
+							<div className='w-full max-w-80'>
 								<GoogleLogin
 									onSuccess={handleGoogleSuccess}
-									onError={() => console.log("Google login failed")}
-									theme='outline'
+									onError={() => console.log('Google login failed')}
+									theme='filled_black'
+									shape='pill'
 									size='large'
-									width='100%'
 									text='signin_with'
-									shape='rectangular'
-									logo_alignment='left'
-									useOneTap={false}
-									containerProps={{
-										style: {
-											width: '100%',
-											height: '48px'
-										}
-									}}
 								/>
 							</div>
 						</div>

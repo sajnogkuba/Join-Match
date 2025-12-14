@@ -11,6 +11,7 @@ interface UniversalDatePickerProps {
 	disabled?: boolean
 	mode?: 'event' | 'birth' // 'event' - blokuje przeszłe, 'birth' - blokuje przyszłe
 	theme?: 'violet' | 'purple' // Kolory dopasowane do kontekstu
+	withLeftIcon?: boolean
 }
 
 const MONTHS = [
@@ -38,6 +39,7 @@ export default function DatePicker({
 	disabled = false,
 	mode = 'event',
 	theme = 'violet',
+	withLeftIcon = false,
 }: UniversalDatePickerProps) {
 	const [isOpen, setIsOpen] = useState(false)
 	const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -207,10 +209,10 @@ export default function DatePicker({
 				primary: 'purple-600',
 				primaryHover: 'purple-700',
 				primaryLight: 'purple-400',
-				inputBg: 'bg-gray-800',
-				inputBorder: 'border-gray-600',
-				inputBorderHover: 'hover:border-gray-500',
-				focusRing: 'focus:ring-purple-500',
+				inputBg: 'bg-zinc-900/70',
+				inputBorder: 'border-white/10',
+				inputBorderHover: 'hover:border-white/20',
+				focusRing: 'focus:ring-purple-500/40',
 			}
 		} else {
 			return {
@@ -218,9 +220,9 @@ export default function DatePicker({
 				primaryHover: 'violet-700',
 				primaryLight: 'violet-400',
 				inputBg: 'bg-zinc-900/70',
-				inputBorder: 'border-zinc-700',
-				inputBorderHover: 'hover:border-zinc-600',
-				focusRing: 'focus:ring-violet-600',
+				inputBorder: 'border-white/10',
+				inputBorderHover: 'hover:border-white/20',
+				focusRing: 'focus:ring-violet-600/40',
 			}
 		}
 	}
@@ -230,6 +232,13 @@ export default function DatePicker({
 
 	return (
 		<div className='relative'>
+			{withLeftIcon && (
+				<CalendarIcon
+					size={18}
+					className='absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none'
+				/>
+			)}
+
 			{/* Input field */}
 			<button
 				ref={buttonRef}
@@ -241,7 +250,9 @@ export default function DatePicker({
 					}
 				}}
 				disabled={disabled}
-				className={`w-full px-4 py-3 rounded-xl ${themeClasses.inputBg} border text-white placeholder-gray-400 ${
+				className={`w-full py-3 pr-4 ${withLeftIcon ? 'pl-10' : 'pl-4'} rounded-xl ${
+					themeClasses.inputBg
+				} border text-white placeholder-gray-400 ${
 					themeClasses.focusRing
 				} focus:border-transparent transition text-left flex items-center justify-between ${
 					error ? 'border-red-500' : themeClasses.inputBorder
@@ -261,7 +272,7 @@ export default function DatePicker({
 						animate={{ opacity: 1, y: 0, scale: 1 }}
 						exit={{ opacity: 0, y: -10, scale: 0.95 }}
 						transition={{ duration: 0.2 }}
-						className='fixed bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-[9999] p-4 min-w-[320px]'
+						className='absolute bg-gradient-to-b from-zinc-900/80 to-black/80 border border-white/10 rounded-xl shadow-[0_0_60px_-15px_rgba(168,85,247,0.35)] z-50 p-4 min-w-[320px] mt-2'
 						style={{
 							top: `${position.top}px`,
 							left: `${position.left}px`,
