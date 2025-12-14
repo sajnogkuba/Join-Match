@@ -73,4 +73,5 @@ export type EventDetails = {
 	latitude: number
 	longitude: number
 	isBanned?: boolean
+	isAttendanceChecked: boolean;
 }

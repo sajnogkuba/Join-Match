@@ -21,6 +21,7 @@ public record EventResponseDto(
         Integer minLevel,
         String imageUrl,
         Boolean isBanned
+
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(

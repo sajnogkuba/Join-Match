@@ -30,6 +30,10 @@ public class UserRating {
     @JoinColumn(name = "rated_id", nullable = false)
     private User rated;
 
+    @ManyToOne
+    @JoinColumn(name = "event_id")
+    private Event event;
+
     @Column(nullable = false)
     @Min(1)
     @Max(5)

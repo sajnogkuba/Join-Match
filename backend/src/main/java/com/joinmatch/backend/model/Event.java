@@ -73,6 +73,9 @@ public class Event {
     @Column(nullable = false)
     private EventStatus status;
 
+    @Column(name = "is_attendance_checked")
+    private Boolean isAttendanceChecked = false;
+
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "event_payment_methods", joinColumns = @JoinColumn(name = "event_id"))

@@ -149,7 +149,8 @@ public class EventService {
                 e.getImageUrl(),
 
                 e.getSportObject().getLatitude(),
-                e.getSportObject().getLongitude()
+                e.getSportObject().getLongitude(),
+                e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false
         );
     }
 
