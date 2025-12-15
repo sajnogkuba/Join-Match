@@ -25,6 +25,7 @@ public class ModeratorService {
     private final ReportUserRatingRepository reportUserRatingRepository;
     private final ReportUserRepository reportUserRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public GetStatisticsForDashboard getStatisticsForDashboard(){
         long newReportsForCompetition = reportCompetitionRepository.countByReviewedIsFalse();
@@ -324,5 +325,11 @@ public class ModeratorService {
         if((!user.getRole().equals(Role.MODERATOR) && (!user.getRole().equals(Role.ADMIN)))){
             throw new IllegalArgumentException("Not authorised");
         }
+    }
+
+    public void sendWarning(ModeratorWarningRequest request, HttpServletRequest httpRequest) {
+        User user = userRepository.findByEmail(request.usermailOfReceiver())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        notificationService.sendModeratorWarning(user);
     }
 }
