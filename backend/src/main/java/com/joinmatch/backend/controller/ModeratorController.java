@@ -302,5 +302,17 @@ public class ModeratorController {
         }
         return ResponseEntity.ok().build();
     }
+    @PostMapping("/notification/warning")
+    public ResponseEntity<Void> sendWarning(
+            @RequestBody ModeratorWarningRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        try {
+            moderatorService.sendWarning(request, httpRequest);
+        }catch (IllegalArgumentException exception){
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok().build();
+    }
 
 }

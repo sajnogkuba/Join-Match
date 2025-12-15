@@ -707,5 +707,26 @@ public class NotificationService {
             }
         });
     }
+    @Transactional
+    public void sendModeratorWarning(User receiver) {
+
+        Notification notification = Notification.builder()
+                .user(receiver)
+                .type(NotificationType.MODERATOR_WARNING)
+                .title("Ostrzeżenie od moderatora")
+                .message("Przestrzegaj regulaminu. W przypadku dalszych naruszeń konto może zostać zablokowane.")
+                .data(null)
+                .build();
+
+        Notification saved = notificationRepository.save(notification);
+
+        messagingTemplate.convertAndSendToUser(
+                receiver.getId().toString(),
+                "/queue/notifications",
+                NotificationResponseDto.fromNotification(saved)
+        );
+    }
+
+
 
 }
