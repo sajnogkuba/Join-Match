@@ -29,24 +29,24 @@ type FormErrors = {
 
 // --- NOWE: Pomocnicza funkcja do wyciągania danych z Google Place ---
 const extractPlaceDetails = (place: google.maps.places.PlaceResult) => {
-    const getComp = (types: string[]) => 
+    const getComp = (types: string[]) =>
         place.address_components?.find(c => types.some(t => c.types.includes(t)))?.long_name || ''
 
     const city = getComp(['locality']) || getComp(['postal_town']) || getComp(['administrative_area_level_2']) || 'Nieznane miasto'
     const street = getComp(['route']) || 'Nieznana ulica'
     const number = getComp(['street_number']) || '1'
-    
+
     let lat = 0
     let lng = 0
-    
+
     if (place.geometry && place.geometry.location) {
-        
-        lat = typeof place.geometry.location.lat === 'function' 
-            ? place.geometry.location.lat() 
+
+        lat = typeof place.geometry.location.lat === 'function'
+            ? place.geometry.location.lat()
             : (place.geometry.location.lat as unknown as number)
 
-        lng = typeof place.geometry.location.lng === 'function' 
-            ? place.geometry.location.lng() 
+        lng = typeof place.geometry.location.lng === 'function'
+            ? place.geometry.location.lng()
             : (place.geometry.location.lng as unknown as number)
     }
 
@@ -60,6 +60,7 @@ export default function CreateEventForm() {
     const [level, setLevel] = useState(1)
     const [free, setFree] = useState(false)
     const [isPrivate, setIsPrivate] = useState(false)
+    const [isForTeam, setIsForTeam] = useState(false)
     const [price, setPrice] = useState<number | ''>(0)
     const [maxParticipants, setMaxParticipants] = useState<number | ''>('')
     const [eventDate, setEventDate] = useState('')
@@ -73,7 +74,7 @@ export default function CreateEventForm() {
     const [serverError, setServerError] = useState<string | null>(null)
     const [serverOk, setServerOk] = useState<string | null>(null)
     const [uploadingImage, setUploadingImage] = useState(false)
-    
+
     // Domyślna metoda płatności
     const [paymentMethods, setPaymentMethods] = useState<string[]>(['GOTOWKA'])
     const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
@@ -161,7 +162,7 @@ export default function CreateEventForm() {
 
         try {
             setSubmitting(true)
-            
+
             // 1. Upload zdjęcia (bez zmian)
             let imageUrl = null
             if (selectedFile) {
@@ -177,7 +178,7 @@ export default function CreateEventForm() {
 
             // 2. Obsługa Miejsca (SportObject)
             let sportObjectId = placeId
-            
+
             if (useCustomPlace && customPlace) {
                 // Wyciągamy dane z customPlace za pomocą naszej nowej funkcji
                 let { city, street, number, lat, lng } = extractPlaceDetails(customPlace)
@@ -188,10 +189,10 @@ export default function CreateEventForm() {
                     console.warn("Brak współrzędnych z autocomplete, próba geocodingu...")
                     const geocoder = new google.maps.Geocoder()
                     try {
-                        const geoRes = await geocoder.geocode({ 
-                            address: customPlace.formatted_address || `${city} ${street} ${number}` 
+                        const geoRes = await geocoder.geocode({
+                            address: customPlace.formatted_address || `${city} ${street} ${number}`
                         })
-                        
+
                         if (geoRes.results && geoRes.results[0]) {
                             const location = geoRes.results[0].geometry.location
                             lat = location.lat()
@@ -239,16 +240,18 @@ export default function CreateEventForm() {
                 sportTypeId: sportId,
                 minLevel: level,
                 imageUrl,
+                isForTeam,
                 paymentMethods: free ? [] : paymentMethods, // upewniamy się, że nie wysyłamy metod jak jest free
             })
 
             setServerOk('🎉 Wydarzenie utworzone pomyślnie!')
-            
+
             // Reset formularza
             setEventName('')
             setDescription('')
             setSportId(0)
             setLevel(1)
+            setIsForTeam(false)
             setFree(false)
             setPrice(0)
             setMaxParticipants('')
@@ -258,7 +261,7 @@ export default function CreateEventForm() {
             setSelectedFile(null)
             setCustomPlace(null)
             setUseCustomPlace(false)
-            
+
         } catch (err: any) {
             console.error('Błąd tworzenia wydarzenia:', err)
             setServerError('Wystąpił błąd serwera przy tworzeniu wydarzenia.')
@@ -412,6 +415,12 @@ export default function CreateEventForm() {
                             value={maxParticipants}
                             onChange={e => setMaxParticipants(e.target.value === '' ? '' : Number(e.target.value))}
                             className={`${inputBase} ${errors.maxParticipants ? 'border-red-500' : ''}`}
+                        />
+                        <Checkbox
+                            id="isForTeam"
+                            label="Czy to wydarzenie drużynowe?"
+                            checked={isForTeam}
+                            onChange={setIsForTeam}
                         />
                         {errors.maxParticipants && <p className='text-red-400 text-sm mt-1'>{errors.maxParticipants}</p>}
                     </div>

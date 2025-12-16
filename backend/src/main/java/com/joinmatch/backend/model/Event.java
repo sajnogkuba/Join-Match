@@ -31,6 +31,8 @@ public class Event {
 
     @Column(name = "cost", precision = 6, scale = 2, nullable = false)
     private BigDecimal cost;
+    @Column(name = "is_for_team", nullable = false)
+    private boolean isForTeam = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
