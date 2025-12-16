@@ -119,7 +119,7 @@ public class EventService {
                 e.getEventName(),
                 e.getNumberOfParticipants(),
                 e.getNumberOfParticipants(), // bookedParticipants
-
+                e.isForTeam(),
                 e.getCost(),
                 "PLN",
                 e.getStatus().name(),
@@ -185,7 +185,7 @@ public class EventService {
         event.setMinLevel(eventRequestDto.minLevel());
         event.setImageUrl(eventRequestDto.imageUrl());
         event.setPaymentMethods(eventRequestDto.paymentMethods());
-
+        event.setForTeam(eventRequestDto.isForTeam());
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);
     }

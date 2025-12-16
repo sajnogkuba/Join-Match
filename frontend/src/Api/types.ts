@@ -42,6 +42,7 @@ export type EventDetails = {
 	description?: string
 	numberOfParticipants: number
 	bookedParticipants: number
+	isForTeam: boolean
 	cost: number
 	currency: string
 	status: EventStatus

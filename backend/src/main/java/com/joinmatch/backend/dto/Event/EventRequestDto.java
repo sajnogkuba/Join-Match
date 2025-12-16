@@ -19,6 +19,7 @@ public record EventRequestDto(
         Integer sportTypeId,
         Integer minLevel,
         String imageUrl,
+        Boolean isForTeam,
         List<String> paymentMethods
 ) {
 }

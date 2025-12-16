@@ -9,6 +9,7 @@ public record EventDetailsResponseDto (
         String eventName,
      Integer numberOfParticipants,
      Integer bookedParticipants,
+     Boolean isForTeam,
 
      BigDecimal cost,
      String currency,
