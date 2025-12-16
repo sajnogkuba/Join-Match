@@ -5,6 +5,7 @@ import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
+import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import com.joinmatch.backend.service.EventService;
@@ -81,7 +82,7 @@ public class EventServiceTest {
         e.setEventName("Test Event");
         e.setNumberOfParticipants(10);
         e.setCost(BigDecimal.valueOf(20));
-        e.setStatus("OPEN");
+        e.setStatus(EventStatus.PLANNED);
         e.setScoreTeam1(1);
         e.setScoreTeam2(2);
         e.setEventDate(LocalDateTime.now());
@@ -169,11 +170,12 @@ public class EventServiceTest {
                 "owner@gmail.com",
                 10,
                 3,
-                "OPEN",
+                EventStatus.PLANNED,
                 LocalDateTime.now(),
                 5,
                 3,
                 "img.png",
+                Boolean.TRUE,
                 List.of()
         );
 

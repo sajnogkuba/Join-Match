@@ -30,6 +30,7 @@ export const Navbar: React.FC = () => {
 		{ to: '/events', label: 'Eventy' },
 		{ to: '/teams', label: 'Drużyny' },
 		{ to: '/about', label: 'O nas' },
+		{ to: '/rankings', label: 'Rankingi' },
 	]
 
 	useEffect(() => {

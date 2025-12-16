@@ -27,8 +27,8 @@ import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
 import PostPage from './pages/PostPage.tsx'
 import ModeratorPanelPage from "./pages/ModeratorPanelPage.tsx";
+import RankingsPage from './pages/RankingsPage.tsx'
 
-const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
@@ -45,7 +45,6 @@ const App: React.FC = () => (
 								<Route index element={<MainPage />} />
 								<Route path='events' element={<EventsPage />} />
 								<Route path='event/:id' element={<EventPage />} />
-								<Route path='rankingi' element={<RankingsPage />} />
 								<Route path='about' element={<AboutUsPage />} />
 								<Route path='teams' element={<TeamsPage />} />
 								<Route path='team/:id' element={<TeamPage />} />
@@ -70,6 +69,7 @@ const App: React.FC = () => (
 								<Route path='chat' element={<ChatPage />} />
 								<Route path='*' element={<NotFoundPage />} />
 								<Route path='/moderator' element={<ModeratorPanelPage/>}/>
+								<Route path='/rankings' element={<RankingsPage />} />
 							</Route>
 						</Routes>
 					</BrowserRouter>
