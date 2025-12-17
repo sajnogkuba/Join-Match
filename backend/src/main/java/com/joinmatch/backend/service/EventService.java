@@ -4,6 +4,7 @@ import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.EventTeam.EventTeamResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.Event;
@@ -40,6 +41,9 @@ public class EventService {
     private final ReportEventRatingRepository reportEventRatingRepository;
     private final OrganizerRatingRepository organizerRatingRepository;
     private final NotificationService notificationService;
+    private final EventTeamRepository eventTeamRepository;
+    private final TeamRepository teamRepository;
+
 
     private void refundParticipants(Event event) {
         event.getUserEvents().forEach(ue -> {
@@ -114,12 +118,43 @@ public class EventService {
         Event e = eventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
 
+        List<EventTeamResponseDto> teams = e.getEventTeams()
+                .stream()
+                .map(et -> {
+                    Team t = et.getTeam();
+                    return new EventTeamResponseDto(
+                            t.getId(),
+                            t.getName(),
+                            t.getCity(),
+                            t.getPhotoUrl(),
+                            t.getLeader().getId(),
+                            t.getLeader().getName()
+                    );
+                })
+                .toList();
+        int individualCount = (e.getUserEvents() == null) ? 0 : e.getUserEvents().size();
+        int teamCount = (e.getEventTeams() == null) ? 0 :
+                e.getEventTeams().stream()
+                        .map(EventTeam::getTeam)
+                        .mapToInt(t ->
+                                (int) t.getUserTeams()
+                                        .stream()
+                                        .map(ut -> ut.getUser().getId())
+                                        .distinct()
+                                        .count()
+                        )
+
+                        .sum();
+        int bookedParticipants = individualCount + teamCount;
+
         return new EventDetailsResponseDto(
                 e.getEventId(),
                 e.getEventName(),
                 e.getNumberOfParticipants(),
-                e.getNumberOfParticipants(), // bookedParticipants
+                e.getNumberOfParticipants(),// bookedParticipants
+                teamCount,
                 e.isForTeam(),
+
                 e.getCost(),
                 "PLN",
                 e.getStatus().name(),
@@ -150,13 +185,15 @@ public class EventService {
 
                 e.getSportObject().getLatitude(),
                 e.getSportObject().getLongitude(),
-                e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false
+                e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false,
+                teams
         );
     }
 
 
 
-        @Transactional
+
+    @Transactional
     public EventResponseDto create(EventRequestDto eventRequestDto) {
         Event event = new Event();
             event.setStatus(EventStatus.PLANNED);
@@ -318,6 +355,103 @@ public class EventService {
                 .build();
 
         organizerRatingRepository.save(rating);
+    }
+
+    @Transactional
+    public void joinEventAsTeam(
+            Integer eventId,
+            Integer teamId,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token");
+        }
+
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (!event.isForTeam()) {
+            throw new IllegalStateException("Event is not team-based");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+
+        if (!team.getLeader().getId().equals(user.getId())) {
+            throw new SecurityException("Only team leader can join event");
+        }
+
+        // 5️⃣ czy już zapisany
+        boolean alreadyJoined = eventTeamRepository
+                .existsByEvent_EventIdAndTeam_Id(eventId, teamId);
+
+        if (alreadyJoined) {
+            throw new IllegalStateException("Team already joined this event");
+        }
+
+        int individualCount = event.getUserEvents() == null
+                ? 0
+                : event.getUserEvents().size();
+
+        int teamCount = event.getEventTeams() == null
+                ? 0
+                : event.getEventTeams().stream()
+                .mapToInt(et -> et.getTeam().getUserTeams().size())
+                .sum();
+
+        int bookedParticipants = individualCount + teamCount;
+
+        int teamSize = team.getUserTeams().size();
+
+        if (bookedParticipants + teamSize > event.getNumberOfParticipants()) {
+            throw new IllegalStateException("Not enough free spots for this team");
+        }
+
+        EventTeam eventTeam = new EventTeam();
+        eventTeam.setEvent(event);
+        eventTeam.setTeam(team);
+        eventTeam.setJoinedAt(LocalDateTime.now());
+        eventTeamRepository.save(eventTeam);
+    }
+    @Transactional
+    public void leaveEventAsTeam(
+            Integer eventId,
+            Integer teamId,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token");
+        }
+
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (!event.isForTeam()) {
+            throw new IllegalStateException("Event is not team-based");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+
+        // ✅ tylko lider
+        if (!team.getLeader().getId().equals(user.getId())) {
+            throw new SecurityException("Only team leader can leave event");
+        }
+
+        // ✅ sprawdź czy drużyna jest zapisana
+        EventTeam eventTeam = eventTeamRepository
+                .findByEvent_EventIdAndTeam_Id(eventId, teamId).orElseThrow(() -> new IllegalStateException("Team is not part of this event"));
+
+        // ✅ wypisanie
+        eventTeamRepository.delete(eventTeam);
     }
 
 }

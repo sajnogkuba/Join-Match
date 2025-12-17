@@ -42,6 +42,7 @@ export type EventDetails = {
 	description?: string
 	numberOfParticipants: number
 	bookedParticipants: number
+	teamParticipants : number
 	isForTeam: boolean
 	cost: number
 	currency: string
@@ -75,4 +76,13 @@ export type EventDetails = {
 	longitude: number
 	isBanned?: boolean
 	isAttendanceChecked: boolean;
+	teams?: EventTeam[]
+}
+export type EventTeam = {
+	teamId: number
+	name: string
+	city?: string
+	photoUrl?: string | null
+	leaderId: number
+	leaderName: string
 }

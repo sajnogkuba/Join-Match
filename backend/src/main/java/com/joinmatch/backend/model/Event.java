@@ -103,4 +103,13 @@ public class Event {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<ReportEvent> reportEvents = new HashSet<>();
+    @OneToMany(
+            mappedBy = "event",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<EventTeam> eventTeams = new HashSet<>();
+
 }
