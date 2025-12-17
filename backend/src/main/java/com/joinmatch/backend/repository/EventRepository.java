@@ -58,4 +58,20 @@ WHERE
     """)
     List<Object[]> findTopOrganizersByActivity(@Param("limit") Integer limit);
 
+    @Query("""
+        SELECT u.id, u.name, u.email, u.urlOfPicture, 
+               COUNT(e.eventId) as eventCount
+        FROM User u
+        JOIN Event e ON e.owner.id = u.id
+        JOIN SportObject so ON e.sportObject.objectId = so.objectId
+        WHERE u.isBlocked = false 
+          AND u.isVerified = true
+          AND LOWER(so.city) = LOWER(:city)
+        GROUP BY u.id, u.name, u.email, u.urlOfPicture
+        HAVING COUNT(e.eventId) > 0
+        ORDER BY eventCount DESC
+        LIMIT :limit
+    """)
+    List<Object[]> findTopOrganizersByLocalActivity(@Param("city") String city, @Param("limit") Integer limit);
+
 }

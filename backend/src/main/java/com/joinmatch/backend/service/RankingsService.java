@@ -137,4 +137,26 @@ public class RankingsService {
 
         return ranking;
     }
+
+    public List<UserRankingResponseDto> getLocalOrganizerRanking(String city, Integer limit) {
+        List<Object[]> results = eventRepository.findTopOrganizersByLocalActivity(city, limit);
+
+        List<UserRankingResponseDto> ranking = new ArrayList<>();
+        int position = 1;
+
+        for (Object[] row : results) {
+            Integer userId = (Integer) row[0];
+            String name = (String) row[1];
+            String email = (String) row[2];
+            String avatarUrl = (String) row[3];
+            long eventCount = ((Number) row[4]).longValue();
+
+            ranking.add(new UserRankingResponseDto(
+                    userId, name, email, avatarUrl,
+                    null, (int) eventCount, position++
+            ));
+        }
+
+        return ranking;
+    }
 }

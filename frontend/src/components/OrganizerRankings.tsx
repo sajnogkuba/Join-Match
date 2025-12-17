@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import CitySelector from './CitySelector'
 import Avatar from './Avatar'
 import StarRatingDisplay from './StarRatingDisplay'
-import { getGeneralOrganizerRanking, getActivityOrganizerRanking } from '../Api/rankings'
+import { getGeneralOrganizerRanking, getActivityOrganizerRanking, getLocalOrganizerRanking } from '../Api/rankings'
 import type { UserRankingItem } from '../Api/types/Ranking'
 
 type RankingType = 'ogolny' | 'aktywnosc' | 'lokalny'
@@ -51,10 +51,30 @@ const OrganizerRankings: React.FC = () => {
 				.finally(() => {
 					setLoading(false)
 				})
+		} else if (activeRanking === 'lokalny') {
+			if (selectedCity) {
+				setLoading(true)
+				setError(null)
+				getLocalOrganizerRanking(selectedCity, 20)
+					.then((data) => {
+						setRanking(data || [])
+					})
+					.catch(() => {
+						setError('Nie udało się pobrać rankingu.')
+						setRanking([])
+					})
+					.finally(() => {
+						setLoading(false)
+					})
+			} else {
+				setRanking([])
+				setLoading(false)
+				setError(null)
+			}
 		} else {
 			setRanking([])
 		}
-	}, [activeRanking])
+	}, [activeRanking, selectedCity])
 
 	const getTop3Colors = (position: number) => {
 		switch (position) {
@@ -92,7 +112,7 @@ const OrganizerRankings: React.FC = () => {
 	const validRanking = useMemo(() => {
 		if (activeRanking === 'ogolny') {
 			return ranking.filter(user => user.averageRating !== null && user.averageRating !== undefined)
-		} else if (activeRanking === 'aktywnosc') {
+		} else if (activeRanking === 'aktywnosc' || activeRanking === 'lokalny') {
 			return ranking
 		}
 		return []
@@ -341,9 +361,107 @@ const OrganizerRankings: React.FC = () => {
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
 								<p className='text-zinc-400'>Wybierz miasto, aby zobaczyć ranking.</p>
 							</div>
-						) : (
+						) : loading ? (
+							<div className='flex items-center justify-center py-12'>
+								<div className='flex items-center gap-2 text-zinc-400'>
+									<Loader2 className='animate-spin' size={24} />
+									<span>Ładowanie rankingu...</span>
+								</div>
+							</div>
+						) : error ? (
+							<div className='rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center'>
+								<p className='text-rose-300'>{error}</p>
+							</div>
+						) : ranking.length === 0 ? (
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-center'>
-								<p className='text-zinc-400'>Ranking lokalny organizatorów dla miasta {selectedCity} zostanie dodany wkrótce.</p>
+								<p className='text-zinc-400'>Brak danych w rankingu dla miasta {selectedCity}.</p>
+							</div>
+						) : (
+							<div className='space-y-6'>
+								<div className='mb-4'>
+									<h4 className='text-white font-semibold text-lg'>
+										Ranking dla miasta: <span className='text-violet-400'>{selectedCity}</span>
+									</h4>
+								</div>
+								{top3.length > 0 && (
+									<div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+										{top3.map((user) => {
+											const colors = getTop3Colors(user.position)
+											return (
+												<Link
+													key={user.userId}
+													to={`/profile/${user.userId}`}
+													className={`rounded-2xl border-2 ${colors.border} ${colors.bg} p-6 transition-transform hover:scale-105`}
+												>
+													<div className='flex flex-col items-center text-center space-y-3'>
+														<div className='relative'>
+															<Avatar
+																src={user.userAvatarUrl}
+																name={user.userName}
+																size='md'
+																className='ring-4 ring-violet-700'
+															/>
+															<div className={`absolute -top-2 -right-2 ${colors.crown}`}>
+																<Crown size={24} className='fill-current' />
+															</div>
+														</div>
+														<div>
+															<div className={`text-2xl font-bold ${colors.text} mb-1`}>
+																#{user.position}
+															</div>
+															<h4 className='text-white font-semibold text-lg'>{user.userName}</h4>
+														</div>
+														<div className='flex flex-col items-center gap-1'>
+															<div className={`text-3xl font-bold ${colors.text}`}>
+																{user.totalRatings}
+															</div>
+															<div className='text-xs text-zinc-400'>
+																{user.totalRatings === 1
+																	? 'wydarzenie'
+																	: user.totalRatings < 5
+																	? 'wydarzenia'
+																	: 'wydarzeń'}
+															</div>
+														</div>
+													</div>
+												</Link>
+											)
+										})}
+									</div>
+								)}
+
+								{rest.length > 0 && (
+									<div className='space-y-2'>
+										<h4 className='text-white font-semibold mb-3'>Pozostali</h4>
+										{rest.map((user) => (
+											<Link
+												key={user.userId}
+												to={`/profile/${user.userId}`}
+												className='flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 transition-colors hover:bg-zinc-800'
+											>
+												<div className='flex items-center gap-4 flex-1 min-w-0'>
+													<div className='text-zinc-400 font-semibold w-8 shrink-0'>
+														#{user.position}
+													</div>
+													<Avatar src={user.userAvatarUrl} name={user.userName} size='sm' />
+													<div className='flex-1 min-w-0'>
+														<div className='text-white font-medium truncate'>{user.userName}</div>
+														<div className='flex items-center gap-2 mt-1'>
+															<span className='text-sm text-zinc-400'>
+																{user.totalRatings}{' '}
+																{user.totalRatings === 1
+																	? 'wydarzenie'
+																	: user.totalRatings < 5
+																	? 'wydarzenia'
+																	: 'wydarzeń'}
+															</span>
+														</div>
+													</div>
+												</div>
+											</Link>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 					</div>

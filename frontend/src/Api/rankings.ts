@@ -34,3 +34,13 @@ export const getActivityOrganizerRanking = async (
 	})
 	return data || []
 }
+
+export const getLocalOrganizerRanking = async (
+	city: string,
+	limit: number = 20
+): Promise<UserRankingItem[]> => {
+	const { data } = await api.get<UserRankingItem[]>('/rankings/organizers/local', {
+		params: { city, limit },
+	})
+	return data || []
+}
