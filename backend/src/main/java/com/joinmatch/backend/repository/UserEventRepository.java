@@ -38,5 +38,18 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Integer> {
     @Query("SELECT COUNT(ue) FROM UserEvent ue WHERE ue.user.id = :userId")
     int countJoinedEvents(@Param("userId") Integer userId);
 
+    @Query("""
+        SELECT u.id, u.name, u.email, u.urlOfPicture, 
+               COUNT(ue.id) as eventCount
+        FROM User u
+        LEFT JOIN UserEvent ue ON ue.user.id = u.id
+        WHERE u.isBlocked = false AND u.isVerified = true
+        GROUP BY u.id, u.name, u.email, u.urlOfPicture
+        HAVING COUNT(ue.id) > 0
+        ORDER BY eventCount DESC
+        LIMIT :limit
+    """)
+    List<Object[]> findTopUsersByActivity(@Param("limit") Integer limit);
+
 }
 

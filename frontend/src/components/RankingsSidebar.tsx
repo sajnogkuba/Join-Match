@@ -7,7 +7,7 @@ interface RankingsSidebarProps {
 
 const RankingsSidebar = ({ active, onSelect }: RankingsSidebarProps) => {
 	const items = [
-		{ label: "Użytkownicy", icon: Users },
+		{ label: "Gracze", icon: Users },
 	];
 
 	return (
