@@ -6,9 +6,10 @@ import { getAvailableCities } from '../Api/rankings'
 interface CitySelectorProps {
 	value: string | null
 	onChange: (city: string | null) => void
+	getCitiesFn?: () => Promise<string[]>
 }
 
-const CitySelector: React.FC<CitySelectorProps> = ({ value, onChange }) => {
+const CitySelector: React.FC<CitySelectorProps> = ({ value, onChange, getCitiesFn }) => {
 	const [cities, setCities] = useState<string[]>([])
 	const [filteredCities, setFilteredCities] = useState<string[]>([])
 	const [searchQuery, setSearchQuery] = useState('')
@@ -20,7 +21,8 @@ const CitySelector: React.FC<CitySelectorProps> = ({ value, onChange }) => {
 
 	useEffect(() => {
 		setLoading(true)
-		getAvailableCities()
+		const fetchCities = getCitiesFn || getAvailableCities
+		fetchCities()
 			.then((data) => {
 				const sorted = [...data].sort((a, b) => a.localeCompare(b))
 				setCities(sorted)
@@ -31,7 +33,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({ value, onChange }) => {
 				setFilteredCities([])
 			})
 			.finally(() => setLoading(false))
-	}, [])
+	}, [getCitiesFn])
 
 	useEffect(() => {
 		if (searchQuery.trim() === '') {
@@ -100,8 +102,10 @@ const CitySelector: React.FC<CitySelectorProps> = ({ value, onChange }) => {
 		setSearchQuery('')
 	}
 
-	const handleClear = (e: React.MouseEvent) => {
-		e.stopPropagation()
+	const handleClear = (e?: React.SyntheticEvent) => {
+		if (e) {
+			e.stopPropagation()
+		}
 		onChange(null)
 		setSearchQuery('')
 	}
@@ -131,7 +135,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({ value, onChange }) => {
 									if (e.key === 'Enter' || e.key === ' ') {
 										e.preventDefault();
 										e.stopPropagation();
-										handleClear(e);
+										handleClear();
 									}
 								}}
 							>

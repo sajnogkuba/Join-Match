@@ -8,3 +8,32 @@ export type UserRankingItem = {
 	position: number
 }
 
+export type TeamRankingItem = {
+	teamId: number
+	teamName: string
+	teamCity: string
+	teamPhotoUrl: string | null
+	leaderId: number
+	leaderName: string
+	leaderEmail: string
+	leaderAvatarUrl: string | null
+	memberCount: number
+	position: number
+}
+
+export type EventRankingItem = {
+	eventId: number
+	eventName: string
+	eventImageUrl: string | null
+	eventCity: string
+	sportTypeName: string
+	ownerId: number
+	ownerName: string
+	ownerEmail: string
+	ownerAvatarUrl: string | null
+	averageRating: number
+	totalRatings: number
+	participantCount: number
+	position: number
+}
+

@@ -1,6 +1,8 @@
 package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.Rankings.UserRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.TeamRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.EventRankingResponseDto;
 import com.joinmatch.backend.service.RankingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -73,6 +75,56 @@ public class RankingsController {
             @RequestParam(defaultValue = "20") Integer limit
     ) {
         List<UserRankingResponseDto> ranking = rankingsService.getLocalOrganizerRanking(city, limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/teams/general")
+    public ResponseEntity<List<TeamRankingResponseDto>> getGeneralTeamRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<TeamRankingResponseDto> ranking = rankingsService.getGeneralTeamRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/teams/local")
+    public ResponseEntity<List<TeamRankingResponseDto>> getLocalTeamRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<TeamRankingResponseDto> ranking = rankingsService.getLocalTeamRanking(city, limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/teams/cities")
+    public ResponseEntity<List<String>> getAvailableTeamCities() {
+        List<String> cities = rankingsService.getAvailableTeamCities();
+        return ResponseEntity.ok(cities);
+    }
+
+    @GetMapping("/events/rating")
+    public ResponseEntity<List<EventRankingResponseDto>> getRatingEventRanking(
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "1") Integer minRatings
+    ) {
+        List<EventRankingResponseDto> ranking = rankingsService.getRatingEventRanking(limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/events/popularity")
+    public ResponseEntity<List<EventRankingResponseDto>> getPopularityEventRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<EventRankingResponseDto> ranking = rankingsService.getPopularityEventRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/events/local")
+    public ResponseEntity<List<EventRankingResponseDto>> getLocalEventRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "1") Integer minRatings
+    ) {
+        List<EventRankingResponseDto> ranking = rankingsService.getLocalEventRanking(city, limit, minRatings);
         return ResponseEntity.ok(ranking);
     }
 }

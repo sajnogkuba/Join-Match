@@ -74,4 +74,83 @@ WHERE
     """)
     List<Object[]> findTopOrganizersByLocalActivity(@Param("city") String city, @Param("limit") Integer limit);
 
+    @Query("""
+        SELECT e.eventId, e.eventName, e.imageUrl,
+               so.city, s.name as sportTypeName,
+               u.id, u.name, u.email, u.urlOfPicture,
+               COALESCE(AVG(er.rating), 0.0) as avgRating,
+               COUNT(er.eventRatingId) as totalRatings,
+               COUNT(ue.id) as participantCount
+        FROM Event e
+        LEFT JOIN EventRating er ON er.event.eventId = e.eventId
+        LEFT JOIN UserEvent ue ON ue.event.eventId = e.eventId
+        JOIN SportObject so ON e.sportObject.objectId = so.objectId
+        JOIN Sport s ON e.sportEv.id = s.id
+        JOIN User u ON e.owner.id = u.id
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ReportEvent re 
+            WHERE re.reportedEvent.eventId = e.eventId AND re.active = true
+        )
+          AND u.isBlocked = false
+          AND u.isVerified = true
+        GROUP BY e.eventId, e.eventName, e.imageUrl, so.city, s.name, u.id, u.name, u.email, u.urlOfPicture
+        HAVING COUNT(er.eventRatingId) >= :minRatings
+        ORDER BY avgRating DESC, totalRatings DESC
+        LIMIT :limit
+    """)
+    List<Object[]> findTopEventsByRating(@Param("limit") Integer limit, @Param("minRatings") Integer minRatings);
+
+    @Query("""
+        SELECT e.eventId, e.eventName, e.imageUrl,
+               so.city, s.name as sportTypeName,
+               u.id, u.name, u.email, u.urlOfPicture,
+               COALESCE(AVG(er.rating), 0.0) as avgRating,
+               COUNT(er.eventRatingId) as totalRatings,
+               COUNT(ue.id) as participantCount
+        FROM Event e
+        LEFT JOIN EventRating er ON er.event.eventId = e.eventId
+        LEFT JOIN UserEvent ue ON ue.event.eventId = e.eventId
+        JOIN SportObject so ON e.sportObject.objectId = so.objectId
+        JOIN Sport s ON e.sportEv.id = s.id
+        JOIN User u ON e.owner.id = u.id
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ReportEvent re 
+            WHERE re.reportedEvent.eventId = e.eventId AND re.active = true
+        )
+          AND u.isBlocked = false
+          AND u.isVerified = true
+        GROUP BY e.eventId, e.eventName, e.imageUrl, so.city, s.name, u.id, u.name, u.email, u.urlOfPicture
+        HAVING COUNT(ue.id) > 0
+        ORDER BY participantCount DESC
+        LIMIT :limit
+    """)
+    List<Object[]> findTopEventsByPopularity(@Param("limit") Integer limit);
+
+    @Query("""
+        SELECT e.eventId, e.eventName, e.imageUrl,
+               so.city, s.name as sportTypeName,
+               u.id, u.name, u.email, u.urlOfPicture,
+               COALESCE(AVG(er.rating), 0.0) as avgRating,
+               COUNT(er.eventRatingId) as totalRatings,
+               COUNT(ue.id) as participantCount
+        FROM Event e
+        LEFT JOIN EventRating er ON er.event.eventId = e.eventId
+        LEFT JOIN UserEvent ue ON ue.event.eventId = e.eventId
+        JOIN SportObject so ON e.sportObject.objectId = so.objectId
+        JOIN Sport s ON e.sportEv.id = s.id
+        JOIN User u ON e.owner.id = u.id
+        WHERE NOT EXISTS (
+            SELECT 1 FROM ReportEvent re 
+            WHERE re.reportedEvent.eventId = e.eventId AND re.active = true
+        )
+          AND u.isBlocked = false
+          AND u.isVerified = true
+          AND LOWER(so.city) = LOWER(:city)
+        GROUP BY e.eventId, e.eventName, e.imageUrl, so.city, s.name, u.id, u.name, u.email, u.urlOfPicture
+        HAVING COUNT(er.eventRatingId) >= :minRatings
+        ORDER BY avgRating DESC, totalRatings DESC
+        LIMIT :limit
+    """)
+    List<Object[]> findTopEventsByLocalRating(@Param("city") String city, @Param("limit") Integer limit, @Param("minRatings") Integer minRatings);
+
 }

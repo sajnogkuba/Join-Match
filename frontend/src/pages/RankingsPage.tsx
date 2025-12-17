@@ -2,6 +2,8 @@ import { useState } from 'react'
 import RankingsSidebar from '../components/RankingsSidebar'
 import UserRankings from '../components/UserRankings'
 import OrganizerRankings from '../components/OrganizerRankings'
+import TeamRankings from '../components/TeamRankings'
+import EventRankings from '../components/EventRankings'
 
 const RankingsPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<string>('Gracze')
@@ -26,6 +28,8 @@ const RankingsPage: React.FC = () => {
 						<div className='flex-1 space-y-6'>
 							{activeTab === 'Gracze' && <UserRankings />}
 							{activeTab === 'Organizatorzy' && <OrganizerRankings />}
+							{activeTab === 'Drużyny' && <TeamRankings />}
+							{activeTab === 'Wydarzenia' && <EventRankings />}
 						</div>
 					</div>
 				</div>
