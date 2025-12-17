@@ -744,11 +744,20 @@ const EventPage: React.FC = () => {
 			</div>
 		)
 
-	const spotsLeft = Math.max(0, event.numberOfParticipants - confirmedParticipants.length)
+	const spotsLeft = Math.max(
+		0,
+		event.numberOfParticipants
+		- confirmedParticipants.length
+		- (event.teamParticipants ?? 0)
+	)
 	const progressPercentage = Math.min(
 		100,
-		(confirmedParticipants.length / Math.max(1, event.numberOfParticipants)) * 100
+		(
+			(confirmedParticipants.length + (event.teamParticipants ?? 0))
+			/ Math.max(1, event.numberOfParticipants)
+		) * 100
 	)
+
 
 	return (
 		<>

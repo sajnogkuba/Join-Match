@@ -4,6 +4,7 @@ import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.Event.JoinEventAsTeamRequest;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.UserRepository;
@@ -162,5 +163,15 @@ public class EventController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
+    @PostMapping("/{eventId}/join-team")
+    public ResponseEntity<Void> joinEventAsTeam(
+            @PathVariable Integer eventId,
+            @RequestBody JoinEventAsTeamRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        eventService.joinEventAsTeam(eventId, request.teamId(), httpRequest);
+        return ResponseEntity.ok().build();
+    }
+
 
 }
