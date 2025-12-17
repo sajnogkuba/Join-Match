@@ -58,4 +58,12 @@ public class RankingsController {
         List<UserRankingResponseDto> ranking = rankingsService.getGeneralOrganizerRanking(limit, minRatings);
         return ResponseEntity.ok(ranking);
     }
+
+    @GetMapping("/organizers/activity")
+    public ResponseEntity<List<UserRankingResponseDto>> getActivityOrganizerRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getActivityOrganizerRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
 }

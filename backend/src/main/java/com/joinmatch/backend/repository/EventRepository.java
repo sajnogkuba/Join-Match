@@ -45,4 +45,17 @@ WHERE
     @Query("SELECT COUNT(e) FROM Event e WHERE e.owner.id = :userId")
     int countCreatedEvents(@Param("userId") Integer userId);
 
+    @Query("""
+        SELECT u.id, u.name, u.email, u.urlOfPicture, 
+               COUNT(e.eventId) as eventCount
+        FROM User u
+        LEFT JOIN Event e ON e.owner.id = u.id
+        WHERE u.isBlocked = false AND u.isVerified = true
+        GROUP BY u.id, u.name, u.email, u.urlOfPicture
+        HAVING COUNT(e.eventId) > 0
+        ORDER BY eventCount DESC
+        LIMIT :limit
+    """)
+    List<Object[]> findTopOrganizersByActivity(@Param("limit") Integer limit);
+
 }

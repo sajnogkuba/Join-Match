@@ -25,3 +25,12 @@ export const getGeneralOrganizerRanking = async (
 	})
 	return data || []
 }
+
+export const getActivityOrganizerRanking = async (
+	limit: number = 20
+): Promise<UserRankingItem[]> => {
+	const { data } = await api.get<UserRankingItem[]>('/rankings/organizers/activity', {
+		params: { limit },
+	})
+	return data || []
+}
