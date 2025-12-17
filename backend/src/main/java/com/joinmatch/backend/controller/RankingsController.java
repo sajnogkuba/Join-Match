@@ -34,4 +34,19 @@ public class RankingsController {
         List<UserRankingResponseDto> ranking = rankingsService.getActivityUserRanking(limit);
         return ResponseEntity.ok(ranking);
     }
+
+    @GetMapping("/cities")
+    public ResponseEntity<List<String>> getAvailableCities() {
+        List<String> cities = rankingsService.getAvailableCities();
+        return ResponseEntity.ok(cities);
+    }
+
+    @GetMapping("/users/local")
+    public ResponseEntity<List<UserRankingResponseDto>> getLocalUserRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getLocalUserRanking(city, limit);
+        return ResponseEntity.ok(ranking);
+    }
 }
