@@ -410,5 +410,41 @@ public class EventService {
         eventTeam.setJoinedAt(LocalDateTime.now());
         eventTeamRepository.save(eventTeam);
     }
+    @Transactional
+    public void leaveEventAsTeam(
+            Integer eventId,
+            Integer teamId,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token");
+        }
+
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (!event.isForTeam()) {
+            throw new IllegalStateException("Event is not team-based");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+
+        // ✅ tylko lider
+        if (!team.getLeader().getId().equals(user.getId())) {
+            throw new SecurityException("Only team leader can leave event");
+        }
+
+        // ✅ sprawdź czy drużyna jest zapisana
+        EventTeam eventTeam = eventTeamRepository
+                .findByEvent_EventIdAndTeam_Id(eventId, teamId).orElseThrow(() -> new IllegalStateException("Team is not part of this event"));
+
+        // ✅ wypisanie
+        eventTeamRepository.delete(eventTeam);
+    }
 
 }

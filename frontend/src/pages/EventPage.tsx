@@ -105,6 +105,9 @@ const EventPage: React.FC = () => {
 		leaderTeams.some(lt =>
 			event.teams!.some(et => et.teamId === lt.teamId)
 		)
+	const myEventTeam = event?.teams?.find(et =>
+		leaderTeams.some(lt => lt.teamId === et.teamId)
+	)
 
 
 	const getSkillLevelValue = (level?: string) => {
@@ -576,6 +579,24 @@ const EventPage: React.FC = () => {
 			await fetchParticipants(Number(id))
 		} catch (err) {
 			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
+		}
+	}
+
+	const handleLeaveTeam = async (teamId: number) => {
+		if (!id) return
+
+		try {
+			await axiosInstance.delete(`/event/${id}/leave-team`, {
+				params: { teamId }, // ⬅⬅⬅ TO JEST KLUCZOWE
+			})
+
+			toast.success('Drużyna została wypisana z wydarzenia')
+
+			const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
+			setEvent(data)
+		} catch (e) {
+			console.error('Błąd wypisywania drużyny', e)
+			toast.error('Nie udało się wypisać drużyny')
 		}
 	}
 
@@ -1283,13 +1304,25 @@ const EventPage: React.FC = () => {
 
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
-								{myTeamInEvent && (
-									<div className='mb-3 rounded-xl bg-emerald-500/15
-                  border border-emerald-500/30
-                  px-4 py-2 text-sm text-emerald-300 text-center'>
-										✔ Twoja drużyna bierze udział w tym wydarzeniu
-									</div>
+								{myTeamInEvent && myEventTeam && (
+									<>
+										<div className='mb-3 rounded-xl bg-emerald-500/15
+      border border-emerald-500/30
+      px-4 py-2 text-sm text-emerald-300 text-center'>
+											✔ Twoja drużyna bierze udział w tym wydarzeniu
+										</div>
+
+										<button
+											onClick={() => handleLeaveTeam(myEventTeam.teamId)}
+											className='w-full rounded-2xl bg-rose-600 hover:bg-rose-500
+        px-4 py-3 text-white font-semibold transition'
+										>
+											Wypisz drużynę z wydarzenia
+										</button>
+									</>
 								)}
+
+
 
 								{event.status === EventStatus.CANCELED ? (
 									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
