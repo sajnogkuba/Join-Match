@@ -37,3 +37,12 @@ export type EventRankingItem = {
 	position: number
 }
 
+export type BadgeRankingItem = {
+	userId: number
+	userName: string
+	userEmail: string
+	userAvatarUrl: string | null
+	badgeCount: number
+	position: number
+}
+

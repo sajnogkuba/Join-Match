@@ -4,6 +4,7 @@ import UserRankings from '../components/UserRankings'
 import OrganizerRankings from '../components/OrganizerRankings'
 import TeamRankings from '../components/TeamRankings'
 import EventRankings from '../components/EventRankings'
+import BadgeRankings from '../components/BadgeRankings'
 
 const RankingsPage: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<string>('Gracze')
@@ -30,6 +31,7 @@ const RankingsPage: React.FC = () => {
 							{activeTab === 'Organizatorzy' && <OrganizerRankings />}
 							{activeTab === 'Drużyny' && <TeamRankings />}
 							{activeTab === 'Wydarzenia' && <EventRankings />}
+							{activeTab === 'Odznaki' && <BadgeRankings />}
 						</div>
 					</div>
 				</div>

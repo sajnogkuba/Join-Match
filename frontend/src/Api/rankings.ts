@@ -1,5 +1,5 @@
 import api from './axios'
-import type { UserRankingItem, TeamRankingItem, EventRankingItem } from './types/Ranking'
+import type { UserRankingItem, TeamRankingItem, EventRankingItem, BadgeRankingItem } from './types/Ranking'
 
 export const getAvailableCities = async (): Promise<string[]> => {
 	const { data } = await api.get<string[]>('/rankings/cities')
@@ -95,6 +95,15 @@ export const getLocalEventRanking = async (
 ): Promise<EventRankingItem[]> => {
 	const { data } = await api.get<EventRankingItem[]>('/rankings/events/local', {
 		params: { city, limit, minRatings },
+	})
+	return data || []
+}
+
+export const getGeneralBadgeRanking = async (
+	limit: number = 20
+): Promise<BadgeRankingItem[]> => {
+	const { data } = await api.get<BadgeRankingItem[]>('/rankings/badges/general', {
+		params: { limit },
 	})
 	return data || []
 }

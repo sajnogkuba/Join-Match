@@ -3,6 +3,7 @@ package com.joinmatch.backend.controller;
 import com.joinmatch.backend.dto.Rankings.UserRankingResponseDto;
 import com.joinmatch.backend.dto.Rankings.TeamRankingResponseDto;
 import com.joinmatch.backend.dto.Rankings.EventRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.BadgeRankingResponseDto;
 import com.joinmatch.backend.service.RankingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -125,6 +126,14 @@ public class RankingsController {
             @RequestParam(defaultValue = "1") Integer minRatings
     ) {
         List<EventRankingResponseDto> ranking = rankingsService.getLocalEventRanking(city, limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/badges/general")
+    public ResponseEntity<List<BadgeRankingResponseDto>> getGeneralBadgeRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<BadgeRankingResponseDto> ranking = rankingsService.getGeneralBadgeRanking(limit);
         return ResponseEntity.ok(ranking);
     }
 }

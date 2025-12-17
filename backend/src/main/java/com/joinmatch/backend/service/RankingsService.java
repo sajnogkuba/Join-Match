@@ -3,12 +3,14 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.Rankings.UserRankingResponseDto;
 import com.joinmatch.backend.dto.Rankings.TeamRankingResponseDto;
 import com.joinmatch.backend.dto.Rankings.EventRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.BadgeRankingResponseDto;
 import com.joinmatch.backend.repository.UserRatingRepository;
 import com.joinmatch.backend.repository.UserEventRepository;
 import com.joinmatch.backend.repository.SportObjectRepository;
 import com.joinmatch.backend.repository.OrganizerRatingRepository;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.repository.TeamRepository;
+import com.joinmatch.backend.repository.UserBadgeRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ public class RankingsService {
     private final OrganizerRatingRepository organizerRatingRepository;
     private final EventRepository eventRepository;
     private final TeamRepository teamRepository;
+    private final UserBadgeRepository userBadgeRepository;
 
     public List<UserRankingResponseDto> getGeneralUserRanking(Integer limit, Integer minRatings) {
         List<Object[]> results = userRatingRepository.findTopUsersByRating(limit, minRatings);
@@ -306,6 +309,28 @@ public class RankingsService {
                     eventId, eventName, eventImageUrl, eventCity, sportTypeName,
                     ownerId, ownerName, ownerEmail, ownerAvatarUrl,
                     avgRating, (int) totalRatings, (int) participantCount, position++
+            ));
+        }
+
+        return ranking;
+    }
+
+    public List<BadgeRankingResponseDto> getGeneralBadgeRanking(Integer limit) {
+        List<Object[]> results = userBadgeRepository.findTopUsersByBadgeCount(limit);
+
+        List<BadgeRankingResponseDto> ranking = new ArrayList<>();
+        int position = 1;
+
+        for (Object[] row : results) {
+            Integer userId = (Integer) row[0];
+            String name = (String) row[1];
+            String email = (String) row[2];
+            String avatarUrl = (String) row[3];
+            long badgeCount = ((Number) row[4]).longValue();
+
+            ranking.add(new BadgeRankingResponseDto(
+                    userId, name, email, avatarUrl,
+                    (int) badgeCount, position++
             ));
         }
 
