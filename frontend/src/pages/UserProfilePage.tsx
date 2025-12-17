@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
@@ -95,8 +95,6 @@ const UserProfilePage = () => {
 	const averageRating = userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
 
 	const hasRated = !!(currentUserName && userRatings.some(r => r.raterName === currentUserName))
-	const hasCommonEvent =
-		viewerEvents.length > 0 && events.length > 0 && viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
 
 	const handleAddUserRating = async (rating: number, comment: string) => {
 		if (!currentUserId || !id) return
@@ -306,26 +304,29 @@ const UserProfilePage = () => {
 		fetchData()
 	}, [id])
 
+	// Compute mutual events where BOTH users have status 'Zapisany'
 	useEffect(() => {
-		if (!currentUserId || !user?.id) return
-		const fetchMutual = async () => {
-			setIsLoadingMutual(true)
-			try {
-				const mutualRes = await api.get('/event/mutualEvents', {
-					params: {
-						idLogUser: currentUserId,
-						idViewedUser: user.id,
-					},
-				})
-				setMutualEvents(Array.isArray(mutualRes.data) ? mutualRes.data : [])
-			} catch {
-				setMutualEvents([])
-			} finally {
-				setIsLoadingMutual(false)
-			}
+		if (!viewerEvents || !events) {
+			setMutualEvents([])
+			return
 		}
-		fetchMutual()
-	}, [currentUserId, user?.id])
+
+		setIsLoadingMutual(true)
+		try {
+			const mutual = (events || [])
+				.filter(e => e.attendanceStatusName === 'Zapisany')
+				.filter(e => viewerEvents.some(ve => ve.eventId === e.eventId && ve.attendanceStatusName === 'Zapisany'))
+				.map(e => ({ eventId: e.eventId, eventName: e.eventName }))
+
+			setMutualEvents(mutual)
+		} catch (err) {
+			setMutualEvents([])
+		} finally {
+			setIsLoadingMutual(false)
+		}
+	}, [viewerEvents, events])
+
+	const hasCommonEvent = mutualEvents.length > 0
 
 	const fetchEventsPage = useCallback(async (userEmail: string, page: number, size: number) => {
 		setEventsLoading(true)
@@ -340,10 +341,14 @@ const UserProfilePage = () => {
 				},
 			})
 			if (targetEventsRes.data) {
-				setEvents(targetEventsRes.data.content || [])
+				// pokaż tylko wydarzenia, w których użytkownik ma status 'Zapisany'
+				const all = targetEventsRes.data.content || []
+				const confirmed = all.filter(e => e.attendanceStatusName === 'Zapisany')
+				setEvents(confirmed)
 				setEventsPage(targetEventsRes.data.number)
-				setEventsTotalPages(targetEventsRes.data.totalPages)
-				setEventsTotalElements(targetEventsRes.data.totalElements)
+				// Dostosuj paginację lokalnie do przefiltrowanej listy
+				setEventsTotalElements(confirmed.length)
+				setEventsTotalPages(Math.max(1, Math.ceil(confirmed.length / (size || 1))))
 			} else {
 				setEvents([])
 				setEventsPage(0)

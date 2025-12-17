@@ -67,10 +67,10 @@ const EventPage: React.FC = () => {
 	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
 	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
 	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
+	const isJoined = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany')
 
 	const visibleParticipantsCount = confirmedParticipants.length
 
-	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
 	const [showShareModal, setShowShareModal] = useState(false)
@@ -256,58 +256,14 @@ const EventPage: React.FC = () => {
 		checkOrganizerRated()
 	}, [currentUserId, event?.ownerId, id])
 
-	useEffect(() => {
-		const fetchUserEmail = async () => {
-			try {
-				const { data } = await axiosInstance.get('/auth/user/details')
-				setUserEmail(data.email)
-			} catch (err) {
-				setUserEmail(null)
-				setJoined(false)
-			}
-		}
-
-		fetchUserEmail()
-	}, [])
-
-	useEffect(() => {
-		const fetchUser = async () => {
-			try {
-				const { data } = await axiosInstance.get('/auth/user')
-				setCurrentUserId(data.id)
-				setCurrentUserName(data.name)
-				setUserEmail(data.email)
-			} catch (err) {
-				setCurrentUserId(null)
-				setCurrentUserName(null)
-				setUserEmail(null)
-				setJoined(false)
-			}
-		}
-		fetchUser()
-	}, [])
-
-	useEffect(() => {
-		if (!currentUserId) {
-			setJoined(false)
-		}
-	}, [currentUserId])
 
 	const fetchParticipants = async (eventId: number) => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
 			setParticipants(data || [])
-			if (
-				userEmail &&
-				currentUserId &&
-				data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany')
-			)
-				setJoined(true)
-			else setJoined(false)
 		} catch (err) {
 			console.error('❌ Błąd pobierania uczestników:', err)
 			setParticipants([])
-			setJoined(false)
 		}
 	}
 
@@ -473,21 +429,39 @@ const EventPage: React.FC = () => {
 			return
 		}
 
-		const fetchEvent = async () => {
+		setLoading(true)
+
+		const init = async () => {
 			try {
+				let fetchedEmail: string | null = null
+
+				try {
+					const { data } = await axiosInstance.get('/auth/user')
+					setCurrentUserId(data.id)
+					setCurrentUserName(data.name)
+					setUserEmail(data.email)
+					fetchedEmail = data.email ?? null
+				} catch {
+					setCurrentUserId(null)
+					setCurrentUserName(null)
+					setUserEmail(null)
+					fetchedEmail = null
+				}
+
 				const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
 				setEvent(data)
 
 				if (data.isBanned) {
 					setShowBannedAlert(true)
-					setLoading(false)
 					return
 				}
 
 				await fetchParticipants(Number(id))
 
-				if (userEmail) {
-					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
+				if (fetchedEmail) {
+					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, {
+						params: { userEmail: fetchedEmail },
+					})
 					if (savedRes.data?.some?.((s: any) => s.eventId === Number(id))) {
 						setSaved(true)
 					}
@@ -500,14 +474,14 @@ const EventPage: React.FC = () => {
 			}
 		}
 
-		fetchEvent()
-	}, [id, userEmail])
+		init()
+	}, [id])
 
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
 		if (isEventPast) return // Nie można dołączać/opuszczać zakończonych wydarzeń
 		try {
-			if (joined || isPending) {
+			if (isJoined || isPending) {
 				await axiosInstance.delete(`/user-event`, {
 					data: { userEmail, eventId: Number(id) },
 				})
@@ -714,7 +688,7 @@ const EventPage: React.FC = () => {
 								</div>
 							)}
 
-							{joined && isEventPast && hasRatedOrganizer && (
+							{isJoined && isEventPast && hasRatedOrganizer && (
 								<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego organizatora.</p>
 							)}
 
@@ -911,8 +885,8 @@ const EventPage: React.FC = () => {
 									))}
 								</div>
 
-								{!showParticipants && participants.length > 8 && (
-									<p className='text-center text-xs text-zinc-400'>i {participants.length - 8} więcej…</p>
+								{!showParticipants && confirmedParticipants.length > 8 && (
+									<p className='text-center text-xs text-zinc-400'>i {confirmedParticipants.length - 8} więcej…</p>
 								)}
 							</div>
 
@@ -921,7 +895,7 @@ const EventPage: React.FC = () => {
 								<p className='text-sm text-zinc-400 mb-4'>
 									Rozmawiaj z innymi uczestnikami wydarzenia w dedykowanym czacie grupowym.
 								</p>
-								{joined || currentUserId === event.ownerId ? (
+								{isJoined || currentUserId === event.ownerId ? (
 									<button
 										onClick={async () => {
 											if (!id) return
@@ -1037,17 +1011,17 @@ const EventPage: React.FC = () => {
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-8'>
 								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
 
-								{joined && isEventPast && !hasRated && (
+								{isJoined && isEventPast && !hasRated && (
 									<EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />
 								)}
 
-								{joined && !isEventPast && (
+								{isJoined && !isEventPast && (
 									<p className='text-sm text-zinc-400 italic mt-3'>
 										Możesz ocenić wydarzenie dopiero po jego zakończeniu.
 									</p>
 								)}
 
-								{joined && isEventPast && hasRated && (
+								{isJoined && isEventPast && hasRated && (
 									<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś to wydarzenie.</p>
 								)}
 
@@ -1115,7 +1089,7 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{joined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
+							{isJoined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
 								<EventRatingForm
 									title='Oceń organizatora'
 									onSubmit={async (rating, comment) => {
@@ -1148,13 +1122,13 @@ const EventPage: React.FC = () => {
 								/>
 							)}
 
-							{!joined && (
+							{!isJoined && (
 								<p className='text-sm text-zinc-400 italic mt-3'>
 									Możesz ocenić organizatora tylko, jeśli uczestniczyłeś w wydarzeniu.
 								</p>
 							)}
 
-							{joined && !isEventPast && (
+							{isJoined && !isEventPast && (
 								<p className='text-sm text-zinc-400 italic mt-3'>
 									Ocenić organizatora możesz dopiero po zakończeniu wydarzenia.
 								</p>
@@ -1221,11 +1195,11 @@ const EventPage: React.FC = () => {
 										<button
 											onClick={handleJoinEvent}
 											className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
-												joined
+												isJoined
 													? 'bg-rose-600 hover:bg-rose-500'
 													: 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30'
 											}`}>
-											{joined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
+											{isJoined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
 										</button>
 									)
 								) : spotsLeft <= 0 ? (
