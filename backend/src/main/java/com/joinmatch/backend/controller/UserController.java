@@ -60,15 +60,40 @@ public class UserController {
 
     @PostMapping("/refreshToken")
     public ResponseEntity<Void> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        System.out.println("--- REFRESH TOKEN ENDPOINT START ---");
+
+        // 1. Sprawdźmy co przyszło w ciasteczkach
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie c : cookies) {
+                System.out.println("Ciastko: " + c.getName() + " = " + c.getValue());
+            }
+        } else {
+            System.out.println("BRAK CIASTECZEK W REQUEST!");
+        }
+
         String refreshTokenValue = CookieUtil.getCookieValue(request, "refreshToken");
+        System.out.println("Odczytany refreshTokenValue: " + refreshTokenValue);
+
         if (refreshTokenValue == null) {
+            System.out.println("BŁĄD: Wartość tokena jest null -> zwracam 401");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        RefreshSupportObject refreshObject = userService.refreshToken(refreshTokenValue);
-        CookieUtil.setAccessTokenCookie(response, refreshObject.getTokenSupportObject().getToken());
-        CookieUtil.setRefreshTokenCookie(response, refreshObject.getTokenSupportObject().getRefreshToken());
-        CookieUtil.setEmailCookie(response, refreshObject.getUser().getEmail());
-        return ResponseEntity.ok().build();
+
+        try {
+            RefreshSupportObject refreshObject = userService.refreshToken(refreshTokenValue);
+            System.out.println("SUKCES: Token odświeżony dla usera: " + refreshObject.getUser().getEmail());
+
+            CookieUtil.setAccessTokenCookie(response, refreshObject.getTokenSupportObject().getToken());
+            CookieUtil.setRefreshTokenCookie(response, refreshObject.getTokenSupportObject().getRefreshToken());
+            CookieUtil.setEmailCookie(response, refreshObject.getUser().getEmail());
+
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.out.println("WYJĄTEK w userService: " + e.getMessage());
+            e.printStackTrace(); // Zobaczysz pełny błąd w konsoli
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @PostMapping("/logout")

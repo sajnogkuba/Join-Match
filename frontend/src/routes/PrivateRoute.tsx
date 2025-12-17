@@ -4,11 +4,15 @@ import { useAuth } from '../Context/authContext'
 import type { ReactElement } from 'react'
 
 export default function PrivateRoute({ children }: { children: ReactElement }) {
-    const { isAuthenticated } = useAuth()
-    const location = useLocation() // bez ręcznego : Location<any>
+	const { isAuthenticated, isLoading } = useAuth()
+	const location = useLocation()
 
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace state={{ from: location }} />
-    }
-    return children
+	if (isLoading) {
+		return <div className='min-h-screen bg-gray-900 text-white flex items-center justify-center'>Ładowanie...</div>
+	}
+
+	if (!isAuthenticated) {
+		return <Navigate to='/login' replace state={{ from: location }} />
+	}
+	return children
 }

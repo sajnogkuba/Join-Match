@@ -10,6 +10,7 @@ interface AuthContextType {
 	loginWithGoogle: (email: string) => void
 	logout: () => void
 	isAuthenticated: boolean
+	isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -20,14 +21,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const [user, setUser] = useState<string | null>(null)
 	const [accessToken, setAccessToken] = useState<string | null>(null)
 
+	const [isLoading, setIsLoading] = useState(true)
+
+	// Proaktywne pingowanie, żeby access token nie wygasał w trakcie pracy.
+	// Pinguje lekki endpoint chroniony; interceptor zajmie się refreshToken + kolejką, więc unikamy podwójnych refreshy.
+	useEffect(() => {
+		if (!user) return
+
+		let pingPromise: Promise<unknown> | null = null
+		const REFRESH_INTERVAL_MS = 10 * 60 * 1000 // co ~10 min (access = 15 min)
+
+		const pingSession = () => {
+			if (pingPromise) return
+			pingPromise = axiosInstance
+				.get('/auth/user')
+				.catch(() => {
+				})
+				.finally(() => {
+					pingPromise = null
+				})
+		}
+
+		const intervalId = window.setInterval(pingSession, REFRESH_INTERVAL_MS)
+		const onFocus = () => pingSession()
+		const onVisibility = () => {
+			if (document.visibilityState === 'visible') pingSession()
+		}
+
+		window.addEventListener('focus', onFocus)
+		document.addEventListener('visibilitychange', onVisibility)
+
+		return () => {
+			clearInterval(intervalId)
+			window.removeEventListener('focus', onFocus)
+			document.removeEventListener('visibilitychange', onVisibility)
+		}
+	}, [user])
+
 	useEffect(() => {
 		const checkAuth = async () => {
 			try {
 				const response = await axiosInstance.get<{ email: string }>('/auth/user')
 				setUser(response.data.email || null)
-				setAccessToken(null)
-			} catch {
+			} catch (error) {
+				console.log('Brak aktywnej sesji')
 				setUser(null)
+			} finally {
+				setIsLoading(false)
 				setAccessToken(null)
 			}
 		}
@@ -70,26 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		}
 	}
 
-	useEffect(() => {
-		const interceptor = axiosInstance.interceptors.response.use(
-			resp => resp,
-			err => {
-				if (err.response?.status === 401 && user) {
-					const url = err.config?.url || ''
-					if (!url.includes('/auth/user') && !url.includes('/auth/login') && !url.includes('/auth/register')) {
-						const currentPath = window.location.pathname
-						const publicPaths = ['/login', '/register', '/', '/events', '/teams', '/about', '/kontakt', '/faq', '/privacy', '/terms']
-						if (!publicPaths.includes(currentPath) && !currentPath.startsWith('/event/') && !currentPath.startsWith('/team/') && !currentPath.startsWith('/post/') && !currentPath.startsWith('/profile/')) {
-							logout()
-						}
-					}
-				}
-				return Promise.reject(err)
-			}
-		)
-		return () => axiosInstance.interceptors.response.eject(interceptor)
-	}, [user])
-
 	return (
 		<AuthContext.Provider
 			value={{
@@ -99,9 +119,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 				verifyAccount,
 				loginWithGoogle,
 				logout,
+				isLoading,
 				isAuthenticated: !!user,
 			}}>
 			{children}
 		</AuthContext.Provider>
 	)
 }
+
