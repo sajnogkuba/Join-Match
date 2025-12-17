@@ -15,4 +15,18 @@ public interface UserRatingRepository extends JpaRepository<UserRating, Integer>
     Double getAverageUserRating(@Param("userId") Integer userId);
     boolean existsByRaterAndRated(User rater, User rated);
 
+    @Query("""
+    SELECT u.id, u.name, u.email, u.urlOfPicture, 
+           COALESCE(AVG(ur.rating), 0.0) as avgRating,
+           COUNT(ur.userRateId) as totalRatings
+    FROM User u
+    LEFT JOIN UserRating ur ON ur.rated.id = u.id
+    WHERE u.isBlocked = false AND u.isVerified = true
+    GROUP BY u.id, u.name, u.email, u.urlOfPicture
+    HAVING COUNT(ur.userRateId) >= :minRatings
+    ORDER BY avgRating DESC, totalRatings DESC
+    LIMIT :limit
+""")
+    List<Object[]> findTopUsersByRating(@Param("limit") Integer limit, @Param("minRatings") Integer minRatings);
+
 }
