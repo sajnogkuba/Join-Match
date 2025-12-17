@@ -75,4 +75,13 @@ export type EventDetails = {
 	longitude: number
 	isBanned?: boolean
 	isAttendanceChecked: boolean;
+	teams?: EventTeam[]
+}
+export type EventTeam = {
+	teamId: number
+	name: string
+	city?: string
+	photoUrl?: string | null
+	leaderId: number
+	leaderName: string
 }

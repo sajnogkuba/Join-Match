@@ -4,6 +4,7 @@ import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.EventTeam.EventTeamResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
 import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.Event;
@@ -114,12 +115,28 @@ public class EventService {
         Event e = eventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
 
+        List<EventTeamResponseDto> teams = e.getEventTeams()
+                .stream()
+                .map(et -> {
+                    Team t = et.getTeam();
+                    return new EventTeamResponseDto(
+                            t.getId(),
+                            t.getName(),
+                            t.getCity(),
+                            t.getPhotoUrl(),
+                            t.getLeader().getId(),
+                            t.getLeader().getName()
+                    );
+                })
+                .toList();
+
         return new EventDetailsResponseDto(
                 e.getEventId(),
                 e.getEventName(),
                 e.getNumberOfParticipants(),
                 e.getNumberOfParticipants(), // bookedParticipants
                 e.isForTeam(),
+
                 e.getCost(),
                 "PLN",
                 e.getStatus().name(),
@@ -150,13 +167,15 @@ public class EventService {
 
                 e.getSportObject().getLatitude(),
                 e.getSportObject().getLongitude(),
-                e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false
+                e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false,
+                teams
         );
     }
 
 
 
-        @Transactional
+
+    @Transactional
     public EventResponseDto create(EventRequestDto eventRequestDto) {
         Event event = new Event();
             event.setStatus(EventStatus.PLANNED);
