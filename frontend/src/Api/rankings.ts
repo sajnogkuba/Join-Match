@@ -15,3 +15,13 @@ export const getLocalUserRanking = async (
 	})
 	return data || []
 }
+
+export const getGeneralOrganizerRanking = async (
+	limit: number = 20,
+	minRatings: number = 1
+): Promise<UserRankingItem[]> => {
+	const { data } = await api.get<UserRankingItem[]>('/rankings/organizers/general', {
+		params: { limit, minRatings },
+	})
+	return data || []
+}

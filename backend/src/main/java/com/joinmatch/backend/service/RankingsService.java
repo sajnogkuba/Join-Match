@@ -4,6 +4,7 @@ import com.joinmatch.backend.dto.Rankings.UserRankingResponseDto;
 import com.joinmatch.backend.repository.UserRatingRepository;
 import com.joinmatch.backend.repository.UserEventRepository;
 import com.joinmatch.backend.repository.SportObjectRepository;
+import com.joinmatch.backend.repository.OrganizerRatingRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ public class RankingsService {
     private final UserRatingRepository userRatingRepository;
     private final UserEventRepository userEventRepository;
     private final SportObjectRepository sportObjectRepository;
+    private final OrganizerRatingRepository organizerRatingRepository;
 
     public List<UserRankingResponseDto> getGeneralUserRanking(Integer limit, Integer minRatings) {
         List<Object[]> results = userRatingRepository.findTopUsersByRating(limit, minRatings);
@@ -83,6 +85,29 @@ public class RankingsService {
             ranking.add(new UserRankingResponseDto(
                     userId, name, email, avatarUrl,
                     null, (int) eventCount, position++
+            ));
+        }
+
+        return ranking;
+    }
+
+    public List<UserRankingResponseDto> getGeneralOrganizerRanking(Integer limit, Integer minRatings) {
+        List<Object[]> results = organizerRatingRepository.findTopOrganizersByRating(limit, minRatings);
+
+        List<UserRankingResponseDto> ranking = new ArrayList<>();
+        int position = 1;
+
+        for (Object[] row : results) {
+            Integer userId = (Integer) row[0];
+            String name = (String) row[1];
+            String email = (String) row[2];
+            String avatarUrl = (String) row[3];
+            Double avgRating = ((Number) row[4]).doubleValue();
+            long totalRatings = ((Number) row[5]).longValue();
+
+            ranking.add(new UserRankingResponseDto(
+                    userId, name, email, avatarUrl,
+                    avgRating, (int) totalRatings, position++
             ));
         }
 

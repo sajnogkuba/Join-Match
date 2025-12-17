@@ -49,4 +49,13 @@ public class RankingsController {
         List<UserRankingResponseDto> ranking = rankingsService.getLocalUserRanking(city, limit);
         return ResponseEntity.ok(ranking);
     }
+
+    @GetMapping("/organizers/general")
+    public ResponseEntity<List<UserRankingResponseDto>> getGeneralOrganizerRanking(
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "1") Integer minRatings
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getGeneralOrganizerRanking(limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
 }
