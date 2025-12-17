@@ -1,0 +1,139 @@
+package com.joinmatch.backend.controller;
+
+import com.joinmatch.backend.dto.Rankings.UserRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.TeamRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.EventRankingResponseDto;
+import com.joinmatch.backend.dto.Rankings.BadgeRankingResponseDto;
+import com.joinmatch.backend.service.RankingsService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/rankings")
+@RequiredArgsConstructor
+public class RankingsController {
+
+    private final RankingsService rankingsService;
+
+    @GetMapping("/users/general")
+    public ResponseEntity<List<UserRankingResponseDto>> getGeneralUserRanking(
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "0") Integer minRatings
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getGeneralUserRanking(limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/users/activity")
+    public ResponseEntity<List<UserRankingResponseDto>> getActivityUserRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getActivityUserRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/cities")
+    public ResponseEntity<List<String>> getAvailableCities() {
+        List<String> cities = rankingsService.getAvailableCities();
+        return ResponseEntity.ok(cities);
+    }
+
+    @GetMapping("/users/local")
+    public ResponseEntity<List<UserRankingResponseDto>> getLocalUserRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getLocalUserRanking(city, limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/organizers/general")
+    public ResponseEntity<List<UserRankingResponseDto>> getGeneralOrganizerRanking(
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "1") Integer minRatings
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getGeneralOrganizerRanking(limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/organizers/activity")
+    public ResponseEntity<List<UserRankingResponseDto>> getActivityOrganizerRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getActivityOrganizerRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/organizers/local")
+    public ResponseEntity<List<UserRankingResponseDto>> getLocalOrganizerRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<UserRankingResponseDto> ranking = rankingsService.getLocalOrganizerRanking(city, limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/teams/general")
+    public ResponseEntity<List<TeamRankingResponseDto>> getGeneralTeamRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<TeamRankingResponseDto> ranking = rankingsService.getGeneralTeamRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/teams/local")
+    public ResponseEntity<List<TeamRankingResponseDto>> getLocalTeamRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<TeamRankingResponseDto> ranking = rankingsService.getLocalTeamRanking(city, limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/teams/cities")
+    public ResponseEntity<List<String>> getAvailableTeamCities() {
+        List<String> cities = rankingsService.getAvailableTeamCities();
+        return ResponseEntity.ok(cities);
+    }
+
+    @GetMapping("/events/rating")
+    public ResponseEntity<List<EventRankingResponseDto>> getRatingEventRanking(
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "1") Integer minRatings
+    ) {
+        List<EventRankingResponseDto> ranking = rankingsService.getRatingEventRanking(limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/events/popularity")
+    public ResponseEntity<List<EventRankingResponseDto>> getPopularityEventRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<EventRankingResponseDto> ranking = rankingsService.getPopularityEventRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/events/local")
+    public ResponseEntity<List<EventRankingResponseDto>> getLocalEventRanking(
+            @RequestParam String city,
+            @RequestParam(defaultValue = "20") Integer limit,
+            @RequestParam(defaultValue = "1") Integer minRatings
+    ) {
+        List<EventRankingResponseDto> ranking = rankingsService.getLocalEventRanking(city, limit, minRatings);
+        return ResponseEntity.ok(ranking);
+    }
+
+    @GetMapping("/badges/general")
+    public ResponseEntity<List<BadgeRankingResponseDto>> getGeneralBadgeRanking(
+            @RequestParam(defaultValue = "20") Integer limit
+    ) {
+        List<BadgeRankingResponseDto> ranking = rankingsService.getGeneralBadgeRanking(limit);
+        return ResponseEntity.ok(ranking);
+    }
+}

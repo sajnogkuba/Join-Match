@@ -48,6 +48,7 @@ const publicEndpoints = [
 	'/user-event',
 	'/user-saved-event',
 	'/ratings',
+	'/rankings',
 	'/conversations',
 	'/notifications'
 ]
