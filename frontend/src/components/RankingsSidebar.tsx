@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+import { Users, UserCog } from "lucide-react";
 
 interface RankingsSidebarProps {
 	active: string;
@@ -8,6 +8,7 @@ interface RankingsSidebarProps {
 const RankingsSidebar = ({ active, onSelect }: RankingsSidebarProps) => {
 	const items = [
 		{ label: "Gracze", icon: Users },
+		{ label: "Organizatorzy", icon: UserCog },
 	];
 
 	return (
