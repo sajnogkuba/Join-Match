@@ -136,7 +136,14 @@ public class EventService {
         int teamCount = (e.getEventTeams() == null) ? 0 :
                 e.getEventTeams().stream()
                         .map(EventTeam::getTeam)
-                        .mapToInt(t -> (t.getUserTeams() == null) ? 1 : t.getUserTeams().size()+1)
+                        .mapToInt(t ->
+                                (int) t.getUserTeams()
+                                        .stream()
+                                        .map(ut -> ut.getUser().getId())
+                                        .distinct()
+                                        .count()
+                        )
+
                         .sum();
         int bookedParticipants = individualCount + teamCount;
 
