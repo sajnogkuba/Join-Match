@@ -64,6 +64,7 @@ const EventsPage = () => {
 
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
+	const [confirmedCounts, setConfirmedCounts] = useState<Record<number, number>>({})
 	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
 	const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string }>({
 		isOpen: false,
@@ -110,22 +111,26 @@ const EventsPage = () => {
 		}
 	}, [])
 
-	// --- reszta Twoich efektów bez zmian ---
 	useEffect(() => {
 		if (!userEmail) return
+
 		axiosInstance
 			.get('/user-event/by-user-email', {
 				params: {
 					userEmail,
 					page: 0,
-					size: 1000, // Pobierz dużo, żeby mieć wszystkie dołączone wydarzenia
+					size: 1000,
 					sortBy: 'id',
 					direction: 'ASC',
 				},
 			})
 			.then(({ data }) => {
 				if (data?.content) {
-					setJoinedEventIds(new Set(data.content.map((ue: any) => ue.eventId)))
+					const joinedIds = data.content
+						.filter((ue: any) => ue.attendanceStatusName === 'Zapisany')
+						.map((ue: any) => ue.eventId)
+
+					setJoinedEventIds(new Set(joinedIds))
 				}
 			})
 			.catch(e => console.error('Nie udało się pobrać dołączonych wydarzeń:', e))
@@ -224,6 +229,49 @@ const EventsPage = () => {
 				} else {
 					setEvents(data.content || [])
 				}
+				// Pobierz liczbę potwierdzonych uczestników dla załadowanych eventów
+				;(async () => {
+					try {
+						const items = data.content || []
+						const promises = items.map(async (ev: any) => {
+							try {
+								const res = await axiosInstance.get(`/user-event/${ev.eventId}/participants`)
+								let confirmed = Array.isArray(res.data)
+									? res.data.filter((p: any) => p.attendanceStatusName === 'Zapisany').length
+									: 0
+
+								// If event is team-based, include team participants count if available
+								const teamCount = (ev as any).teamParticipants ?? null
+								if (teamCount == null) {
+									// try fetching event details for teamParticipants
+									try {
+										const det = await axiosInstance.get(`/event/${ev.eventId}`)
+										const td = det.data as any
+										if (td?.isForTeam) confirmed += td.teamParticipants ?? 0
+									} catch (_) {
+										// ignore
+									}
+								} else {
+									confirmed += teamCount
+								}
+
+								return { id: ev.eventId, confirmed }
+							} catch (e) {
+								const fallback = (ev as any).bookedParticipants || 0
+								const teamCount = (ev as any).teamParticipants ?? 0
+								return { id: ev.eventId, confirmed: fallback + (teamCount || 0) }
+							}
+						})
+						const results = await Promise.all(promises)
+						setConfirmedCounts(prev => {
+							const copy = { ...prev }
+							results.forEach((r: any) => (copy[r.id] = r.confirmed))
+							return copy
+						})
+					} catch (e) {
+						console.error('Błąd pobierania potwierdzonych uczestników:', e)
+					}
+				})()
 				setHasNext(!data.last)
 			} catch (err) {
 				console.error('Błąd pobierania wydarzeń:', err)
@@ -344,13 +392,18 @@ const EventsPage = () => {
 					s.delete(eventId)
 					return s
 				})
+				// decrement confirmed count
+				setConfirmedCounts(prev => ({
+					...prev,
+					[eventId]: Math.max(0, (prev[eventId] ?? ((event as any).bookedParticipants || 0)) - 1),
+				}))
 				setEvents(prev =>
 					prev.map(ev =>
 						ev.eventId === eventId ? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) } : ev
 					)
 				)
 			} else {
-				const bookedParticipants = (event as any)?.bookedParticipants || 0
+				const bookedParticipants = (confirmedCounts[eventId] ?? (event as any)?.bookedParticipants) || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
 
 				if (bookedParticipants >= numberOfParticipants) {
@@ -375,8 +428,13 @@ const EventsPage = () => {
 					}
 				}
 
-				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+				await axiosInstance.post('/user-event', { userEmail, eventId })
 				setJoinedEventIds(prev => new Set([...prev, eventId]))
+				// increment confirmed count
+				setConfirmedCounts(prev => ({
+					...prev,
+					[eventId]: (prev[eventId] ?? ((event as any).bookedParticipants || 0)) + 1,
+				}))
 				setEvents(prev =>
 					prev.map(ev =>
 						ev.eventId === eventId ? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 } : ev
@@ -588,6 +646,7 @@ const EventsPage = () => {
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{events.map(ev => {
 										const isBanned = ev.isBanned === true
+										const confirmedCount = confirmedCounts[ev.eventId] ?? ((ev as any).bookedParticipants || 0)
 										return (
 											<article
 												key={ev.eventId}
@@ -664,7 +723,7 @@ const EventsPage = () => {
 															<MapPin size={16} /> {ev.sportObjectName}
 														</div>
 														<div className='flex items-center gap-2'>
-															<Users size={16} /> {(ev as any).bookedParticipants}/{ev.numberOfParticipants}
+															<Users size={16} /> {confirmedCount}/{ev.numberOfParticipants}
 														</div>
 														<div className='flex items-center gap-2'>
 															<Ticket size={16} />
@@ -681,7 +740,7 @@ const EventsPage = () => {
 															<>
 																{(() => {
 																	const isJoined = joinedEventIds.has(ev.eventId)
-																	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+																	const isFull = confirmedCount >= ev.numberOfParticipants && !isJoined
 																	const isEventPast = ev.eventDate && parseEventDate(ev.eventDate).isBefore(dayjs())
 																	return (
 																		<button
