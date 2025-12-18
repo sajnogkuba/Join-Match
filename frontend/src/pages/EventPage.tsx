@@ -16,6 +16,7 @@ import ReportEventModal from '../components/ReportEventModal'
 import ReportRatingModal from '../components/ReportRatingModal'
 import AlertModal from '../components/AlertModal'
 import InviteToEventModal from '../components/InviteToEventModal'
+import JoinAsTeamModal	 from "../components/JoinAsTeamModal.tsx";
 import {
 	Share2,
 	Shield,
@@ -71,6 +72,7 @@ const EventPage: React.FC = () => {
 
 	const visibleParticipantsCount = confirmedParticipants.length
 
+	const [joined, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
 	const [showShareModal, setShowShareModal] = useState(false)
@@ -89,12 +91,25 @@ const EventPage: React.FC = () => {
 	const [editRatingComment, setEditRatingComment] = useState<string>('')
 	const [hasRatedOrganizer, setHasRatedOrganizer] = useState(false)
 	const [showBannedAlert, setShowBannedAlert] = useState(false)
+	const [showJoinTeamModal, setShowJoinTeamModal] = useState(false)
+	const [leaderTeams, setLeaderTeams] = useState<any[]>([])
+	const [loadingLeaderTeams, setLoadingLeaderTeams] = useState(false)
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+	const myTeamInEvent =
+		event?.isForTeam &&
+		event?.teams &&
+		leaderTeams.some(lt =>
+			event.teams!.some(et => et.teamId === lt.teamId)
+		)
+	const myEventTeam = event?.teams?.find(et =>
+		leaderTeams.some(lt => lt.teamId === et.teamId)
+	)
+
 
 	const getSkillLevelValue = (level?: string) => {
 		switch (level?.toLowerCase()) {
@@ -112,6 +127,45 @@ const EventPage: React.FC = () => {
 				return 1
 		}
 	}
+	type LeaderTeam = {
+		idTeam: number
+		name: string
+		city?: string | null
+		leaderId: number
+		leaderName?: string | null
+		photoUrl?: string | null
+	}
+
+	const fetchLeaderTeams = async () => {
+		if (!currentUserId) return
+
+		setLoadingLeaderTeams(true)
+		try {
+			const res = await axiosInstance.get('/team/by-leader', {
+				params: { leaderId: currentUserId }, // page/size mogą zostać, ale nie muszą
+			})
+
+			const raw: LeaderTeam[] = res.data?.content ?? []
+
+			// NORMALIZACJA do formatu event.teams (czyli teamId)
+			const normalized = raw.map(t => ({
+				teamId: t.idTeam,
+				name: t.name,
+				city: t.city ?? null,
+				leaderId: t.leaderId,
+				leaderName: t.leaderName ?? '',
+				photoUrl: t.photoUrl ?? null,
+			}))
+
+			setLeaderTeams(normalized)
+		} catch (e) {
+			console.error('Błąd pobierania drużyn leadera', e)
+			setLeaderTeams([])
+		} finally {
+			setLoadingLeaderTeams(false)
+		}
+	}
+
 
 	const handleCancelEvent = async () => {
 		if (!event) return
@@ -256,6 +310,47 @@ const EventPage: React.FC = () => {
 		checkOrganizerRated()
 	}, [currentUserId, event?.ownerId, id])
 
+	useEffect(() => {
+		if (currentUserId) fetchLeaderTeams()
+	}, [currentUserId])
+
+
+	useEffect(() => {
+		const fetchUserEmail = async () => {
+			try {
+				const { data } = await axiosInstance.get('/auth/user/details')
+				setUserEmail(data.email)
+			} catch (err) {
+				setUserEmail(null)
+				setJoined(false)
+			}
+		}
+
+		fetchUserEmail()
+	}, [])
+
+	useEffect(() => {
+		const fetchUser = async () => {
+			try {
+				const { data } = await axiosInstance.get('/auth/user')
+				setCurrentUserId(data.id)
+				setCurrentUserName(data.name)
+				setUserEmail(data.email)
+			} catch (err) {
+				setCurrentUserId(null)
+				setCurrentUserName(null)
+				setUserEmail(null)
+				setJoined(false)
+			}
+		}
+		fetchUser()
+	}, [])
+
+	useEffect(() => {
+		if (!currentUserId) {
+			setJoined(false)
+		}
+	}, [currentUserId])
 
 	const fetchParticipants = async (eventId: number) => {
 		try {
@@ -498,6 +593,24 @@ const EventPage: React.FC = () => {
 		}
 	}
 
+	const handleLeaveTeam = async (teamId: number) => {
+		if (!id) return
+
+		try {
+			await axiosInstance.delete(`/event/${id}/leave-team`, {
+				params: { teamId }, // ⬅⬅⬅ TO JEST KLUCZOWE
+			})
+
+			toast.success('Drużyna została wypisana z wydarzenia')
+
+			const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
+			setEvent(data)
+		} catch (e) {
+			console.error('Błąd wypisywania drużyny', e)
+			toast.error('Nie udało się wypisać drużyny')
+		}
+	}
+
 	const handleShare = async () => {
 		try {
 			const url = window.location.href
@@ -663,10 +776,18 @@ const EventPage: React.FC = () => {
 			</div>
 		)
 
-	const spotsLeft = Math.max(0, event.numberOfParticipants - confirmedParticipants.length)
+	const spotsLeft = Math.max(
+		0,
+		event.numberOfParticipants
+		- confirmedParticipants.length
+		- (event.teamParticipants ?? 0)
+	)
 	const progressPercentage = Math.min(
 		100,
-		(confirmedParticipants.length / Math.max(1, event.numberOfParticipants)) * 100
+		(
+			(confirmedParticipants.length + (event.teamParticipants ?? 0))
+			/ Math.max(1, event.numberOfParticipants)
+		) * 100
 	)
 
 	return (
@@ -766,6 +887,62 @@ const EventPage: React.FC = () => {
 										<ChevronDown size={16} className={`transition-transform ${showParticipants ? 'rotate-180' : ''}`} />
 									</button>
 								</div>
+								{/* ================= DRUŻYNY (EVENT DRUŻYNOWY) ================= */}
+								{event.isForTeam && event.teams && (
+									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-6'>
+										<h3 className='text-white text-lg font-semibold mb-4'>
+											Drużyny ({event.teams.length})
+										</h3>
+
+										{event.teams.length === 0 ? (
+											<p className='text-sm text-zinc-400 italic'>
+												Brak zapisanych drużyn.
+											</p>
+										) : (
+											<div className='space-y-3'>
+												{event.teams.map(team => (
+													<Link
+														key={team.teamId}
+														to={`/team/${team.teamId}`}
+														className='flex items-center justify-between rounded-xl
+                       bg-zinc-800/60 p-3 hover:bg-zinc-800 transition'
+													>
+														<div className='flex items-center gap-3'>
+															{team.photoUrl ? (
+																<img
+																	src={team.photoUrl}
+																	alt={team.name}
+																	className='h-10 w-10 rounded-lg object-cover
+                             border border-zinc-700'
+																/>
+															) : (
+																<div className='h-10 w-10 rounded-lg bg-zinc-700
+                                flex items-center justify-center
+                                text-xs text-zinc-300'>
+																	TEAM
+																</div>
+															)}
+
+															<div>
+																<p className='text-white font-medium leading-tight'>
+																	{team.name}
+																</p>
+																<p className='text-xs text-zinc-400'>
+																	{team.city ?? '—'} • Lider: {team.leaderName}
+																</p>
+															</div>
+														</div>
+
+														<span className='text-xs text-violet-300'>
+              Zobacz →
+            </span>
+													</Link>
+												))}
+											</div>
+										)}
+									</div>
+								)}
+
 
 								{currentUserId === event?.ownerId && (
 									<button
@@ -1137,6 +1314,26 @@ const EventPage: React.FC = () => {
 
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+								{myTeamInEvent && myEventTeam && (
+									<>
+										<div className='mb-3 rounded-xl bg-emerald-500/15
+      border border-emerald-500/30
+      px-4 py-2 text-sm text-emerald-300 text-center'>
+											✔ Twoja drużyna bierze udział w tym wydarzeniu
+										</div>
+
+										<button
+											onClick={() => handleLeaveTeam(myEventTeam.teamId)}
+											className='w-full rounded-2xl bg-rose-600 hover:bg-rose-500
+        px-4 py-3 text-white font-semibold transition'
+										>
+											Wypisz drużynę z wydarzenia
+										</button>
+									</>
+								)}
+
+
+
 								{event.status === EventStatus.CANCELED ? (
 									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
 										Wydarzenie odwołane
@@ -1211,6 +1408,22 @@ const EventPage: React.FC = () => {
 										Wydarzenie niedostępne
 									</button>
 								)}
+								{currentUserId && event.isForTeam && (
+									<button
+										onClick={() => {
+											fetchLeaderTeams()
+											setShowJoinTeamModal(true)
+										}}
+										disabled={loadingLeaderTeams || myTeamInEvent || event.status === EventStatus.CANCELED || isEventPast}
+										className={`mt-3 w-full rounded-2xl px-4 py-3 text-white font-semibold transition
+			${myTeamInEvent ? 'bg-emerald-700/60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}
+		`}
+									>
+										{myTeamInEvent ? 'Drużyna już dołączyła' : 'Dołącz jako drużyna'}
+									</button>
+								)}
+
+
 							</div>
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
@@ -1445,6 +1658,24 @@ const EventPage: React.FC = () => {
 					participants={confirmedParticipants}
 				/>
 			)}
+			<JoinAsTeamModal
+				isOpen={showJoinTeamModal}
+				onClose={() => setShowJoinTeamModal(false)}
+				teams={leaderTeams}
+				loading={loadingLeaderTeams}
+				onConfirm={async (teamId) => {
+					if (!id) return
+
+					await axiosInstance.post(`/event/${id}/join-team`, { teamId })
+
+					toast.success('Drużyna dołączyła do wydarzenia')
+
+					const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
+					setEvent(data)
+				}}
+			/>
+
+
 		</>
 	)
 }

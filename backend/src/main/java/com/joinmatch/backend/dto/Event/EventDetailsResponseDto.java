@@ -1,5 +1,7 @@
 package com.joinmatch.backend.dto.Event;
 
+import com.joinmatch.backend.dto.EventTeam.EventTeamResponseDto;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,6 +11,7 @@ public record EventDetailsResponseDto (
         String eventName,
      Integer numberOfParticipants,
      Integer bookedParticipants,
+     Integer teamParticipants,
      Boolean isForTeam,
 
      BigDecimal cost,
@@ -41,6 +44,8 @@ public record EventDetailsResponseDto (
 
      Double latitude,
      Double longitude,
-        Boolean isAttendanceChecked
+        Boolean isAttendanceChecked,
+        List<EventTeamResponseDto> teams
+
 )
 {}
