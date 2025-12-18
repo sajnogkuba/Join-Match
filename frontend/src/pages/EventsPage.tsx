@@ -236,12 +236,30 @@ const EventsPage = () => {
 						const promises = items.map(async (ev: any) => {
 							try {
 								const res = await axiosInstance.get(`/user-event/${ev.eventId}/participants`)
-								const confirmed = Array.isArray(res.data)
+								let confirmed = Array.isArray(res.data)
 									? res.data.filter((p: any) => p.attendanceStatusName === 'Zapisany').length
 									: 0
+
+								// If event is team-based, include team participants count if available
+								const teamCount = (ev as any).teamParticipants ?? null
+								if (teamCount == null) {
+									// try fetching event details for teamParticipants
+									try {
+										const det = await axiosInstance.get(`/event/${ev.eventId}`)
+										const td = det.data as any
+										if (td?.isForTeam) confirmed += td.teamParticipants ?? 0
+									} catch (_) {
+										// ignore
+									}
+								} else {
+									confirmed += teamCount
+								}
+
 								return { id: ev.eventId, confirmed }
 							} catch (e) {
-								return { id: ev.eventId, confirmed: (ev as any).bookedParticipants || 0 }
+								const fallback = (ev as any).bookedParticipants || 0
+								const teamCount = (ev as any).teamParticipants ?? 0
+								return { id: ev.eventId, confirmed: fallback + (teamCount || 0) }
 							}
 						})
 						const results = await Promise.all(promises)

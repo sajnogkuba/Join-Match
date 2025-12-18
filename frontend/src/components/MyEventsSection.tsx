@@ -54,12 +54,25 @@ const MyEventsSection: React.FC = () => {
 						const promises = sanitized.map(async ev => {
 							try {
 								const res = await api.get(`/user-event/${ev.eventId}/participants`)
-								const confirmed = Array.isArray(res.data)
+								let confirmed = Array.isArray(res.data)
 									? res.data.filter((p: any) => p.attendanceStatusName === 'Zapisany').length
 									: 0
+
+								// include team participants if event is team-based
+								const teamCount = (ev as any).teamParticipants ?? null
+								if (teamCount == null) {
+									try {
+										const det = await api.get(`/event/${ev.eventId}`)
+										const td = det.data as any
+										if (td?.isForTeam) confirmed += td.teamParticipants ?? 0
+									} catch (_) {}
+								} else {
+									confirmed += teamCount
+								}
+
 								return { id: ev.eventId, confirmed }
 							} catch (e) {
-								return { id: ev.eventId, confirmed: ev.bookedParticipants ?? 0 }
+								return { id: ev.eventId, confirmed: (ev.bookedParticipants ?? 0) + ((ev as any).teamParticipants ?? 0) }
 							}
 						})
 						const results = await Promise.all(promises)

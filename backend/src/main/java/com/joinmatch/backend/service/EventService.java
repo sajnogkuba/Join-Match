@@ -393,14 +393,19 @@ public class EventService {
             throw new IllegalStateException("Team already joined this event");
         }
 
-        int individualCount = event.getUserEvents() == null
-                ? 0
-                : event.getUserEvents().size();
+        int individualCount = (int) event.getUserEvents().stream()
+                .filter(ue -> ue.getAttendanceStatus().getId() == 1)
+                .count();
 
-        int teamCount = event.getEventTeams() == null
-                ? 0
-                : event.getEventTeams().stream()
-                .mapToInt(et -> et.getTeam().getUserTeams().size())
+        int teamCount = event.getEventTeams().stream()
+                .map(EventTeam::getTeam)
+                .mapToInt(t ->
+                        (int) t.getUserTeams()
+                                .stream()
+                                .map(ut -> ut.getUser().getId())
+                                .distinct()
+                                .count()
+                )
                 .sum();
 
         int bookedParticipants = individualCount + teamCount;
