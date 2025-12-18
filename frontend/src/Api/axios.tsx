@@ -81,44 +81,79 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
 	return isPublic && !isProtected
 }
 
-// axios.ts
 axiosInstance.interceptors.response.use(
-    (response) => response,
-    async (error: AxiosError) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+	(response: AxiosResponse) => response,
+	async (error: AxiosError) => {
+		const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-        if (error.response?.status !== 401 || originalRequest._retry) {
-            return Promise.reject(error);
-        }
+		if (originalRequest.url?.includes('/auth/refreshToken') || originalRequest.url?.includes('/auth/login')) {
+			return Promise.reject(error)
+		}
 
-        if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refreshToken')) {
-            return Promise.reject(error);
-        }
+		if (error.response?.status === 401 && !originalRequest._retry) {
+			if (isPublicEndpoint(originalRequest.url)) {
+				return Promise.reject(error)
+			}
 
-        if (isRefreshing) {
-            return new Promise((resolve, reject) => {
-                failedQueue.push({ resolve, reject });
-            })
-                .then(() => axiosInstance(originalRequest))
-                .catch((err) => Promise.reject(err));
-        }
+			if (isRefreshing) {
+				return new Promise(function (resolve, reject) {
+					failedQueue.push({ resolve, reject })
+				})
+					.then(() => {
+						return axiosInstance(originalRequest)
+					})
+					.catch(err => {
+						return Promise.reject(err)
+					})
+			}
 
-        originalRequest._retry = true;
-        isRefreshing = true;
+			originalRequest._retry = true
+			isRefreshing = true
 
-        try {
-            await axios.post(`${import.meta.env.VITE_API_URL}/auth/refreshToken`, {}, { withCredentials: true });
-            
-            isRefreshing = false;
-            processQueue(null); 
-            return axiosInstance(originalRequest);
-        } catch (refreshError) {
-            isRefreshing = false;
-            processQueue(refreshError);
-            window.location.href = '/login'; 
-            return Promise.reject(refreshError);
-        }
-    }
-);
+			try {
+				await refreshToken()
+				processQueue(null, true)
+				isRefreshing = false
+				return axiosInstance(originalRequest)
+			} catch (refreshError) {
+				processQueue(refreshError, null)
+				isRefreshing = false
+
+				console.error('Krytyczny błąd odświeżania sesji - Wylogowywanie...', refreshError)
+
+				if (disconnectWebSocket) {
+					disconnectWebSocket()
+				}
+
+				const currentPath = window.location.pathname
+				const publicPaths = [
+					'/login',
+					'/register',
+					'/',
+					'/events',
+					'/teams',
+					'/about',
+					'/kontakt',
+					'/faq',
+					'/privacy',
+					'/terms',
+				]
+				if (
+					!publicPaths.includes(currentPath) &&
+					!currentPath.startsWith('/event/') &&
+					!currentPath.startsWith('/team/') &&
+					!currentPath.startsWith('/post/') &&
+					!currentPath.startsWith('/profile/')
+				) {
+					window.location.href = '/login'
+				}
+
+				return Promise.reject(refreshError)
+			}
+		}
+
+		return Promise.reject(error)
+	}
+)
 
 export default axiosInstance
