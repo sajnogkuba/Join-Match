@@ -889,7 +889,7 @@ const EventPage: React.FC = () => {
 								</div>
 								{/* ================= DRUŻYNY (EVENT DRUŻYNOWY) ================= */}
 								{event.isForTeam && event.teams && (
-									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-6'>
+									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-6 mb-6'>
 										<h3 className='text-white text-lg font-semibold mb-4'>
 											Drużyny ({event.teams.length})
 										</h3>
@@ -1324,7 +1324,7 @@ const EventPage: React.FC = () => {
 
 										<button
 											onClick={() => handleLeaveTeam(myEventTeam.teamId)}
-											className='w-full rounded-2xl bg-rose-600 hover:bg-rose-500
+											className='w-full rounded-2xl bg-rose-600 hover:bg-rose-500 mb-2
         px-4 py-3 text-white font-semibold transition'
 										>
 											Wypisz drużynę z wydarzenia
@@ -1414,7 +1414,7 @@ const EventPage: React.FC = () => {
 											fetchLeaderTeams()
 											setShowJoinTeamModal(true)
 										}}
-										disabled={loadingLeaderTeams || myTeamInEvent || event.status === EventStatus.CANCELED || isEventPast}
+										disabled={loadingLeaderTeams || myTeamInEvent || event.status === EventStatus.CANCELED || !!isEventPast}
 										className={`mt-3 w-full rounded-2xl px-4 py-3 text-white font-semibold transition
 			${myTeamInEvent ? 'bg-emerald-700/60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}
 		`}
