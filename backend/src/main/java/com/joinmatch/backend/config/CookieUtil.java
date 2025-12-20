@@ -11,10 +11,8 @@ public class CookieUtil {
     private static final int REFRESH_TOKEN_MAX_AGE = 4 * 60 * 60;
     private static final int EMAIL_MAX_AGE = 4 * 60 * 60;
 
-    // KONFIGURACJA DLA LOCALHOST (HTTP)
-    // Na produkcji (HTTPS) zmień: SECURE = true, SAME_SITE = "None"
-    private static final boolean SECURE = false;
-    private static final String SAME_SITE = "Lax";
+    private static final boolean SECURE = true;
+    private static final String SAME_SITE = "None";
 
     public static void setAccessTokenCookie(HttpServletResponse response, String token) {
         ResponseCookie cookie = ResponseCookie.from("accessToken", token)

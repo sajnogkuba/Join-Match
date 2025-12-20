@@ -1,6 +1,11 @@
 spring:
   config:
     import: optional:file:.env[.properties]
+  datasource:
+    hikari:
+      maximum-pool-size: 40
+      minimum-idle: 10
+      connection-timeout: 30000
 
   mail:
     host: smtp.gmail.com
