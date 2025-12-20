@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs, { Dayjs } from 'dayjs'
-import { MapPin, CalendarDays, Users, AlertTriangle } from 'lucide-react'
+import { MapPin, CalendarDays, Users, AlertTriangle, List, Calendar } from 'lucide-react'
 import api from '../Api/axios'
+import UniversalEventsCalendar from './UniversalEventsCalendar'
 type EventStatus = 'PLANNED' | 'CANCELED' | 'FINISHED'
 type EventDateWire = number[] | string | Date
 
@@ -38,6 +39,7 @@ const MyEventsSection: React.FC = () => {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [confirmedCounts, setConfirmedCounts] = useState<Record<number, number>>({})
+	const [view, setView] = useState<'list' | 'calendar'>('list')
 
 	useEffect(() => {
 		;(async () => {
@@ -100,6 +102,30 @@ const MyEventsSection: React.FC = () => {
 					<h2 className='text-2xl font-semibold text-white'>Moje wydarzenia</h2>
 					<p className='text-sm text-zinc-400'>Wydarzenia, których jesteś właścicielem.</p>
 				</div>
+				{events.length > 0 && (
+					<div className='flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700'>
+						<button
+							onClick={() => setView('list')}
+							className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+								view === 'list'
+									? 'bg-violet-600 text-white'
+									: 'text-zinc-400 hover:text-white'
+							}`}>
+							<List size={16} />
+							Lista
+						</button>
+						<button
+							onClick={() => setView('calendar')}
+							className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+								view === 'calendar'
+									? 'bg-violet-600 text-white'
+									: 'text-zinc-400 hover:text-white'
+							}`}>
+							<Calendar size={16} />
+							Kalendarz
+						</button>
+					</div>
+				)}
 			</header>
 
 			{loading ? (
@@ -110,6 +136,14 @@ const MyEventsSection: React.FC = () => {
 				<div className='rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center text-zinc-400'>
 					Nie masz jeszcze żadnych własnych wydarzeń.
 				</div>
+			) : view === 'calendar' ? (
+				<UniversalEventsCalendar
+					events={events.map(e => ({
+						eventId: e.eventId,
+						eventName: e.eventName,
+						eventDate: e.eventDate,
+					}))}
+				/>
 			) : (
 				<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
 					{events.map(ev => {

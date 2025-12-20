@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs, { Dayjs } from 'dayjs'
-import { MapPin, CalendarDays, Users, Loader2, AlertTriangle } from 'lucide-react'
+import { MapPin, CalendarDays, Users, Loader2, AlertTriangle, List, Calendar } from 'lucide-react'
 import api from '../Api/axios'
+import UniversalEventsCalendar from './UniversalEventsCalendar'
 
 type EventStatus = 'PLANNED' | 'CANCELED' | 'FINISHED'
 type EventDateWire = number[] | string | Date
@@ -55,6 +56,7 @@ const MyParticipationsSection: React.FC = () => {
 	const [hasNext, setHasNext] = useState(false)
 	const observerTarget = useRef<HTMLDivElement>(null)
 	const currentPageRef = useRef(0)
+	const [view, setView] = useState<'list' | 'calendar'>('list')
 
 	const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
 		if (append) {
@@ -177,6 +179,30 @@ const MyParticipationsSection: React.FC = () => {
 					<h2 className='text-2xl font-semibold text-white'>Biorę udział</h2>
 					<p className='text-sm text-zinc-400'>Wydarzenia, w których bierzesz udział.</p>
 				</div>
+				{events.length > 0 && (
+					<div className='flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700'>
+						<button
+							onClick={() => setView('list')}
+							className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+								view === 'list'
+									? 'bg-violet-600 text-white'
+									: 'text-zinc-400 hover:text-white'
+							}`}>
+							<List size={16} />
+							Lista
+						</button>
+						<button
+							onClick={() => setView('calendar')}
+							className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+								view === 'calendar'
+									? 'bg-violet-600 text-white'
+									: 'text-zinc-400 hover:text-white'
+							}`}>
+							<Calendar size={16} />
+							Kalendarz
+						</button>
+					</div>
+				)}
 			</header>
 
 			{loading ? (
@@ -187,6 +213,14 @@ const MyParticipationsSection: React.FC = () => {
 				<div className='rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center text-zinc-400'>
 					Nie bierzesz udziału w żadnych wydarzeniach.
 				</div>
+			) : view === 'calendar' ? (
+				<UniversalEventsCalendar
+					events={events.map(e => ({
+						eventId: e.eventId,
+						eventName: e.eventName,
+						eventDate: e.eventDate,
+					}))}
+				/>
 			) : (
 				<>
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>

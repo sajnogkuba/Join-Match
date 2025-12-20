@@ -12,6 +12,7 @@ import SportTypeFilter from '../components/SportTypeFilter'
 import TeamInfoTab from '../components/TeamInfoTab'
 import TeamDiscussionTab from '../components/TeamDiscussionTab'
 import ReportTeamModal from '../components/ReportTeamModal'
+import TeamRoleManagementModal from '../components/TeamRoleManagementModal'
 import { MapPin, Users, Loader2, AlertTriangle, Search, X, UserPlus, Clock, Pencil, Camera, Check } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
@@ -56,6 +57,9 @@ const TeamPage: React.FC = () => {
 
 	// 🔴 Zgłaszanie drużyny – modal
 	const [showReportTeamModal, setShowReportTeamModal] = useState(false)
+	
+	// Zarządzanie rolami – modal
+	const [showRoleManagementModal, setShowRoleManagementModal] = useState(false)
 
 	// States for team editing
 	const [isEditing, setIsEditing] = useState(false)
@@ -321,7 +325,14 @@ const TeamPage: React.FC = () => {
 			const { data } = await api.get<TeamMembersPageResponse>(`/user-team/${team.idTeam}/members`, {
 				params: { page: 0, size: 100, sort: 'userName', direction: 'ASC' },
 			})
-			setTeamMembers(data.content || [])
+			// Sortuj członków - lider zawsze pierwszy
+			const members = data.content || []
+			const sortedMembers = [...members].sort((a, b) => {
+				if (a.userId === team.leaderId) return -1
+				if (b.userId === team.leaderId) return 1
+				return 0
+			})
+			setTeamMembers(sortedMembers)
 		} catch (error) {
 			console.error('Error fetching team members:', error)
 			setTeamMembers([])
@@ -852,6 +863,7 @@ const TeamPage: React.FC = () => {
 							}
 						}}
 						onReportTeam={() => setShowReportTeamModal(true)}
+						onManageRoles={() => setShowRoleManagementModal(true)}
 					/>
 				)}
 				{activeTab === 'dyskusja' && (
@@ -1128,6 +1140,16 @@ const TeamPage: React.FC = () => {
 				teamId={team.idTeam}
 				teamName={team.name}
 			/>
+
+			{team && (
+				<TeamRoleManagementModal
+					isOpen={showRoleManagementModal}
+					onClose={() => setShowRoleManagementModal(false)}
+					teamId={team.idTeam}
+					leaderId={team.leaderId}
+					onMembersUpdate={fetchTeamMembers}
+				/>
+			)}
 		</main>
 	)
 }
