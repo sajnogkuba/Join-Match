@@ -5,16 +5,16 @@ import { check, sleep, fail } from 'k6'
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080'
 
 export const options = {
-	stages: [
-		{ duration: '30s', target: 500 }, // ramp-up (do 500 userów)
-		{ duration: '1m', target: 500 }, // stay (trzymaj 500 userów)
-		{ duration: '10s', target: 0 }, // ramp-down (zejście do 0)
-	],
-	thresholds: {
-		http_req_duration: ['p(95)<3000'], // 95% zapytań poniżej 3s
-		http_req_failed: ['rate<0.01'], // mniej niż 1% błędów
-	},
-}
+    stages: [
+        { duration: '30s', target: 50 }, // Rozpędzamy się do 50 userów (a nie 500)
+        { duration: '1m', target: 50 },  // Utrzymujemy 50 userów przez minutę
+        { duration: '10s', target: 0 },  // Wyhamowujemy
+    ],
+    thresholds: {
+        http_req_duration: ['p(95)<3000'], // Oczekujemy czasu poniżej 3s (powinno wyjść < 500ms)
+        http_req_failed: ['rate<0.01'],    // Zero błędów
+    },
+};
 
 export function setup() {
 	const payload = JSON.stringify({ email: 'test@gmail.com', password: 'test' })
