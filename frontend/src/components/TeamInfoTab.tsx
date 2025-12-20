@@ -19,6 +19,55 @@ import {
 } from 'lucide-react'
 import { parseLocalDate } from '../utils/formatDate'
 
+// Funkcja do konwersji hex na rgba z przezroczystością
+// Używa wyższego alpha dla lepszej widoczności na ciemnym tle
+const hexToRgba = (hexColor: string, alpha: number = 0.7): string => {
+	if (!hexColor) return `rgba(63, 63, 70, ${alpha})`
+	
+	// Obsługa koloru z lub bez #
+	let cleanHex = hexColor.trim()
+	if (!cleanHex.startsWith('#')) {
+		cleanHex = '#' + cleanHex
+	}
+	
+	// Sprawdź czy to poprawny format hex (7 znaków: #RRGGBB)
+	if (cleanHex.length !== 7) {
+		console.warn('Invalid hex color format:', hexColor)
+		return `rgba(63, 63, 70, ${alpha})`
+	}
+	
+	try {
+		const r = parseInt(cleanHex.slice(1, 3), 16)
+		const g = parseInt(cleanHex.slice(3, 5), 16)
+		const b = parseInt(cleanHex.slice(5, 7), 16)
+		
+		if (isNaN(r) || isNaN(g) || isNaN(b)) {
+			console.warn('Invalid hex color values:', hexColor)
+			return `rgba(63, 63, 70, ${alpha})`
+		}
+		
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`
+	} catch (e) {
+		console.warn('Error parsing hex color:', hexColor, e)
+		return `rgba(63, 63, 70, ${alpha})`
+	}
+}
+
+// Funkcja do określenia kontrastowego koloru tekstu (biały/czarny)
+const getContrastColor = (hexColor: string): string => {
+	if (!hexColor || !hexColor.startsWith('#')) return '#d4d4d8'
+	
+	const r = parseInt(hexColor.slice(1, 3), 16)
+	const g = parseInt(hexColor.slice(3, 5), 16)
+	const b = parseInt(hexColor.slice(5, 7), 16)
+	
+	// Oblicz jasność koloru (wzór z WCAG)
+	const brightness = (r * 299 + g * 587 + b * 114) / 1000
+	
+	// Jeśli kolor jest jasny, użyj czarnego tekstu, w przeciwnym razie białego
+	return brightness > 128 ? '#000000' : '#ffffff'
+}
+
 interface TeamInfoTabProps {
 	team: TeamDetails
 	teamMembers: TeamMember[]
@@ -130,7 +179,15 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 													</div>
 												)}
 												{member.roleName && (
-													<div className='inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-zinc-700/60 text-zinc-300 border border-zinc-600'>
+													<div
+														className='inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium'
+														style={{
+															backgroundColor: member.roleColor || '#3f3f46',
+															color: member.roleColor
+																? getContrastColor(member.roleColor)
+																: '#d4d4d8',
+														}}
+													>
 														{member.roleName}
 													</div>
 												)}

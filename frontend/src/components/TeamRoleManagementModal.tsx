@@ -6,6 +6,7 @@ import type { TeamMember } from '../Api/types/TeamMember'
 import AlertModal from './AlertModal'
 import { parseLocalDate } from '../utils/formatDate'
 import Avatar from './Avatar'
+import TeamRoleColorPicker from './TeamRoleColorPicker'
 
 interface TeamRoleManagementModalProps {
 	isOpen: boolean
@@ -28,11 +29,15 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 	
 	// Formularz tworzenia roli
 	const [newRoleName, setNewRoleName] = useState('')
+	const [newRoleColor, setNewRoleColor] = useState<string | null>(null)
+	const [showColorPicker, setShowColorPicker] = useState(false)
 	const [creating, setCreating] = useState(false)
 	
 	// Edycja roli
 	const [editingRoleId, setEditingRoleId] = useState<number | null>(null)
 	const [editingRoleName, setEditingRoleName] = useState('')
+	const [editingRoleColor, setEditingRoleColor] = useState<string | null>(null)
+	const [showEditColorPicker, setShowEditColorPicker] = useState(false)
 	const [updating, setUpdating] = useState(false)
 	
 	// Usuwanie roli
@@ -99,8 +104,12 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 
 	const handleClose = () => {
 		setNewRoleName('')
+		setNewRoleColor(null)
+		setShowColorPicker(false)
 		setEditingRoleId(null)
 		setEditingRoleName('')
+		setEditingRoleColor(null)
+		setShowEditColorPicker(false)
 		setError(null)
 		setSuccess(null)
 		setDeletingRoleId(null)
@@ -160,9 +169,12 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 			await api.post('/team-role', {
 				name: trimmed,
 				teamId: teamId,
+				color: newRoleColor,
 			})
 			
 			setNewRoleName('')
+			setNewRoleColor(null)
+			setShowColorPicker(false)
 			setSuccess('Rola została utworzona')
 			await fetchRoles()
 			await fetchMembers()
@@ -180,6 +192,8 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 	const handleStartEdit = (role: TeamRole) => {
 		setEditingRoleId(role.id)
 		setEditingRoleName(role.name)
+		setEditingRoleColor(role.color || null)
+		setShowEditColorPicker(false)
 		setError(null)
 		setSuccess(null)
 	}
@@ -187,6 +201,8 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 	const handleCancelEdit = () => {
 		setEditingRoleId(null)
 		setEditingRoleName('')
+		setEditingRoleColor(null)
+		setShowEditColorPicker(false)
 	}
 
 	const handleUpdateRole = async (roleId: number) => {
@@ -209,10 +225,13 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 		try {
 			await api.put(`/team-role/${roleId}`, {
 				name: trimmed,
+				color: editingRoleColor,
 			})
 			
 			setEditingRoleId(null)
 			setEditingRoleName('')
+			setEditingRoleColor(null)
+			setShowEditColorPicker(false)
 			setSuccess('Rola została zaktualizowana')
 			await fetchRoles()
 			await fetchMembers()
@@ -313,6 +332,12 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 									className='flex-1 rounded-xl border border-zinc-700 bg-zinc-800/70 px-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-500'
 									disabled={creating}
 								/>
+								<TeamRoleColorPicker
+									value={newRoleColor}
+									onChange={setNewRoleColor}
+									showPicker={showColorPicker}
+									setShowPicker={setShowColorPicker}
+								/>
 								<button
 									type='submit'
 									disabled={creating || !newRoleName.trim()}
@@ -332,7 +357,7 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 								</button>
 							</div>
 							<p className='text-xs text-zinc-400'>
-								Maksymalnie 100 znaków. Nazwa musi być unikalna w drużynie.
+								Maksymalnie 100 znaków. Nazwa musi być unikalna w drużynie. Kolor jest opcjonalny.
 							</p>
 						</form>
 					</div>
@@ -370,6 +395,12 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 													disabled={updating}
 													autoFocus
 												/>
+												<TeamRoleColorPicker
+													value={editingRoleColor}
+													onChange={setEditingRoleColor}
+													showPicker={showEditColorPicker}
+													setShowPicker={setShowEditColorPicker}
+												/>
 												<button
 													onClick={() => handleUpdateRole(role.id)}
 													disabled={updating || !editingRoleName.trim()}
@@ -393,7 +424,16 @@ const TeamRoleManagementModal: React.FC<TeamRoleManagementModalProps> = ({ isOpe
 										) : (
 											<>
 												<div className='flex-1'>
-													<div className='text-white text-sm font-medium'>{role.name}</div>
+													<div className='flex items-center gap-2'>
+														<div className='text-white text-sm font-medium'>{role.name}</div>
+														{role.color && (
+															<div
+																className='w-4 h-4 rounded border border-zinc-600'
+																style={{ backgroundColor: role.color }}
+																title={`Kolor: ${role.color}`}
+															/>
+														)}
+													</div>
 													<div className='text-xs text-zinc-400 mt-0.5'>
 														Utworzono: {parseLocalDate(role.createdAt).format('DD.MM.YYYY')}
 													</div>

@@ -10,6 +10,8 @@ public record TeamRoleRequestDto(
         String name,
 
         @NotNull(message = "Team ID cannot be null")
-        Integer teamId
+        Integer teamId,
+
+        String color
 ) {
 }

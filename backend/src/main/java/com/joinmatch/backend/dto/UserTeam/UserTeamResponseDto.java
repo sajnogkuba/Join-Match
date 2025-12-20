@@ -12,15 +12,18 @@ public record UserTeamResponseDto (
         String userAvatarUrl,
         LocalDateTime joinedAt,
         Integer roleId,
-        String roleName
+        String roleName,
+        String roleColor
 ){
     public static UserTeamResponseDto fromUserTeam(UserTeam userTeam) {
         Integer roleId = null;
         String roleName = null;
+        String roleColor = null;
         
         if (userTeam.getRole() != null) {
             roleId = userTeam.getRole().getId();
             roleName = userTeam.getRole().getName();
+            roleColor = userTeam.getRole().getColor();
         }
         
         return new UserTeamResponseDto(
@@ -31,7 +34,8 @@ public record UserTeamResponseDto (
                 userTeam.getUser().getUrlOfPicture(),
                 userTeam.getCreatedAt(),
                 roleId,
-                roleName
+                roleName,
+                roleColor
         );
     }
 }

@@ -7,5 +7,6 @@ export interface TeamMember {
 	joinedAt: string
 	roleId?: number | null
 	roleName?: string | null
+	roleColor?: string | null
 }
 

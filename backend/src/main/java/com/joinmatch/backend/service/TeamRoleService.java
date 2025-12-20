@@ -43,6 +43,7 @@ public class TeamRoleService {
         TeamRole teamRole = TeamRole.builder()
                 .team(team)
                 .name(requestDto.name())
+                .color(requestDto.color())
                 .build();
 
         TeamRole savedRole = teamRoleRepository.save(teamRole);
@@ -61,6 +62,7 @@ public class TeamRoleService {
         }
 
         teamRole.setName(updateDto.name());
+        teamRole.setColor(updateDto.color());
         TeamRole updatedRole = teamRoleRepository.save(teamRole);
         return TeamRoleResponseDto.fromTeamRole(updatedRole);
     }

@@ -25,6 +25,9 @@ public class TeamRole {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    @Column(name = "color", length = 7)
+    private String color;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
