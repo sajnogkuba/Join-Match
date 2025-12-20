@@ -9,6 +9,8 @@ import SportTypeFilter from '../components/SportTypeFilter'
 import api from '../Api/axios.tsx'
 import type { Event } from '../Api/types.ts'
 import type { UserSportsResponse } from '../Api/types/Sports'
+import { formatEventDate, parseEventDate } from '../utils/formatDate'
+import { getCookie } from '../utils/cookies'
 
 // Typ odpowiedzi z backendu (Spring Page)
 type EventsPageResponse = {
@@ -40,7 +42,7 @@ const MainPage: React.FC = () => {
 	}>({ isOpen: false, title: "", message: "" })
 	const navigate = useNavigate()
 
-	useEffect(() => setUserEmail(localStorage.getItem('email')), [])
+	useEffect(() => setUserEmail(getCookie('email')), [])
 
 	// Funkcja pobierająca eventy z backendu
 	const fetchEvents = useCallback(async () => {
@@ -79,8 +81,20 @@ const MainPage: React.FC = () => {
 
 	useEffect(() => {
 		if (!userEmail) return
-		api.get('/user-event/by-user-email', { params: { userEmail } })
-			.then(({ data }) => setJoinedEventIds(new Set(data.map((x: any) => x.eventId))))
+		api.get('/user-event/by-user-email', { 
+			params: { 
+				userEmail,
+				page: 0,
+				size: 1000, // Pobierz dużo, żeby mieć wszystkie dołączone wydarzenia
+				sortBy: 'id',
+				direction: 'ASC'
+			} 
+		})
+			.then(({ data }) => {
+				if (data?.content) {
+					setJoinedEventIds(new Set(data.content.map((x: any) => x.eventId)))
+				}
+			})
 			.catch(() => {})
 		
 		// Fetch saved events
@@ -89,9 +103,7 @@ const MainPage: React.FC = () => {
 			.catch(() => {})
 		
 		// Fetch user's sports
-		const token = localStorage.getItem('accessToken')
-		if (token) {
-			api.get<UserSportsResponse>('/sport-type/user', { params: { token } })
+		api.get<UserSportsResponse>('/sport-type/user')
 				.then(({ data }) => {
 					const sportsMap = new Map<string, number>()
 					data.sports?.forEach((s: UserSportsResponse['sports'][number]) => {
@@ -99,14 +111,27 @@ const MainPage: React.FC = () => {
 					})
 					setUserSports(sportsMap)
 				})
-				.catch(() => {})
-		}
+				.catch(() => {});
 	}, [userEmail])
 
 	const handleSignUp = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
 		
 		const isJoined = joinedEventIds.has(eventId)
+		const event = events.find(ev => ev.eventId === eventId)
+		
+		// Sprawdź czy wydarzenie się zakończyło
+		if (event?.eventDate) {
+			const isEventPast = parseEventDate(event.eventDate).isBefore(dayjs())
+			if (isEventPast) {
+				setAlertModal({
+					isOpen: true,
+					title: "Wydarzenie zakończone",
+					message: "Nie można dołączać ani opuszczać zakończonych wydarzeń."
+				})
+				return
+			}
+		}
 		
 		try {
 			if (isJoined) {
@@ -125,7 +150,6 @@ const MainPage: React.FC = () => {
 				))
 			} else {
 				// Check if event has available places
-				const event = events.find(ev => ev.eventId === eventId)
 				const bookedParticipants = (event as any)?.bookedParticipants || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
 				
@@ -321,7 +345,7 @@ const MainPage: React.FC = () => {
 												<MapPin size={14} /> {event.sportObjectName}
 											</p>
 											<p className="text-sm text-zinc-500 mb-2 flex items-center gap-2">
-												<CalendarDays size={14} /> {dayjs(event.eventDate).format('DD.MM.YYYY HH:mm')}
+												<CalendarDays size={14} /> {formatEventDate(event.eventDate)}
 											</p>
 											<p className="text-sm text-zinc-500 mb-3 flex items-center gap-2">
 												<Users size={14} /> {(event as any).bookedParticipants || 0}/{event.numberOfParticipants}
@@ -342,19 +366,22 @@ const MainPage: React.FC = () => {
 														{(() => {
 															const isJoined = joinedEventIds.has(event.eventId)
 															const isFull = ((event as any).bookedParticipants || 0) >= event.numberOfParticipants && !isJoined
+															const isEventPast = event.eventDate && parseEventDate(event.eventDate).isBefore(dayjs())
 															return (
 																<button
 																	onClick={() => handleSignUp(event.eventId)}
-																	disabled={isFull}
+																	disabled={isFull || isEventPast}
 																	className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
-																		isJoined
+																		isEventPast
+																			? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																			: isJoined
 																			? 'bg-red-600 hover:bg-red-500'
 																			: isFull
 																			? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
 																			: 'bg-gradient-to-r from-violet-600 to-violet-800 hover:from-violet-700 hover:to-violet-900'
 																	}`}
 																>
-																	{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+																	{isEventPast ? 'Zakończone' : isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
 																</button>
 															)
 														})()}

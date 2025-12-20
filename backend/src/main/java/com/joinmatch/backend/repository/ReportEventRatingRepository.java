@@ -9,5 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ReportEventRatingRepository extends JpaRepository<ReportEventRating, Integer> {
     long countByReviewedIsFalse();
     Page<ReportEventRating> findAllByOrderByIdDesc(Pageable pageable);
+    boolean existsByEventRating_EventRatingIdAndReporterUser_IdAndActiveTrue(Integer eventRatingId, Integer reporterId);
+    void deleteAllByEventRating_EventRatingId(Integer ratingId);
+
 
 }

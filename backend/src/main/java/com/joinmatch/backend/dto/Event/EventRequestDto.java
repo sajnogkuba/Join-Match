@@ -1,5 +1,7 @@
 package com.joinmatch.backend.dto.Event;
 
+import com.joinmatch.backend.enums.EventStatus;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,11 +14,12 @@ public record EventRequestDto(
         String ownerEmail,
         Integer sportObjectId,
         Integer eventVisibilityId,
-        String status,
+        EventStatus status,
         LocalDateTime eventDate,
         Integer sportTypeId,
         Integer minLevel,
         String imageUrl,
+        Boolean isForTeam,
         List<String> paymentMethods
 ) {
 }

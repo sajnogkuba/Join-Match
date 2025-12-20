@@ -25,6 +25,10 @@ public class UserTeam {
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_id", nullable = true)
+    private TeamRole role;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

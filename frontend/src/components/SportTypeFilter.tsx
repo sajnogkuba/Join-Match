@@ -104,8 +104,8 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 		setSearchQuery('')
 	}
 
-	const handleClear = (e: React.MouseEvent) => {
-		e.stopPropagation()
+	const handleClear = (e?: React.MouseEvent | React.KeyboardEvent) => {
+		e?.stopPropagation()
 		onChange(null)
 		setSearchQuery('')
 	}
@@ -123,13 +123,24 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 					</span>
 					<div className='flex items-center gap-1 shrink-0'>
 						{value !== null && (
-							<button
-								type='button'
-								onClick={handleClear}
-								className='p-0.5 hover:bg-zinc-700 rounded transition'
+							<div
+								onClick={(e) => {
+									e.stopPropagation();
+									handleClear(e);
+								}}
+								className='p-0.5 hover:bg-zinc-700 rounded transition cursor-pointer'
+								role='button'
+								tabIndex={0}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										e.stopPropagation();
+										handleClear(e);
+									}
+								}}
 							>
 								<X size={14} />
-							</button>
+							</div>
 						)}
 						<ChevronDown
 							size={16}

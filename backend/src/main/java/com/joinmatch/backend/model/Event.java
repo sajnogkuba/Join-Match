@@ -1,6 +1,7 @@
 package com.joinmatch.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.joinmatch.backend.enums.EventStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,6 +31,8 @@ public class Event {
 
     @Column(name = "cost", precision = 6, scale = 2, nullable = false)
     private BigDecimal cost;
+    @Column(name = "is_for_team", nullable = false)
+    private boolean isForTeam = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
@@ -49,9 +52,6 @@ public class Event {
     @EqualsAndHashCode.Exclude
     private EventVisibility eventVisibility;
 
-    @Column(name = "status", length = 50, nullable = false)
-    private String status;
-
     @Column(name = "score_team1")
     private Integer scoreTeam1;
 
@@ -70,6 +70,14 @@ public class Event {
 
     @Column(name = "description", length = 1000)
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EventStatus status;
+
+    @Column(name = "is_attendance_checked")
+    private Boolean isAttendanceChecked = false;
+
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "event_payment_methods", joinColumns = @JoinColumn(name = "event_id"))
@@ -95,4 +103,13 @@ public class Event {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<ReportEvent> reportEvents = new HashSet<>();
+    @OneToMany(
+            mappedBy = "event",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<EventTeam> eventTeams = new HashSet<>();
+
 }

@@ -1,5 +1,6 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Reports.TeamReportDto;
 import com.joinmatch.backend.dto.Team.CancelTeamRequestDto;
 import com.joinmatch.backend.dto.Team.TeamDetailsDto;
@@ -10,6 +11,7 @@ import com.joinmatch.backend.repository.ReportTeamRepository;
 import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.TeamRepository;
 import com.joinmatch.backend.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.*;
@@ -46,9 +48,9 @@ public class TeamService {
         Page<Team> teams = teamRepository.findAll(sortedPageable);
 
         List<Team> filtered = teams.getContent().stream()
-                .filter(event -> event.getReportTeamSet()
+                .filter(team -> team.getReportTeamSet() == null || team.getReportTeamSet()
                         .stream()
-                        .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
+                        .noneMatch(reportTeam -> Boolean.TRUE.equals(reportTeam.getActive())))
                 .toList();
 
         Page<Team> filteredPage = new PageImpl<>(
@@ -139,9 +141,16 @@ public class TeamService {
         return TeamResponseDto.fromTeam(savedTeam);
     }
 
-    public void reportUserRating(TeamReportDto teamReportDto) {
+    public void reportUserRating(TeamReportDto teamReportDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Team team = teamRepository.findById(teamReportDto.IdTeam()).orElseThrow(() -> new IllegalArgumentException());
-        User user = userRepository.findByTokenValue(teamReportDto.token()).orElseThrow(() -> new IllegalArgumentException());
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException());
+        if(reportTeamRepository.existsByTeam_IdAndTeamReporterUser_IdAndActiveTrue(teamReportDto.IdTeam(), user.getId())){
+            throw new RuntimeException("Not allowed to multiple report");
+        }
         ReportTeam reportTeam = new ReportTeam();
         reportTeam.setTeamReporterUser(user);
         reportTeam.setDescription(teamReportDto.description());
@@ -150,8 +159,6 @@ public class TeamService {
         reportTeam.setTeam(team);
         team.getReportTeamSet().add(reportTeam);
         user.getTeamReportSender().add(reportTeam);
-//        userRepository.save(user);
-//        teamRepository.save(team);
         reportTeamRepository.save(reportTeam);
     }
 }

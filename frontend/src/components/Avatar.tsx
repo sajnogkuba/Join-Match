@@ -1,5 +1,5 @@
 interface AvatarProps {
-    src: string | null;
+    src?: string | null; 
     name: string;
     size?: "sm" | "md" | "lg";
     className?: string;
@@ -21,7 +21,6 @@ const Avatar = ({
 
     const baseClasses = "rounded-full object-cover ring-2 ring-zinc-700 flex items-center justify-center font-semibold text-white bg-gradient-to-br from-violet-600 to-purple-700";
 
-    // Show loading state
     if (loading) {
         return (
             <div className={`${baseClasses} ${sizeClasses[size]} ${className} animate-pulse bg-zinc-700`}>
@@ -40,7 +39,8 @@ const Avatar = ({
         );
     }
 
-    const firstLetter = name.charAt(0).toUpperCase();
+    // Zabezpieczenie na wypadek pustego name (opcjonalne, ale dobre dla bezpieczeństwa)
+    const firstLetter = name ? name.charAt(0).toUpperCase() : '?';
 
     return (
         <div className={`${baseClasses} ${sizeClasses[size]} ${className}`}>

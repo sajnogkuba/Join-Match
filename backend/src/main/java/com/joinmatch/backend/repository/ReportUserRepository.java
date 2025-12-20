@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ReportUserRepository extends JpaRepository<ReportUser, Integer> {
     long countByReviewedIsFalse();
     Page<ReportUser> findAllByOrderByIdDesc(Pageable pageable);
+    boolean existsBySuspectUser_IdAndReporterUser_IdAndActiveTrue(Integer suspectUserId, Integer reporterId);
+
 }

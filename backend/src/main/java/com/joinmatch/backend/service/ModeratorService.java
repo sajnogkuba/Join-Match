@@ -1,14 +1,19 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Moderator.*;
+import com.joinmatch.backend.enums.Role;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +24,8 @@ public class ModeratorService {
     private final ReportTeamRepository reportTeamRepository;
     private final ReportUserRatingRepository reportUserRatingRepository;
     private final ReportUserRepository reportUserRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public GetStatisticsForDashboard getStatisticsForDashboard(){
         long newReportsForCompetition = reportCompetitionRepository.countByReviewedIsFalse();
@@ -302,5 +309,27 @@ public class ModeratorService {
         referenceById.getReporterUser().getUserReportSender().remove(referenceById);
         reportUserRepository.delete(referenceById);
 
+    }
+
+    public void authenticate(HttpServletRequest httpServletRequest) {
+        String token = TokenExtractor.extractToken(httpServletRequest);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
+        if (!byTokenValue.isPresent()) {
+            throw new IllegalArgumentException("No users found");
+        }
+        User user = byTokenValue.get();
+        System.out.println("Here ===============================================================");
+        if((!user.getRole().equals(Role.MODERATOR) && (!user.getRole().equals(Role.ADMIN)))){
+            throw new IllegalArgumentException("Not authorised");
+        }
+    }
+
+    public void sendWarning(ModeratorWarningRequest request, HttpServletRequest httpRequest) {
+        User user = userRepository.findByEmail(request.usermailOfReceiver())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        notificationService.sendModeratorWarning(user);
     }
 }

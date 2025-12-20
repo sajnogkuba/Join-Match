@@ -46,9 +46,7 @@ const ProfileImageModal = ({
                 headers: { "Content-Type": "multipart/form-data" }
             });
             const photoUrl = uploadResponse.data;
-            const token = localStorage.getItem("accessToken");
-            if (!token) throw new Error("Brak tokenu autoryzacji");
-            await api.patch("/auth/user/photo", { token, photoUrl });
+            await api.patch("/auth/user/photo", { photoUrl });
             onPhotoUpdated(photoUrl);
             handleClose();
         } catch {

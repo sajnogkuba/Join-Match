@@ -13,16 +13,16 @@ import com.joinmatch.backend.dto.Reports.UserReportDto;
 import com.joinmatch.backend.enums.FriendRequestStatus;
 import com.joinmatch.backend.model.JoinMatchToken;
 import com.joinmatch.backend.model.ReportUser;
-import com.joinmatch.backend.model.Role;
+import com.joinmatch.backend.enums.Role;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.*;
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +41,7 @@ public class UserService {
     private final FriendshipRepository friendshipRepository;
     private final GoogleTokenVerifier tokenVerifier;
     private final ReportUserRepository reportUserRepository;
+    private final EmailService emailService;
 
 
     public void register(RegisterRequest request) {
@@ -54,8 +55,13 @@ public class UserService {
         user.setDateOfBirth(LocalDate.parse(request.dateOfBirth()));
         user.setRole(Role.USER);
         user.setIsBlocked(false);
+        user.setIsVerified(false);
+        String code = generateVerificationCode();
+        user.setVerificationCode(code);
+
         userRepository.save(user);
-        // Można dodać logikę wysyłania e-maila weryfikacyjnego
+
+        emailService.sendVerificationEmail(user.getEmail(), code);
     }
 
     public TokenSupportObject login(LoginRequest request) {
@@ -63,6 +69,9 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
+        }
+        if (!user.getIsVerified()) {
+            throw new RuntimeException("Account is not verified. Please check your email for the code.");
         }
         if (user.getIsBlocked()) {
             throw new IllegalArgumentException("User is blocked");
@@ -124,8 +133,12 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(ChangePassDto changePassDto) {
-        Optional<User> byTokenValue = userRepository.findByTokenValue(changePassDto.token());
+    public void changePassword(ChangePassDto changePassDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if (!byTokenValue.isPresent()) {
             throw new IllegalArgumentException("No users found");
         }
@@ -138,7 +151,11 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public UserResponseDto getSimpleInfo(String token) {
+    public UserResponseDto getSimpleInfo(HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if (byTokenValue.isEmpty()) {
             throw new IllegalArgumentException("User Not Found");
@@ -147,7 +164,11 @@ public class UserService {
         return UserResponseDto.fromUser(user);
     }
 
-    public void updateUserPhoto(String token, String photoUrl) {
+    public void updateUserPhoto(String photoUrl, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Optional<User> byTokenValue = userRepository.findByTokenValue(token);
         if (byTokenValue.isEmpty()) {
             throw new IllegalArgumentException("User Not Found");
@@ -302,7 +323,7 @@ public class UserService {
             User u = new User();
             u.setEmail(email);
             u.setName(name != null ? name : email);
-            u.setPassword("test");
+            u.setPassword(null);
             u.setDateOfBirth(LocalDate.now());
             u.setRole(Role.USER);
             u.setIsBlocked(false);
@@ -315,8 +336,12 @@ public class UserService {
        return new JwtResponse(tokenSupportObject.getToken(),tokenSupportObject.getRefreshToken(),email);
     }
 
-    public void reportUser(UserReportDto userReportDto) {
-        User user = userRepository.findByTokenValue(userReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
+    public void reportUser(UserReportDto userReportDto, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("Brak uprawnien");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException("Brak uprawnien"));
         User suspect = userRepository.findById(userReportDto.reportedUserId()).orElseThrow(() -> new IllegalArgumentException("Brak usera"));
         ReportUser reportUser = new ReportUser();
         reportUser.setSuspectUser(suspect);
@@ -325,8 +350,6 @@ public class UserService {
         reportUser.setDescription(userReportDto.description());
         suspect.getSuspectUser().add(reportUser);
         user.getUserReportSender().add(reportUser);
-//        userRepository.save(user);
-//        userRepository.save(suspect);
         reportUserRepository.save(reportUser);
     }
     public User findByEmail(String email) {
@@ -337,6 +360,29 @@ public class UserService {
     public User findById(Integer id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id " + id));
+    }
+
+    public void verifyUser(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getIsVerified()) {
+            throw new RuntimeException("User already verified");
+        }
+
+        if (user.getVerificationCode() != null && user.getVerificationCode().equals(code)) {
+            user.setIsVerified(true);
+            user.setVerificationCode(null);
+            userRepository.save(user);
+        } else {
+            throw new RuntimeException("Invalid verification code");
+        }
+    }
+
+    private String generateVerificationCode() {
+        Random random = new Random();
+        int code = 100000 + random.nextInt(900000); // 6 digit code
+        return String.valueOf(code);
     }
 
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
 import type { Participant } from '../Api/types/Participant'
@@ -16,6 +16,7 @@ import ReportEventModal from '../components/ReportEventModal'
 import ReportRatingModal from '../components/ReportRatingModal'
 import AlertModal from '../components/AlertModal'
 import InviteToEventModal from '../components/InviteToEventModal'
+import JoinAsTeamModal from '../components/JoinAsTeamModal.tsx'
 import {
 	Share2,
 	Shield,
@@ -33,9 +34,12 @@ import {
 	X,
 	CheckCircle,
 	XCircle,
+	UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
+import { EventStatus } from '../Api/types/EventStatus'
+import AttendanceControlModal from '../components/AttendanceControlModal'
 
 dayjs.locale('pl')
 
@@ -45,6 +49,8 @@ const EventPage: React.FC = () => {
 
 	const [showReportModal, setShowReportModal] = useState(false)
 	const [isSendingReport, setIsSendingReport] = useState(false)
+
+	const [showAttendanceModal, setShowAttendanceModal] = useState(false)
 
 	const [showRatingReportModal, setShowRatingReportModal] = useState(false)
 	const [ratingToReport, setRatingToReport] = useState<EventRatingResponse | null>(null)
@@ -62,10 +68,9 @@ const EventPage: React.FC = () => {
 	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
 	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
 	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
+	const isJoined = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany')
 
-	const visibleParticipantsCount = confirmedParticipants.length
-
-	const [joined, setJoined] = useState(false)
+	const [, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
 	const [showShareModal, setShowShareModal] = useState(false)
@@ -84,12 +89,22 @@ const EventPage: React.FC = () => {
 	const [editRatingComment, setEditRatingComment] = useState<string>('')
 	const [hasRatedOrganizer, setHasRatedOrganizer] = useState(false)
 	const [showBannedAlert, setShowBannedAlert] = useState(false)
+	const [showJoinTeamModal, setShowJoinTeamModal] = useState(false)
+	const [leaderTeams, setLeaderTeams] = useState<any[]>([])
+	const [loadingLeaderTeams, setLoadingLeaderTeams] = useState(false)
+
+	const teamParticipantsCount = event?.teamParticipants ?? 0
+
+	const totalParticipantsCount = confirmedParticipants.length + teamParticipantsCount
 
 	const averageRating = eventRatings.length
 		? eventRatings.reduce((acc: number, r: EventRatingResponse) => acc + r.rating, 0) / eventRatings.length
 		: null
 
 	const hasRated = !!(currentUserName && eventRatings.some(r => r.userName === currentUserName))
+	const myTeamInEvent =
+		event?.isForTeam && event?.teams && leaderTeams.some(lt => event.teams!.some(et => et.teamId === lt.teamId))
+	const myEventTeam = event?.teams?.find(et => leaderTeams.some(lt => lt.teamId === et.teamId))
 
 	const getSkillLevelValue = (level?: string) => {
 		switch (level?.toLowerCase()) {
@@ -107,22 +122,72 @@ const EventPage: React.FC = () => {
 				return 1
 		}
 	}
+	type LeaderTeam = {
+		idTeam: number
+		name: string
+		city?: string | null
+		leaderId: number
+		leaderName?: string | null
+		photoUrl?: string | null
+	}
 
-	// --- HANDLER: ZGŁOSZENIE WYDARZENIA ---
+	const fetchLeaderTeams = async () => {
+		if (!currentUserId) return
+
+		setLoadingLeaderTeams(true)
+		try {
+			const res = await axiosInstance.get('/team/by-leader', {
+				params: { leaderId: currentUserId }, // page/size mogą zostać, ale nie muszą
+			})
+
+			const raw: LeaderTeam[] = res.data?.content ?? []
+
+			// NORMALIZACJA do formatu event.teams (czyli teamId)
+			const normalized = raw.map(t => ({
+				teamId: t.idTeam,
+				name: t.name,
+				city: t.city ?? null,
+				leaderId: t.leaderId,
+				leaderName: t.leaderName ?? '',
+				photoUrl: t.photoUrl ?? null,
+			}))
+
+			setLeaderTeams(normalized)
+		} catch (e) {
+			console.error('Błąd pobierania drużyn leadera', e)
+			setLeaderTeams([])
+		} finally {
+			setLoadingLeaderTeams(false)
+		}
+	}
+
+	const handleCancelEvent = async () => {
+		if (!event) return
+
+		const confirmed = window.confirm('Czy na pewno chcesz odwołać to wydarzenie?\n\nUczestnicy zostaną powiadomieni.')
+		if (!confirmed) return
+
+		try {
+			await axiosInstance.patch(`/event/${event.eventId}/cancel`)
+			toast.success('Wydarzenie zostało odwołane')
+
+			setEvent(prev => (prev ? { ...prev, status: EventStatus.CANCELED } : prev))
+		} catch (e: any) {
+			if (e?.response?.status === 403) {
+				toast.error('Nie masz uprawnień do odwołania tego wydarzenia')
+			} else {
+				toast.error('Nie udało się odwołać wydarzenia')
+			}
+		}
+	}
+
 	const handleSubmitReport = async (message: string) => {
 		if (!id) return
-
-		const token = localStorage.getItem('accessToken')
-		if (!token) {
-			toast.error('Musisz być zalogowany, aby zgłosić wydarzenie.')
-			return
-		}
 
 		try {
 			setIsSendingReport(true)
 
 			await axiosInstance.post('/event/report/event', {
-				token,
 				idEvent: Number(id),
 				description: message,
 			})
@@ -131,6 +196,15 @@ const EventPage: React.FC = () => {
 			setShowReportModal(false)
 		} catch (e: any) {
 			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e)
+
+			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie już zaakceptowane
+			if (e?.response?.status === 403) {
+				toast.error('Twoje zgłoszenie zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.')
+				setShowReportModal(false)
+				return
+			}
+
+			// Dalsza obsługa błędów
 			if (e?.response?.status === 400) {
 				toast.error('Nie udało się wysłać zgłoszenia (400).')
 			} else {
@@ -144,16 +218,10 @@ const EventPage: React.FC = () => {
 	const handleSubmitRatingReport = async (message: string) => {
 		if (!ratingToReport) return
 
-		const token = localStorage.getItem('accessToken')
-		if (!token) {
-			toast.error('Musisz być zalogowany, aby zgłosić ocenę.')
-			return
-		}
-
 		try {
 			setIsSendingRatingReport(true)
+
 			await axiosInstance.post('/ratings/report/eventRating', {
-				token,
 				idEventRating: ratingToReport.id,
 				description: message,
 			})
@@ -162,9 +230,19 @@ const EventPage: React.FC = () => {
 			setShowRatingReportModal(false)
 			setRatingToReport(null)
 		} catch (e: any) {
-			console.error('❌ Błąd wysyłania zgłoszenia oceny wydarzenia:', e)
+			console.error('❌ Błąd wysyłania zgłoszenia oceny:', e)
+
+			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie tej oceny już zaakceptowane
+			if (e?.response?.status === 403) {
+				toast.error('Twoje zgłoszenie tej oceny zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.')
+				setShowRatingReportModal(false)
+				setRatingToReport(null)
+				return
+			}
+
+			// Obsługa pozostałych błędów
 			if (e?.response?.status === 400) {
-				toast.error('Nie udało się wysłać zgłoszenia (400).')
+				toast.error('Nie udało się wysłać zgłoszenia oceny (400).')
 			} else {
 				toast.error('Nie udało się wysłać zgłoszenia oceny.')
 			}
@@ -226,20 +304,18 @@ const EventPage: React.FC = () => {
 		checkOrganizerRated()
 	}, [currentUserId, event?.ownerId, id])
 
-	// fetch user email from backend based on stored access token (similar to ProfilePage)
+	useEffect(() => {
+		if (currentUserId) fetchLeaderTeams()
+	}, [currentUserId])
+
 	useEffect(() => {
 		const fetchUserEmail = async () => {
-			const token = localStorage.getItem('accessToken')
-			if (!token) {
-				setUserEmail(null)
-				return
-			}
 			try {
-				const { data } = await axiosInstance.get('/auth/user/details', { params: { token } })
+				const { data } = await axiosInstance.get('/auth/user/details')
 				setUserEmail(data.email)
 			} catch (err) {
-				console.error('❌ Nie udało się pobrać danych użytkownika:', err)
 				setUserEmail(null)
+				setJoined(false)
 			}
 		}
 
@@ -248,27 +324,31 @@ const EventPage: React.FC = () => {
 
 	useEffect(() => {
 		const fetchUser = async () => {
-			const token = localStorage.getItem('accessToken')
-			if (!token) return
 			try {
-				const { data } = await axiosInstance.get('/auth/user', { params: { token } })
+				const { data } = await axiosInstance.get('/auth/user')
 				setCurrentUserId(data.id)
 				setCurrentUserName(data.name)
 				setUserEmail(data.email)
 			} catch (err) {
-				console.error('❌ Błąd pobierania usera:', err)
+				setCurrentUserId(null)
+				setCurrentUserName(null)
+				setUserEmail(null)
+				setJoined(false)
 			}
 		}
 		fetchUser()
 	}, [])
 
+	useEffect(() => {
+		if (!currentUserId) {
+			setJoined(false)
+		}
+	}, [currentUserId])
+
 	const fetchParticipants = async (eventId: number) => {
 		try {
 			const { data } = await axiosInstance.get<Participant[]>(`/user-event/${eventId}/participants`)
 			setParticipants(data || [])
-			if (userEmail && data?.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany'))
-				setJoined(true)
-			else setJoined(false)
 		} catch (err) {
 			console.error('❌ Błąd pobierania uczestników:', err)
 			setParticipants([])
@@ -393,7 +473,6 @@ const EventPage: React.FC = () => {
 	const saveEditEventRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
 			await axiosInstance.put(
 				`/ratings/event/${ratingId}`,
 				{
@@ -403,7 +482,6 @@ const EventPage: React.FC = () => {
 					comment: editRatingComment,
 				},
 				{
-					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 					params: { userId: currentUserId },
 				}
 			)
@@ -417,9 +495,7 @@ const EventPage: React.FC = () => {
 
 	const deleteEventRating = async (ratingId: number) => {
 		try {
-			const token = localStorage.getItem('accessToken')
 			await axiosInstance.delete(`/ratings/event/${ratingId}`, {
-				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
 			showRatingToast({ type: 'delete', target: 'wydarzenia' })
@@ -441,21 +517,39 @@ const EventPage: React.FC = () => {
 			return
 		}
 
-		const fetchEvent = async () => {
+		setLoading(true)
+
+		const init = async () => {
 			try {
+				let fetchedEmail: string | null = null
+
+				try {
+					const { data } = await axiosInstance.get('/auth/user')
+					setCurrentUserId(data.id)
+					setCurrentUserName(data.name)
+					setUserEmail(data.email)
+					fetchedEmail = data.email ?? null
+				} catch {
+					setCurrentUserId(null)
+					setCurrentUserName(null)
+					setUserEmail(null)
+					fetchedEmail = null
+				}
+
 				const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
 				setEvent(data)
 
 				if (data.isBanned) {
 					setShowBannedAlert(true)
-					setLoading(false)
 					return
 				}
 
 				await fetchParticipants(Number(id))
 
-				if (userEmail) {
-					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, { params: { userEmail } })
+				if (fetchedEmail) {
+					const savedRes = await axiosInstance.get(`/user-saved-event/by-user-email`, {
+						params: { userEmail: fetchedEmail },
+					})
 					if (savedRes.data?.some?.((s: any) => s.eventId === Number(id))) {
 						setSaved(true)
 					}
@@ -468,13 +562,14 @@ const EventPage: React.FC = () => {
 			}
 		}
 
-		fetchEvent()
-	}, [id, userEmail])
+		init()
+	}, [id])
 
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
+		if (isEventPast) return // Nie można dołączać/opuszczać zakończonych wydarzeń
 		try {
-			if (joined || isPending) {
+			if (isJoined || isPending) {
 				await axiosInstance.delete(`/user-event`, {
 					data: { userEmail, eventId: Number(id) },
 				})
@@ -488,6 +583,24 @@ const EventPage: React.FC = () => {
 			await fetchParticipants(Number(id))
 		} catch (err) {
 			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
+		}
+	}
+
+	const handleLeaveTeam = async (teamId: number) => {
+		if (!id) return
+
+		try {
+			await axiosInstance.delete(`/event/${id}/leave-team`, {
+				params: { teamId }, // ⬅⬅⬅ TO JEST KLUCZOWE
+			})
+
+			toast.success('Drużyna została wypisana z wydarzenia')
+
+			const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
+			setEvent(data)
+		} catch (e) {
+			console.error('Błąd wypisywania drużyny', e)
+			toast.error('Nie udało się wypisać drużyny')
 		}
 	}
 
@@ -532,13 +645,9 @@ const EventPage: React.FC = () => {
 	const handleMessageOrganizer = async () => {
 		if (!currentUserId || !event?.ownerId) return
 		try {
-			const token = localStorage.getItem('accessToken')
 			const res = await axiosInstance.post(
 				`/conversations/direct?user1Id=${currentUserId}&user2Id=${event.ownerId}`,
-				null,
-				{
-					headers: token ? { Authorization: `Bearer ${token}` } : {},
-				}
+				null
 			)
 			const conversationId = res.data?.id || res.data?.conversationId
 			navigate('/chat', { state: { conversationId, targetUserId: event.ownerId } })
@@ -604,10 +713,7 @@ const EventPage: React.FC = () => {
 		if (!id || !currentUserId || event?.ownerId !== currentUserId) return
 
 		try {
-			const token = localStorage.getItem('accessToken')
-			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null, {
-				params: { token },
-			})
+			await axiosInstance.patch(`/user-event/${id}/participant/${participantId}/payment`, null)
 
 			setParticipants(prev => prev.map(p => (p.userId === participantId ? { ...p, isPaid: !currentStatus } : p)))
 
@@ -663,11 +769,9 @@ const EventPage: React.FC = () => {
 			</div>
 		)
 
-	const spotsLeft = Math.max(0, event.numberOfParticipants - confirmedParticipants.length)
-	const progressPercentage = Math.min(
-		100,
-		(confirmedParticipants.length / Math.max(1, event.numberOfParticipants)) * 100
-	)
+	const spotsLeft = Math.max(0, event.numberOfParticipants - totalParticipantsCount)
+
+	const progressPercentage = Math.min(100, (totalParticipantsCount / Math.max(1, event.numberOfParticipants)) * 100)
 
 	return (
 		<>
@@ -688,7 +792,7 @@ const EventPage: React.FC = () => {
 								</div>
 							)}
 
-							{joined && isEventPast && hasRatedOrganizer && (
+							{isJoined && isEventPast && hasRatedOrganizer && (
 								<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś tego organizatora.</p>
 							)}
 
@@ -721,6 +825,13 @@ const EventPage: React.FC = () => {
 						</div>
 					</div>
 
+					{event.status === EventStatus.CANCELED && (
+						<div className='mt-6 mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-300 flex items-center gap-2'>
+							<XCircle size={18} />
+							<span className='font-medium'>To wydarzenie zostało odwołane przez organizatora.</span>
+						</div>
+					)}
+
 					<hr className='my-6 border-zinc-800' />
 
 					<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
@@ -729,7 +840,7 @@ const EventPage: React.FC = () => {
 								<div className='mb-3 flex items-center justify-between'>
 									<h3 className='text-white text-lg font-semibold'>Zapełnienie wydarzenia</h3>
 									<span className='text-violet-300 font-semibold'>
-										{confirmedParticipants.length}/{event.numberOfParticipants}
+										{totalParticipantsCount}/{event.numberOfParticipants}
 									</span>
 								</div>
 								<div className='h-3 w-full overflow-hidden rounded-full bg-zinc-800'>
@@ -751,7 +862,9 @@ const EventPage: React.FC = () => {
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<div className='mb-4 flex items-center justify-between'>
-									<h3 className='text-white text-lg font-semibold'>Uczestnicy ({visibleParticipantsCount})</h3>
+									<h3 className='text-white text-lg font-semibold'>
+										Uczestnicy ({confirmedParticipants.length} + {event.teamParticipants ?? 0})
+									</h3>
 									<button
 										onClick={() => setShowParticipants(s => !s)}
 										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
@@ -759,6 +872,53 @@ const EventPage: React.FC = () => {
 										<ChevronDown size={16} className={`transition-transform ${showParticipants ? 'rotate-180' : ''}`} />
 									</button>
 								</div>
+								{/* ================= DRUŻYNY (EVENT DRUŻYNOWY) ================= */}
+								{event.isForTeam && event.teams && (
+									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-6 mb-6'>
+										<h3 className='text-white text-lg font-semibold mb-4'>Drużyny ({event.teams.length})</h3>
+
+										{event.teams.length === 0 ? (
+											<p className='text-sm text-zinc-400 italic'>Brak zapisanych drużyn.</p>
+										) : (
+											<div className='space-y-3'>
+												{event.teams.map(team => (
+													<Link
+														key={team.teamId}
+														to={`/team/${team.teamId}`}
+														className='flex items-center justify-between rounded-xl
+                       bg-zinc-800/60 p-3 hover:bg-zinc-800 transition'>
+														<div className='flex items-center gap-3'>
+															{team.photoUrl ? (
+																<img
+																	src={team.photoUrl}
+																	alt={team.name}
+																	className='h-10 w-10 rounded-lg object-cover
+                             border border-zinc-700'
+																/>
+															) : (
+																<div
+																	className='h-10 w-10 rounded-lg bg-zinc-700
+                                flex items-center justify-center
+                                text-xs text-zinc-300'>
+																	TEAM
+																</div>
+															)}
+
+															<div>
+																<p className='text-white font-medium leading-tight'>{team.name}</p>
+																<p className='text-xs text-zinc-400'>
+																	{team.city ?? '—'} • Lider: {team.leaderName}
+																</p>
+															</div>
+														</div>
+
+														<span className='text-xs text-violet-300'>Zobacz →</span>
+													</Link>
+												))}
+											</div>
+										)}
+									</div>
+								)}
 
 								{currentUserId === event?.ownerId && (
 									<button
@@ -821,14 +981,24 @@ const EventPage: React.FC = () => {
 													<div className='font-medium text-white leading-tight'>
 														{p.userEmail === userEmail ? `${p.userName} (Ty)` : p.userName}
 													</div>
-													{p.skillLevel && (
-														<div
-															className={`mt-0.5 inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
-																p.skillLevel
-															)}`}>
-															{p.skillLevel}
-														</div>
-													)}
+													<div className='mt-1 flex items-center gap-2'>
+														{p.sportRating && (
+															<div
+																className='flex items-center gap-1.5'
+																title={`Poziom zaawansowania w ${event.sportTypeName}: ${p.sportRating}/5`}>
+																<StarRatingDisplay value={p.sportRating} size={14} max={5} />
+																<span className='text-xs text-zinc-400'>{event.sportTypeName}</span>
+															</div>
+														)}
+														{p.skillLevel && (
+															<div
+																className={`inline-block rounded px-2 py-0.5 text-[10px] ${getSkillLevelColor(
+																	p.skillLevel
+																)}`}>
+																{p.skillLevel}
+															</div>
+														)}
+													</div>
 												</div>
 											</div>
 
@@ -868,8 +1038,8 @@ const EventPage: React.FC = () => {
 									))}
 								</div>
 
-								{!showParticipants && participants.length > 8 && (
-									<p className='text-center text-xs text-zinc-400'>i {participants.length - 8} więcej…</p>
+								{!showParticipants && totalParticipantsCount > 8 && (
+									<p className='text-center text-xs text-zinc-400'>i {totalParticipantsCount - 8} więcej…</p>
 								)}
 							</div>
 
@@ -878,7 +1048,7 @@ const EventPage: React.FC = () => {
 								<p className='text-sm text-zinc-400 mb-4'>
 									Rozmawiaj z innymi uczestnikami wydarzenia w dedykowanym czacie grupowym.
 								</p>
-								{joined || currentUserId === event.ownerId ? (
+								{isJoined || currentUserId === event.ownerId ? (
 									<button
 										onClick={async () => {
 											if (!id) return
@@ -994,17 +1164,17 @@ const EventPage: React.FC = () => {
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-8'>
 								<h3 className='text-white text-lg font-semibold mb-3'>Oceny wydarzenia</h3>
 
-								{joined && isEventPast && !hasRated && (
+								{isJoined && isEventPast && !hasRated && (
 									<EventRatingForm onSubmit={handleAddEventRating} disabled={isSending} />
 								)}
 
-								{joined && !isEventPast && (
+								{isJoined && !isEventPast && (
 									<p className='text-sm text-zinc-400 italic mt-3'>
 										Możesz ocenić wydarzenie dopiero po jego zakończeniu.
 									</p>
 								)}
 
-								{joined && isEventPast && hasRated && (
+								{isJoined && isEventPast && hasRated && (
 									<p className='text-sm text-emerald-300 italic mt-3'>Dziękujemy! Już oceniłeś to wydarzenie.</p>
 								)}
 
@@ -1072,7 +1242,7 @@ const EventPage: React.FC = () => {
 								)}
 							</div>
 
-							{joined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
+							{isJoined && isEventPast && !hasRatedOrganizer && currentUserId !== event.ownerId && (
 								<EventRatingForm
 									title='Oceń organizatora'
 									onSubmit={async (rating, comment) => {
@@ -1105,13 +1275,13 @@ const EventPage: React.FC = () => {
 								/>
 							)}
 
-							{!joined && (
+							{!isJoined && (
 								<p className='text-sm text-zinc-400 italic mt-3'>
 									Możesz ocenić organizatora tylko, jeśli uczestniczyłeś w wydarzeniu.
 								</p>
 							)}
 
-							{joined && !isEventPast && (
+							{isJoined && !isEventPast && (
 								<p className='text-sm text-zinc-400 italic mt-3'>
 									Ocenić organizatora możesz dopiero po zakończeniu wydarzenia.
 								</p>
@@ -1120,8 +1290,40 @@ const EventPage: React.FC = () => {
 
 						<aside className='space-y-6 lg:sticky lg:top-6'>
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
-								{event.status?.toLowerCase() === 'planned' && spotsLeft > 0 ? (
-									// If the current user was invited, show accept/decline UI
+								{myTeamInEvent && myEventTeam && (
+									<>
+										<div
+											className='mb-3 rounded-xl bg-emerald-500/15
+      border border-emerald-500/30
+      px-4 py-2 text-sm text-emerald-300 text-center'>
+											✔ Twoja drużyna bierze udział w tym wydarzeniu
+										</div>
+
+										<button
+											onClick={() => handleLeaveTeam(myEventTeam.teamId)}
+											className='w-full rounded-2xl bg-rose-600 hover:bg-rose-500 mb-2
+        px-4 py-3 text-white font-semibold transition'>
+											Wypisz drużynę z wydarzenia
+										</button>
+									</>
+								)}
+
+								{event.status === EventStatus.CANCELED ? (
+									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
+										Wydarzenie odwołane
+									</button>
+								) : isEventPast ? (
+									<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 font-semibold text-zinc-400'>
+										Zakończone
+									</button>
+								) : event.status === EventStatus.PLANNED && spotsLeft > 0 ? (
+									!currentUserId ? (
+										<Link
+											to='/login'
+											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
+											Zaloguj się, aby dołączyć
+										</Link>
+									) : // If the current user was invited, show accept/decline UI
 									isInvited ? (
 										<div className='space-y-3'>
 											<div className='rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 text-center'>
@@ -1154,15 +1356,21 @@ const EventPage: React.FC = () => {
 										<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 text-zinc-400'>
 											Twoja prośba oczekuje na akceptację…
 										</button>
+									) : !currentUserId ? (
+										<Link
+											to='/login'
+											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
+											Zaloguj się, aby dołączyć
+										</Link>
 									) : (
 										<button
 											onClick={handleJoinEvent}
 											className={`w-full rounded-2xl px-4 py-3 text-white font-semibold transition ${
-												joined
+												isJoined
 													? 'bg-rose-600 hover:bg-rose-500'
 													: 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30'
 											}`}>
-											{joined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
+											{isJoined ? 'Opuść wydarzenie' : 'Dołącz do wydarzenia'}
 										</button>
 									)
 								) : spotsLeft <= 0 ? (
@@ -1174,6 +1382,51 @@ const EventPage: React.FC = () => {
 										Wydarzenie niedostępne
 									</button>
 								)}
+								{currentUserId && event.isForTeam && (
+									<button
+										onClick={() => {
+											fetchLeaderTeams()
+											setShowJoinTeamModal(true)
+										}}
+										disabled={
+											loadingLeaderTeams || myTeamInEvent || event.status === EventStatus.CANCELED || !!isEventPast
+										}
+										className={`mt-3 w-full rounded-2xl px-4 py-3 text-white font-semibold transition
+			${myTeamInEvent ? 'bg-emerald-700/60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}
+		`}>
+										{myTeamInEvent ? 'Drużyna już dołączyła' : 'Dołącz jako drużyna'}
+									</button>
+								)}
+							</div>
+
+							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
+								<h3 className='text-white text-lg font-semibold mb-4'>Sport</h3>
+								<div className='flex items-center gap-4'>
+									{event.sportTypeURL ? (
+										<img
+											src={event.sportTypeURL}
+											alt={event.sportTypeName}
+											className='h-16 w-16 rounded-xl object-cover border border-zinc-700 shadow-md'
+											onError={e => {
+												e.currentTarget.style.display = 'none'
+												const fallback = e.currentTarget.nextElementSibling as HTMLElement
+												if (fallback) fallback.style.display = 'flex'
+											}}
+										/>
+									) : null}
+									<div
+										className={`flex items-center justify-center h-16 w-16 rounded-xl border border-zinc-700 bg-zinc-800/50 ${
+											event.sportTypeURL ? 'hidden' : ''
+										}`}
+										style={{ display: event.sportTypeURL ? 'none' : 'flex' }}>
+										<span className='text-2xl'>{event.sportTypeName}</span>
+									</div>
+									<div>
+										<div className='font-semibold text-white text-lg'>
+											{event.sportTypeName.charAt(0).toUpperCase() + event.sportTypeName.slice(1)}
+										</div>
+									</div>
+								</div>
 							</div>
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
@@ -1208,6 +1461,43 @@ const EventPage: React.FC = () => {
 								</div>
 							</div>
 
+							{/* --- SEKCJA KONTROLI OBECNOŚCI --- */}
+							{currentUserId === event.ownerId &&
+								parseEventDate(event.eventDate).isBefore(dayjs()) &&
+								event.status !== EventStatus.CANCELED &&
+								(!event.isAttendanceChecked ? (
+									<div className='rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5 mb-6'>
+										<h3 className='text-violet-300 text-lg font-semibold mb-2 flex items-center gap-2'>
+											<UserCheck size={20} /> Strefa Organizatora
+										</h3>
+
+										<p className='text-xs text-zinc-400 mb-4'>
+											Wydarzenie się rozpoczęło. Sprawdź listę obecności, aby system mógł nagrodzić obecnych i ukarać
+											nieobecnych.
+										</p>
+
+										<button
+											onClick={() => setShowAttendanceModal(true)}
+											className='w-full inline-flex items-center justify-center gap-2 rounded-xl
+					bg-violet-600 hover:bg-violet-500
+					text-white font-semibold py-3 transition
+					shadow-lg shadow-violet-900/30'>
+											<UserCheck size={18} />
+											Sprawdź obecność
+										</button>
+									</div>
+								) : (
+									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 mb-6 flex items-center gap-3 opacity-90'>
+										<div className='bg-violet-500/15 p-2 rounded-full text-violet-300 ring-1 ring-violet-500/20'>
+											<Check size={20} />
+										</div>
+										<div>
+											<p className='text-zinc-200 font-medium text-sm'>Obecność sprawdzona</p>
+											<p className='text-zinc-500 text-xs'>Lista obecności została już zamknięta.</p>
+										</div>
+									</div>
+								))}
+
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 								<h3 className='text-white text-lg font-semibold'>Akcje</h3>
 								<div className='mt-4 space-y-3'>
@@ -1230,6 +1520,16 @@ const EventPage: React.FC = () => {
 										className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
 										<AlertTriangle size={16} /> Zgłoś wydarzenie
 									</button>
+
+									{currentUserId === event.ownerId && event.status === EventStatus.PLANNED && !isEventPast && (
+										<button
+											onClick={handleCancelEvent}
+											className='w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm
+													text-rose-300 ring-1 ring-rose-700/40 hover:bg-rose-500/10'>
+											<XCircle size={16} />
+											Odwołaj wydarzenie
+										</button>
+									)}
 								</div>
 							</div>
 						</aside>
@@ -1322,6 +1622,31 @@ const EventPage: React.FC = () => {
 					isSubmitting={isSendingRatingReport}
 				/>
 			)}
+
+			{showAttendanceModal && event && (
+				<AttendanceControlModal
+					isOpen={showAttendanceModal}
+					onClose={() => setShowAttendanceModal(false)}
+					eventId={event.eventId}
+					participants={confirmedParticipants}
+				/>
+			)}
+			<JoinAsTeamModal
+				isOpen={showJoinTeamModal}
+				onClose={() => setShowJoinTeamModal(false)}
+				teams={leaderTeams}
+				loading={loadingLeaderTeams}
+				onConfirm={async teamId => {
+					if (!id) return
+
+					await axiosInstance.post(`/event/${id}/join-team`, { teamId })
+
+					toast.success('Drużyna dołączyła do wydarzenia')
+
+					const { data } = await axiosInstance.get<EventDetails>(`/event/${id}`)
+					setEvent(data)
+				}}
+			/>
 		</>
 	)
 }

@@ -44,16 +44,9 @@ const RatingsSection = ({ userId }: RatingsSectionProps) => {
     const handleSubmitReport = async (message: string) => {
         if (!ratingToReport) return;
 
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-            toast.error("Musisz być zalogowany, aby zgłosić opinię.");
-            return;
-        }
-
         try {
             setIsSubmittingReport(true);
             await api.post("/ratings/report/userRating", {
-                token,
                 idUserRating: ratingToReport.id,
                 description: message,
             });

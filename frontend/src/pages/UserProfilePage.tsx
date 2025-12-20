@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
@@ -8,14 +8,18 @@ import UserProfileSidebar from '../components/UserProfileSidebar'
 import UserRatingForm from '../components/UserRatingForm'
 import type { UsersResponse } from '../Api/types/User'
 import type { UserRatingResponse, OrganizerRatingResponse } from '../Api/types/Rating'
+import type { SportTypeOption } from '../Api/types/Sports'
+import type { UserEventResponseDto, UserEventPageResponse } from '../Api/types/Participant'
 import { toast } from 'sonner'
-import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare } from 'lucide-react'
+import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare, ChevronLeft, ChevronRight, List, Calendar } from 'lucide-react'
 import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 import UserReportForm from '../components/UserReportForm'
 import BadgesSection from '../components/BadgesSection'
+import EventsCalendar from '../components/EventsCalendar'
+import { isSystemUser } from '../utils/isSystemUser'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -29,14 +33,22 @@ const UserProfilePage = () => {
 	const [user, setUser] = useState<UsersResponse | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [errorMsg, setErrorMsg] = useState<string | null>(null)
-	const [events, setEvents] = useState<any[]>([])
+	const [events, setEvents] = useState<UserEventResponseDto[]>([])
 	const [userRatings, setUserRatings] = useState<UserRatingResponse[]>([])
 	const [organizerRatings, setOrganizerRatings] = useState<OrganizerRatingResponse[]>([])
 	const [activeTab, setActiveTab] = useState<string>('Informacje')
+	const [eventsView, setEventsView] = useState<'list' | 'calendar'>('list')
+	const [allEventsForCalendar, setAllEventsForCalendar] = useState<UserEventResponseDto[]>([])
+	const [loadingAllEvents, setLoadingAllEvents] = useState(false)
 
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
 	const [viewerEvents, setViewerEvents] = useState<any[]>([])
+	const [eventsPage, setEventsPage] = useState(0)
+	const [eventsPageSize, setEventsPageSize] = useState(12)
+	const [eventsTotalPages, setEventsTotalPages] = useState(0)
+	const [eventsTotalElements, setEventsTotalElements] = useState(0)
+	const [eventsLoading, setEventsLoading] = useState(false)
 	const [isSending, setIsSending] = useState(false)
 	const [isSendingReport, setIsSendingReport] = useState(false)
 	const [friendsCount, setFriendsCount] = useState<number>(0)
@@ -61,11 +73,9 @@ const UserProfilePage = () => {
 
 	const [friendStatus, setFriendStatus] = useState<FriendStatus>({ isFriend: false })
 
-	const EVENTS_PREVIEW = 3
-	const [showAllEvents, setShowAllEvents] = useState(false)
-
 	const [mutualEvents, setMutualEvents] = useState<any[]>([])
 	const [isLoadingMutual, setIsLoadingMutual] = useState(false)
+	const [sportUrlMap, setSportUrlMap] = useState<Map<number, string>>(new Map())
 
 	const fetchUserRatings = async () => {
 		try {
@@ -89,8 +99,6 @@ const UserProfilePage = () => {
 	const averageRating = userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
 
 	const hasRated = !!(currentUserName && userRatings.some(r => r.raterName === currentUserName))
-	const hasCommonEvent =
-		viewerEvents.length > 0 && events.length > 0 && viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
 
 	const handleAddUserRating = async (rating: number, comment: string) => {
 		if (!currentUserId || !id) return
@@ -114,10 +122,7 @@ const UserProfilePage = () => {
 	const handleOpenChat = async () => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
-			const res = await api.post(`/conversations/direct?user1Id=${currentUserId}&user2Id=${parseInt(id)}`, null, {
-				headers: { Authorization: `Bearer ${token}` },
-			})
+			const res = await api.post(`/conversations/direct?user1Id=${currentUserId}&user2Id=${parseInt(id)}`, null)
 
 			const conversationId = res.data?.id || res.data?.conversationId
 
@@ -145,7 +150,6 @@ const UserProfilePage = () => {
 	const saveEditUserRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
 			await api.put(
 				`/ratings/user/${ratingId}`,
 				{
@@ -154,10 +158,7 @@ const UserProfilePage = () => {
 					rating: editRatingValue,
 					comment: editRatingComment,
 				},
-				{
-					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-					params: { userId: currentUserId },
-				}
+				{ params: { userId: currentUserId } }
 			)
 			showRatingToast({ type: 'update', target: 'użytkownika' })
 			cancelEditUserRating()
@@ -169,9 +170,7 @@ const UserProfilePage = () => {
 
 	const deleteUserRating = async (ratingId: number) => {
 		try {
-			const token = localStorage.getItem('accessToken')
 			await api.delete(`/ratings/user/${ratingId}`, {
-				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
 			showRatingToast({ type: 'delete', target: 'użytkownika' })
@@ -204,7 +203,6 @@ const UserProfilePage = () => {
 	const saveEditOrganizerRating = async (ratingId: number) => {
 		if (!currentUserId || !id) return
 		try {
-			const token = localStorage.getItem('accessToken')
 			await api.put(
 				`/ratings/organizer/${ratingId}`,
 				{
@@ -214,10 +212,7 @@ const UserProfilePage = () => {
 					comment: editOrganizerRatingComment,
 					eventId: 0,
 				},
-				{
-					...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-					params: { userId: currentUserId },
-				}
+				{ params: { userId: currentUserId } }
 			)
 			showRatingToast({ type: 'update', target: 'organizatora' })
 			cancelEditOrganizerRating()
@@ -229,9 +224,7 @@ const UserProfilePage = () => {
 
 	const deleteOrganizerRating = async (ratingId: number) => {
 		try {
-			const token = localStorage.getItem('accessToken')
 			await api.delete(`/ratings/organizer/${ratingId}`, {
-				...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 				params: { userId: currentUserId ?? undefined },
 			})
 			showRatingToast({ type: 'delete', target: 'organizatora' })
@@ -243,19 +236,26 @@ const UserProfilePage = () => {
 	}
 
 	useEffect(() => {
-		const token = localStorage.getItem('accessToken')
-		if (!token || !id) return
+		if (!id) return
 
 		const fetchData = async () => {
 			setLoading(true)
 			try {
-				const currentRes = await api.get('/auth/user', { params: { token } })
+				const currentRes = await api.get('/auth/user')
 				setCurrentUserId(currentRes.data.id)
 				setCurrentUserName(currentRes.data.name)
 
 				const profileRes = await api.get(`/auth/user/${id}`, {
 					params: { viewerId: currentRes.data.id },
 				})
+
+				// 🔒 Blokada profilu systemowego
+				if (isSystemUser(profileRes.data)) {
+					toast.info('To jest konto systemowe')
+					navigate(-1)
+					return
+				}
+
 				setUser(profileRes.data)
 
 				const relation = profileRes.data.relationStatus
@@ -264,10 +264,8 @@ const UserProfilePage = () => {
 				else setFriendStatus({ isFriend: false })
 
 				const targetEmail = profileRes.data.email
-				const targetEventsRes = await api.get(`/user-event/by-user-email`, {
-					params: { userEmail: targetEmail },
-				})
-				setEvents(targetEventsRes.data || [])
+				// Pobierz pierwszą stronę wydarzeń
+				await fetchEventsPage(targetEmail, 0, 12)
 
 				try {
 					const friendsRes = await api.get(`/friends/${profileRes.data.id}`)
@@ -287,9 +285,19 @@ const UserProfilePage = () => {
 				const viewerEmail = currentRes.data.email
 				if (viewerEmail) {
 					const viewerEventsRes = await api.get(`/user-event/by-user-email`, {
-						params: { userEmail: viewerEmail },
+						params: {
+							userEmail: viewerEmail,
+							page: 0,
+							size: 1000, // Pobierz dużo, żeby mieć wszystkie wydarzenia
+							sortBy: 'id',
+							direction: 'ASC',
+						},
 					})
-					setViewerEvents(viewerEventsRes.data || [])
+					if (viewerEventsRes.data?.content) {
+						setViewerEvents(viewerEventsRes.data.content)
+					} else {
+						setViewerEvents([])
+					}
 				}
 			} catch {
 				setErrorMsg('Nie udało się pobrać profilu użytkownika.')
@@ -300,32 +308,131 @@ const UserProfilePage = () => {
 		fetchData()
 	}, [id])
 
+	// Compute mutual events where BOTH users have status 'Zapisany'
 	useEffect(() => {
-		if (!currentUserId || !user?.id) return
-		const fetchMutual = async () => {
-			setIsLoadingMutual(true)
-			try {
-				const mutualRes = await api.get('/event/mutualEvents', {
-					params: {
-						idLogUser: currentUserId,
-						idViewedUser: user.id,
-					},
-				})
-				setMutualEvents(Array.isArray(mutualRes.data) ? mutualRes.data : [])
-			} catch {
-				setMutualEvents([])
-			} finally {
-				setIsLoadingMutual(false)
-			}
+		if (!viewerEvents || !events) {
+			setMutualEvents([])
+			return
 		}
-		fetchMutual()
-	}, [currentUserId, user?.id])
+
+		setIsLoadingMutual(true)
+		try {
+			const mutual = (events || [])
+				.filter(e => e.attendanceStatusName === 'Zapisany')
+				.filter(e => viewerEvents.some(ve => ve.eventId === e.eventId && ve.attendanceStatusName === 'Zapisany'))
+				.map(e => ({ eventId: e.eventId, eventName: e.eventName }))
+
+			setMutualEvents(mutual)
+		} catch (err) {
+			setMutualEvents([])
+		} finally {
+			setIsLoadingMutual(false)
+		}
+	}, [viewerEvents, events])
+
+	const hasCommonEvent = mutualEvents.length > 0
+
+	const fetchEventsPage = useCallback(async (userEmail: string, page: number, size: number) => {
+		setEventsLoading(true)
+		try {
+			const targetEventsRes = await api.get<UserEventPageResponse>(`/user-event/by-user-email`, {
+				params: {
+					userEmail,
+					page,
+					size,
+					sortBy: 'id',
+					direction: 'ASC',
+				},
+			})
+			if (targetEventsRes.data) {
+				// pokaż tylko wydarzenia, w których użytkownik ma status 'Zapisany'
+				const all = targetEventsRes.data.content || []
+				const confirmed = all.filter(e => e.attendanceStatusName === 'Zapisany')
+				setEvents(confirmed)
+				setEventsPage(targetEventsRes.data.number)
+				// Dostosuj paginację lokalnie do przefiltrowanej listy
+				setEventsTotalElements(confirmed.length)
+				setEventsTotalPages(Math.max(1, Math.ceil(confirmed.length / (size || 1))))
+			} else {
+				setEvents([])
+				setEventsPage(0)
+				setEventsTotalPages(0)
+				setEventsTotalElements(0)
+			}
+		} catch (error) {
+			console.error('Błąd pobierania wydarzeń:', error)
+			setEvents([])
+		} finally {
+			setEventsLoading(false)
+		}
+	}, [])
+
+	const handleEventsPageChange = (newPage: number) => {
+		if (user?.email && newPage >= 0 && newPage < eventsTotalPages) {
+			fetchEventsPage(user.email, newPage, eventsPageSize)
+		}
+	}
+
+	const handleEventsPageSizeChange = (newSize: number) => {
+		if (user?.email) {
+			setEventsPageSize(newSize)
+			fetchEventsPage(user.email, 0, newSize)
+		}
+	}
+
+	// Pobierz wszystkie wydarzenia dla widoku kalendarza
+	const fetchAllEventsForCalendar = useCallback(async (userEmail: string) => {
+		setLoadingAllEvents(true)
+		try {
+			const targetEventsRes = await api.get<UserEventPageResponse>(`/user-event/by-user-email`, {
+				params: {
+					userEmail,
+					page: 0,
+					size: 1000, // Pobierz dużo wydarzeń dla kalendarza
+					sortBy: 'id',
+					direction: 'ASC',
+				},
+			})
+			if (targetEventsRes.data) {
+				const all = targetEventsRes.data.content || []
+				const confirmed = all.filter(e => e.attendanceStatusName === 'Zapisany')
+				setAllEventsForCalendar(confirmed)
+			} else {
+				setAllEventsForCalendar([])
+			}
+		} catch (error) {
+			console.error('Błąd pobierania wszystkich wydarzeń:', error)
+			setAllEventsForCalendar([])
+		} finally {
+			setLoadingAllEvents(false)
+		}
+	}, [])
+
+	// Pobierz wszystkie wydarzenia gdy przełączamy na widok kalendarza
+	useEffect(() => {
+		if (eventsView === 'calendar' && user?.email && allEventsForCalendar.length === 0 && !loadingAllEvents) {
+			fetchAllEventsForCalendar(user.email)
+		}
+	}, [eventsView, user?.email, allEventsForCalendar.length, loadingAllEvents, fetchAllEventsForCalendar])
 
 	useEffect(() => {
 		if (currentUserId && id && currentUserId === parseInt(id)) {
 			window.location.href = '/profile'
 		}
 	}, [currentUserId, id])
+
+	useEffect(() => {
+		api
+			.get<SportTypeOption[]>('/sport-type')
+			.then(({ data }) => {
+				const map = new Map<number, string>()
+				data.forEach(sport => {
+					map.set(sport.id, sport.url)
+				})
+				setSportUrlMap(map)
+			})
+			.catch(() => {})
+	}, [])
 
 	const handleAddFriend = async () => {
 		if (!currentUserId || !id) return
@@ -357,29 +464,21 @@ const UserProfilePage = () => {
 	const handleSubmitUserReport = async (message: string) => {
 		if (!id) return
 
-		const token = localStorage.getItem('accessToken')
-		if (!token) {
-			toast.error("Brak tokenu – zaloguj się ponownie.")
-			return
-		}
-
 		setIsSendingReport(true)
 		try {
-			await api.post("/auth/report/user", {
-				token: token,
+			await api.post('/auth/report/user', {
 				reportedUserId: parseInt(id),
-				description: message
+				description: message,
 			})
 
-			toast.success("Zgłoszenie zostało wysłane do moderatorów.")
+			toast.success('Zgłoszenie zostało wysłane do moderatorów.')
 		} catch (e) {
-			toast.error("Nie udało się wysłać zgłoszenia.")
+			toast.error('Nie udało się wysłać zgłoszenia.')
 			console.error(e)
 		} finally {
 			setIsSendingReport(false)
 		}
 	}
-
 
 	if (loading) return <div className='p-10 text-center text-zinc-400'>Ładowanie profilu...</div>
 	if (errorMsg) return <div className='p-10 text-center text-red-400'>{errorMsg}</div>
@@ -405,7 +504,13 @@ const UserProfilePage = () => {
 							<Avatar src={user.urlOfPicture} name={user.name} size='md' className='ring-4 ring-violet-700 shadow-xl' />
 							<div>
 								<p className='text-white font-semibold leading-tight'>
-									{user.name} <span className='text-zinc-400'>/ Profil</span>
+									{user.name}
+									{isSystemUser({ email: user.email, name: user.name }) && (
+										<span className='ml-2 rounded-md bg-violet-600/20 px-2 py-0.5 text-xs font-semibold text-violet-300'>
+											SYSTEM
+										</span>
+									)}{' '}
+									<span className='text-zinc-400'>/ Profil</span>
 								</p>
 								<p className='text-sm text-zinc-400'>Zaktualizuj swoje dane i zarządzaj kontem</p>
 							</div>
@@ -447,16 +552,35 @@ const UserProfilePage = () => {
 										Data urodzenia: {new Date(user.dateOfBirth).toLocaleDateString('pl-PL')}
 									</p>
 									<p className='mt-2 text-sm text-zinc-400'>Sporty:</p>
-									<ul className='mt-2 space-y-2'>
-										{user.sports.map(s => (
-											<li key={s.id} className='flex items-center justify-between bg-zinc-800/50 px-4 py-2 rounded-lg'>
-												<span>{s.name}</span>
-												<div className='flex items-center gap-2'>
-													<StarRatingDisplay value={toFiveScale(levelToNumber(s.level))} />
-													<span className='text-sm text-zinc-400 ml-1'>Poziom: {levelToNumber(s.level)}</span>
-												</div>
-											</li>
-										))}
+									<ul className='mt-2 space-y-3'>
+										{user.sports.map(s => {
+											const sportUrl = sportUrlMap.get(s.id)
+											return (
+												<li
+													key={s.id}
+													className='flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3'>
+													<div className='flex items-center gap-3 min-w-0'>
+														{sportUrl ? (
+															<img
+																src={sportUrl}
+																alt={s.name}
+																className='h-10 w-10 rounded-full object-cover border border-zinc-700 shrink-0'
+															/>
+														) : (
+															<div className='h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 shrink-0 flex items-center justify-center text-xs text-zinc-400'>
+																img
+															</div>
+														)}
+														<div className='min-w-0'>
+															<p className='text-white font-medium leading-tight truncate'>{s.name}</p>
+															<div className='flex items-center gap-1 mt-0.5'>
+																<StarRatingDisplay value={toFiveScale(levelToNumber(s.level))} size={14} />
+															</div>
+														</div>
+													</div>
+												</li>
+											)
+										})}
 									</ul>
 
 									<div className='mt-6 flex gap-3 flex-wrap'>
@@ -488,29 +612,107 @@ const UserProfilePage = () => {
 
 							{activeTab === 'Historia wydarzeń' && (
 								<section>
-									<h3 className='text-lg font-semibold text-white mb-3'>Historia wydarzeń</h3>
-									{events.length ? (
-										<>
-											<ul className='space-y-3'>
-												{(showAllEvents ? events : events.slice(0, EVENTS_PREVIEW)).map(e => (
-													<li
-														key={e.eventId}
-														className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
-														<span className='text-white'>{e.eventName}</span>
-														<a href={`/event/${e.eventId}`} className='text-violet-400 hover:text-violet-300 text-sm'>
-															Zobacz →
-														</a>
-													</li>
-												))}
-											</ul>
-											{events.length > EVENTS_PREVIEW && (
-												<div className='mt-3 text-center'>
-													<button
-														onClick={() => setShowAllEvents(s => !s)}
-														className='inline-flex items-center gap-2 rounded-lg bg-zinc-800/60 px-4 py-2 text-sm text-violet-300 hover:bg-zinc-800 transition'>
-														{showAllEvents ? 'Pokaż mniej' : `Pokaż więcej (${events.length - EVENTS_PREVIEW})`}
-													</button>
+									<div className='flex items-center justify-between mb-3'>
+										<h3 className='text-lg font-semibold text-white'>Historia wydarzeń</h3>
+										<div className='flex items-center gap-3'>
+											{/* Przełącznik widoków */}
+											<div className='flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700'>
+												<button
+													onClick={() => setEventsView('list')}
+													className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+														eventsView === 'list'
+															? 'bg-violet-600 text-white'
+															: 'text-zinc-400 hover:text-white'
+													}`}>
+													<List size={16} />
+													Lista
+												</button>
+												<button
+													onClick={() => setEventsView('calendar')}
+													className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+														eventsView === 'calendar'
+															? 'bg-violet-600 text-white'
+															: 'text-zinc-400 hover:text-white'
+													}`}>
+													<Calendar size={16} />
+													Kalendarz
+												</button>
+											</div>
+											{/* Paginacja tylko dla widoku listy */}
+											{eventsView === 'list' && eventsTotalElements > 0 && (
+												<div className='flex items-center gap-2'>
+													<label className='text-sm text-zinc-400'>Pokaż:</label>
+													<select
+														value={eventsPageSize}
+														onChange={e => handleEventsPageSizeChange(Number(e.target.value))}
+														className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600'>
+														<option value={6}>6</option>
+														<option value={12}>12</option>
+														<option value={24}>24</option>
+														<option value={48}>48</option>
+													</select>
 												</div>
+											)}
+										</div>
+									</div>
+									{eventsLoading ? (
+										<div className='text-center py-8'>
+											<p className='text-sm text-zinc-400'>Ładowanie...</p>
+										</div>
+									) : events.length ? (
+										<>
+											{eventsView === 'list' ? (
+												<>
+													<ul className='space-y-3'>
+														{events.map(e => (
+															<li key={e.id} className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
+																<span className='text-white'>{e.eventName}</span>
+																<a href={`/event/${e.eventId}`} className='text-violet-400 hover:text-violet-300 text-sm'>
+																	Zobacz →
+																</a>
+															</li>
+														))}
+													</ul>
+													{eventsTotalPages > 1 && (
+														<div className='mt-6 flex items-center justify-between'>
+															<div className='text-sm text-zinc-400'>
+																Strona {eventsPage + 1} z {eventsTotalPages} ({eventsTotalElements}{' '}
+																{eventsTotalElements === 1
+																	? 'wydarzenie'
+																	: eventsTotalElements < 5
+																	? 'wydarzenia'
+																	: 'wydarzeń'}
+																)
+															</div>
+															<div className='flex items-center gap-2'>
+																<button
+																	onClick={() => handleEventsPageChange(eventsPage - 1)}
+																	disabled={eventsPage === 0}
+																	className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
+																	<ChevronLeft size={16} />
+																	Poprzednia
+																</button>
+																<button
+																	onClick={() => handleEventsPageChange(eventsPage + 1)}
+																	disabled={eventsPage >= eventsTotalPages - 1}
+																	className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
+																	Następna
+																	<ChevronRight size={16} />
+																</button>
+															</div>
+														</div>
+													)}
+												</>
+											) : (
+												<>
+													{loadingAllEvents ? (
+														<div className='text-center py-8'>
+															<p className='text-sm text-zinc-400'>Ładowanie wydarzeń...</p>
+														</div>
+													) : (
+														<EventsCalendar events={allEventsForCalendar.length > 0 ? allEventsForCalendar : events} />
+													)}
+												</>
 											)}
 										</>
 									) : (
@@ -686,7 +888,7 @@ const UserProfilePage = () => {
 							)}
 
 							{activeTab === 'Odznaki' && (
-								<div className="flex-1">
+								<div className='flex-1'>
 									<BadgesSection userId={id ? parseInt(id) : null} />
 								</div>
 							)}

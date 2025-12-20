@@ -1,17 +1,23 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Notification.EventInviteRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
-import com.joinmatch.backend.model.Event;
+import org.springframework.data.domain.Page;
 import com.joinmatch.backend.model.User;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.EventService;
 import com.joinmatch.backend.service.NotificationService;
 import com.joinmatch.backend.service.UserEventService;
 import com.joinmatch.backend.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,8 +44,20 @@ public class UserEventController {
     }
 
     @GetMapping("/by-user-email")
-    public ResponseEntity<List<UserEventResponseDto>> getUserEventsByUserEmail(@RequestParam String userEmail) {
-        List<UserEventResponseDto> userEvents = userEventService.getUserEventsByUserEmail(userEmail);
+    public ResponseEntity<Page<UserEventResponseDto>> getUserEventsByUserEmail(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "ASC") String direction,
+            @RequestParam String userEmail
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<UserEventResponseDto> userEvents = userEventService.getUserEventsByUserEmail(
+                pageable,
+                sortBy,
+                direction,
+                userEmail);
+
         if (userEvents.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -109,13 +127,31 @@ public class UserEventController {
     public ResponseEntity<Void> togglePaymentStatus(
             @PathVariable Integer eventId,
             @PathVariable Integer userId,
-            @RequestParam String token
+            HttpServletRequest request
     ) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         User requester = userRepository.findByTokenValue(token)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
 
         userEventService.togglePaymentStatus(eventId, userId, requester.getEmail());
 
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{eventId}/attendance")
+    public ResponseEntity<Void> checkAttendance(
+            @PathVariable Integer eventId,
+            @RequestBody List<Integer> presentUserIds,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
+
+        userEventService.checkAttendance(eventId, presentUserIds, user.getEmail());
         return ResponseEntity.ok().build();
     }
 

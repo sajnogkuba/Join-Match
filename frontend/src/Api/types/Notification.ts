@@ -21,6 +21,7 @@ export const NotificationType = {
 	EVENT_JOIN_ACCEPTED: 'EVENT_JOIN_ACCEPTED',
 	EVENT_JOIN_REJECTED: 'EVENT_JOIN_REJECTED',
 	EVENT_JOINED_PUBLIC: 'EVENT_JOINED_PUBLIC',
+	MODERATOR_WARNING: 'MODERATOR_WARNING',
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]

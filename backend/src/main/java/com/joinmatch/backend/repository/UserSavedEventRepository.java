@@ -9,4 +9,6 @@ public interface UserSavedEventRepository extends JpaRepository<UserSavedEvent, 
     List<UserSavedEvent> findByUserId(Integer id);
 
     UserSavedEvent findByUserIdAndEventEventId(Integer userId, Integer eventId);
+    void deleteAllByEvent_EventId(Integer eventId);
+
 }

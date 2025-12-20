@@ -1,103 +1,128 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import axiosInstance from '../Api/axios'; // Twój plik z axiosInstance
-import type { JwtResponse } from '../Api/types'
-import {scheduleTokenRefresh} from '../Api/axios';
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import axiosInstance from '../Api/axios'
+import { getCookie, deleteCookie } from '../utils/cookies'
 
 interface AuthContextType {
-  user: string | null;
-  accessToken: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (token: string, refreshToken: string, email: string) => void;
-  logout: () => void;
-  isAuthenticated: boolean;
+	user: string | null
+	accessToken: string | null
+	login: (email: string, password: string) => Promise<void>
+	verifyAccount: (email: string, code: string) => Promise<void>
+	loginWithGoogle: (email: string) => void
+	logout: () => void
+	isAuthenticated: boolean
+	isLoading: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const useAuth = () => useContext(AuthContext)!;
+export const useAuth = () => useContext(AuthContext)!
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+	const [user, setUser] = useState<string | null>(null)
+	const [accessToken, setAccessToken] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Przy starcie aplikacji sprawdzamy, czy są tokeny
-    const storedToken = localStorage.getItem('accessToken');
-    const storedEmail = localStorage.getItem('email'); // Dodaj do loginu!
-    if (storedToken && storedEmail) {
-      setAccessToken(storedToken);
-      setUser(storedEmail);
-    }
-  }, []);
+	const [isLoading, setIsLoading] = useState(true)
 
+	// Proaktywne pingowanie, żeby access token nie wygasał w trakcie pracy.
+	// Pinguje lekki endpoint chroniony; interceptor zajmie się refreshToken + kolejką, więc unikamy podwójnych refreshy.
+	useEffect(() => {
+		if (!user) return
 
-const login = async (email: string, password: string) => {
-	const response = await axiosInstance.post<JwtResponse>('/auth/login', { email, password });
-	const { token, refreshToken, email: responseEmail } = response.data;
+		let pingPromise: Promise<unknown> | null = null
+		const REFRESH_INTERVAL_MS = 10 * 60 * 1000 // co ~10 min (access = 15 min)
 
-	localStorage.setItem('accessToken', token);
-	localStorage.setItem('refreshToken', refreshToken);
-	localStorage.setItem('email', responseEmail);
+		const pingSession = () => {
+			if (pingPromise) return
+			pingPromise = axiosInstance
+				.get('/auth/user')
+				.catch(() => {
+				})
+				.finally(() => {
+					pingPromise = null
+				})
+		}
 
-	setAccessToken(token);
-	setUser(responseEmail);
+		const intervalId = window.setInterval(pingSession, REFRESH_INTERVAL_MS)
+		const onFocus = () => pingSession()
+		const onVisibility = () => {
+			if (document.visibilityState === 'visible') pingSession()
+		}
 
-	scheduleTokenRefresh();
-};
+		window.addEventListener('focus', onFocus)
+		document.addEventListener('visibilitychange', onVisibility)
 
-const loginWithGoogle = (token: string, refreshToken: string, email: string) => {
-  localStorage.setItem('accessToken', token);
-  localStorage.setItem('refreshToken', refreshToken);
-  localStorage.setItem('email', email);
+		return () => {
+			clearInterval(intervalId)
+			window.removeEventListener('focus', onFocus)
+			document.removeEventListener('visibilitychange', onVisibility)
+		}
+	}, [user])
 
-  setAccessToken(token);
-  setUser(email);
+	useEffect(() => {
+		const checkAuth = async () => {
+			try {
+				const response = await axiosInstance.get<{ email: string }>('/auth/user')
+				setUser(response.data.email || null)
+			} catch (error) {
+				console.log('Brak aktywnej sesji')
+				setUser(null)
+			} finally {
+				setIsLoading(false)
+				setAccessToken(null)
+			}
+		}
+		checkAuth()
+	}, [])
 
-  scheduleTokenRefresh();
-};
+	const login = async (email: string, password: string) => {
+		const response = await axiosInstance.post<{ email: string }>('/auth/login', { email, password })
+		const responseEmail = response.data.email
 
+		setTimeout(() => {
+			const cookieEmail = getCookie('email') || responseEmail
+			if (cookieEmail) {
+				setUser(cookieEmail)
+				setAccessToken(null)
+			}
+		}, 100)
+	}
 
+	const verifyAccount = async (email: string, code: string) => {
+		await axiosInstance.post('/auth/verify', { email, code })
+	}
 
-  const logout = async () => {
-    try {
-      await axiosInstance.post('/auth/logout', { email: user });
-    } catch (e) {
-      // Ignoruj, jeśli błąd
-    }
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('email');
-    setUser(null);
-    setAccessToken(null);
-    window.location.href = '/login'; // Przekieruj usera
-  };
+	const loginWithGoogle = (email: string) => {
+		setUser(email)
+		setAccessToken(null)
+	}
 
-  // **Automatyczne wylogowanie gdy backend odrzuci refresh lub wygaśnie sesja**
-  useEffect(() => {
-    const interceptor = axiosInstance.interceptors.response.use(
-      resp => resp,
-      err => {
-        if (err.response?.status === 401) {
-          logout();
-        }
-        return Promise.reject(err);
-      }
-    );
-    return () => axiosInstance.interceptors.response.eject(interceptor);
-  }, [user]);
+	const logout = async () => {
+		try {
+			await axiosInstance.post('/auth/logout', { email: user })
+		} catch (e) {}
+		deleteCookie('accessToken')
+		deleteCookie('refreshToken')
+		deleteCookie('email')
+		setUser(null)
+		setAccessToken(null)
+		if (window.location.pathname !== '/login') {
+			window.location.href = '/login'
+		}
+	}
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        accessToken,
-        login,
-        loginWithGoogle,
-        logout,
-        isAuthenticated: !!user,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
+	return (
+		<AuthContext.Provider
+			value={{
+				user,
+				accessToken,
+				login,
+				verifyAccount,
+				loginWithGoogle,
+				logout,
+				isLoading,
+				isAuthenticated: !!user,
+			}}>
+			{children}
+		</AuthContext.Provider>
+	)
+}

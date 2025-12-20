@@ -1,13 +1,17 @@
 package com.joinmatch.backend.service;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.EventTeam.EventTeamResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
+import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.Event;
 import com.joinmatch.backend.repository.EventRepository;
 import com.joinmatch.backend.specification.EventSpecificationBuilder;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.*;
 import org.springframework.transaction.annotation.Transactional;
 import com.joinmatch.backend.model.*;
@@ -18,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -29,6 +34,24 @@ public class EventService {
     private final UserRepository userRepository;
     private final EventVisibilityRepository eventVisibilityRepository;
     private final ReportEventRepository reportEventRepository;
+    private final UserEventRepository userEventRepository;
+    private final ConversationRepository conversationRepository;
+    private final UserSavedEventRepository userSavedEventRepository;
+    private final EventRatingRepository eventRatingRepository;
+    private final ReportEventRatingRepository reportEventRatingRepository;
+    private final OrganizerRatingRepository organizerRatingRepository;
+    private final NotificationService notificationService;
+    private final EventTeamRepository eventTeamRepository;
+    private final TeamRepository teamRepository;
+
+
+    private void refundParticipants(Event event) {
+        event.getUserEvents().forEach(ue -> {
+            if (Boolean.TRUE.equals(ue.getIsPaid())) {
+                ue.setIsPaid(false);
+            }
+        });
+    }
 
     private String mapSkillLevelToString(Integer level) {
         if (level == null) return "Nieokreślony";
@@ -79,10 +102,12 @@ public class EventService {
                         .noneMatch(reportEvent -> Boolean.TRUE.equals(reportEvent.getActive())))
                 .toList();
 
+        long totalElements = events.getTotalElements();
+        
         Page<Event> filteredPage = new PageImpl<>(
                 filtered,
                 sortedPageable,
-                filtered.size()
+                totalElements
         );
 
         return filteredPage.map(EventResponseDto::fromEvent);
@@ -93,20 +118,52 @@ public class EventService {
         Event e = eventRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Event " + id + " not found"));
 
+        List<EventTeamResponseDto> teams = e.getEventTeams()
+                .stream()
+                .map(et -> {
+                    Team t = et.getTeam();
+                    return new EventTeamResponseDto(
+                            t.getId(),
+                            t.getName(),
+                            t.getCity(),
+                            t.getPhotoUrl(),
+                            t.getLeader().getId(),
+                            t.getLeader().getName()
+                    );
+                })
+                .toList();
+        int individualCount = (e.getUserEvents() == null) ? 0 : e.getUserEvents().size();
+        int teamCount = (e.getEventTeams() == null) ? 0 :
+                e.getEventTeams().stream()
+                        .map(EventTeam::getTeam)
+                        .mapToInt(t ->
+                                (int) t.getUserTeams()
+                                        .stream()
+                                        .map(ut -> ut.getUser().getId())
+                                        .distinct()
+                                        .count()
+                        )
+
+                        .sum();
+        int bookedParticipants = individualCount + teamCount;
+
         return new EventDetailsResponseDto(
                 e.getEventId(),
                 e.getEventName(),
                 e.getNumberOfParticipants(),
-                e.getNumberOfParticipants(), // bookedParticipants
+                e.getNumberOfParticipants(),// bookedParticipants
+                teamCount,
+                e.isForTeam(),
 
                 e.getCost(),
                 "PLN",
-                e.getStatus(),
+                e.getStatus().name(),
                 e.getEventDate(),
                 e.getScoreTeam1(),
                 e.getScoreTeam2(),
 
                 e.getSportEv().getName(),
+                e.getSportEv().getURL(),
                 e.getSportObject().getName(),
 
                 e.getSportObject().getObjectId(),
@@ -122,20 +179,24 @@ public class EventService {
                 e.getOwner().getName(),
                 e.getOwner().getUrlOfPicture(),
 
-                "Amator",
-                "Gotówka",
+                mapSkillLevelToString(e.getMinLevel()),
+                String.join(", ", e.getPaymentMethods()),
                 e.getImageUrl(),
 
                 e.getSportObject().getLatitude(),
-                e.getSportObject().getLongitude()
+                e.getSportObject().getLongitude(),
+                e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false,
+                teams
         );
     }
 
 
 
-        @Transactional
+
+    @Transactional
     public EventResponseDto create(EventRequestDto eventRequestDto) {
         Event event = new Event();
+            event.setStatus(EventStatus.PLANNED);
         return getEventResponseDto(eventRequestDto, event);
     }
 
@@ -155,18 +216,22 @@ public class EventService {
         event.setOwner(owner);
         event.setSportObject(sportObject);
         event.setEventVisibility(eventVisibility);
-        event.setStatus(eventRequestDto.status());
+        event.setStatus(event.getStatus());
         event.setSportEv(sport);
         event.setEventDate(eventRequestDto.eventDate());
         event.setMinLevel(eventRequestDto.minLevel());
         event.setImageUrl(eventRequestDto.imageUrl());
         event.setPaymentMethods(eventRequestDto.paymentMethods());
-
+        event.setForTeam(eventRequestDto.isForTeam());
         Event saved = eventRepository.save(event);
         return EventResponseDto.fromEvent(saved);
     }
 
-    public List<EventResponseDto> getEventsForUser(String token){
+    public List<EventResponseDto> getEventsForUser(HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         return eventRepository.findAllOwnedByUserToken(token)
                 .stream()
                 .map(EventResponseDto::fromEvent)
@@ -179,9 +244,16 @@ public class EventService {
                 .toList();
     }
     @Transactional
-    public void reportEvent(EventReportDto eventReportDto){
-        User user = userRepository.findByTokenValue(eventReportDto.token()).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
+    public void reportEvent(EventReportDto eventReportDto, HttpServletRequest request){
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
+        User user = userRepository.findByTokenValue(token).orElseThrow(() -> new IllegalArgumentException("Not foung user"));
         Event referenceById = eventRepository.getReferenceById(eventReportDto.idEvent());
+        if(reportEventRepository.existsByReportedEvent_EventIdAndReporterUser_IdAndActiveTrue(eventReportDto.idEvent(), user.getId())){
+            throw new RuntimeException("You cannot report many times");
+        }
         ReportEvent reportEvent = new ReportEvent();
         reportEvent.setReportedEvent(referenceById);
         reportEvent.setReporterUser(user);
@@ -190,12 +262,14 @@ public class EventService {
         reportEvent.setDescription(eventReportDto.description());
         user.getReportEvents().add(reportEvent);
         referenceById.getReportEvents().add(reportEvent);
-//        userRepository.save(user);
-//        eventRepository.save(referenceById);
         reportEventRepository.save(reportEvent);
     }
 
-    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, String token) {
+    public Page<EventResponseDto> getParticipatedEvents(Pageable pageable, String sortBy, String direction, HttpServletRequest request) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token found");
+        }
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
@@ -209,4 +283,180 @@ public class EventService {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event with id " + id + " not found"));
     }
+
+    @Transactional
+    public void deleteEvent(Integer idEvent) {
+        Event event = eventRepository.findById(idEvent)
+                .orElseThrow(() -> new IllegalArgumentException("Event with id " + idEvent + " not found"));
+        if (event.getUserEvents() != null && !event.getUserEvents().isEmpty()) {
+            userEventRepository.deleteAll(event.getUserEvents());
+            event.getUserEvents().clear();
+        }
+        if (event.getReportEvents() != null && !event.getReportEvents().isEmpty()) {
+            reportEventRepository.deleteAll(event.getReportEvents());
+            event.getReportEvents().clear();
+        }
+        if (event.getConversations() != null && !event.getConversations().isEmpty()) {
+            conversationRepository.deleteAll(event.getConversations());
+            event.getConversations().clear();
+        }
+        userSavedEventRepository.deleteAllByEvent_EventId(idEvent);
+        List<EventRating> ratings = eventRatingRepository.findAllByEvent_EventId(idEvent);
+
+        for (EventRating rating : ratings) {
+            reportEventRatingRepository.deleteAllByEventRating_EventRatingId(rating.getEventRatingId());
+        }
+        eventRatingRepository.deleteAll(ratings);
+        eventRepository.delete(event);
+    }
+
+    @Transactional
+    public void cancelEvent(Integer eventId, String requesterEmail) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!event.getOwner().getId().equals(requester.getId())) {
+            throw new IllegalArgumentException("Only organizer can cancel event");
+        }
+
+        if (event.getStatus() == EventStatus.CANCELED) {
+            return;
+        }
+
+        boolean lessThan24h =
+                event.getEventDate().isBefore(LocalDateTime.now().plusHours(24));
+
+        event.setStatus(EventStatus.CANCELED);
+        eventRepository.save(event);
+
+        if (lessThan24h) {
+            addAutomaticOrganizerPenalty(event);
+        }
+
+        refundParticipants(event);
+        notificationService.sendEventCanceledNotification(event);
+    }
+
+    @Transactional
+    public void addAutomaticOrganizerPenalty(Event event) {
+        User systemUser = userRepository.findByEmail("system@joinmatch.pl")
+                .orElseThrow(() -> new IllegalStateException("System user missing"));
+
+        OrganizerRating rating = OrganizerRating.builder()
+                .rater(systemUser)
+                .organizer(event.getOwner())
+                .event(event)
+                .rating(1)
+                .comment("Odwołanie wydarzenia na mniej niż 24h przed jego rozpoczęciem.")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        organizerRatingRepository.save(rating);
+    }
+
+    @Transactional
+    public void joinEventAsTeam(
+            Integer eventId,
+            Integer teamId,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token");
+        }
+
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (!event.isForTeam()) {
+            throw new IllegalStateException("Event is not team-based");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+
+        if (!team.getLeader().getId().equals(user.getId())) {
+            throw new SecurityException("Only team leader can join event");
+        }
+
+        // 5️⃣ czy już zapisany
+        boolean alreadyJoined = eventTeamRepository
+                .existsByEvent_EventIdAndTeam_Id(eventId, teamId);
+
+        if (alreadyJoined) {
+            throw new IllegalStateException("Team already joined this event");
+        }
+
+        int individualCount = (int) event.getUserEvents().stream()
+                .filter(ue -> ue.getAttendanceStatus().getId() == 1)
+                .count();
+
+        int teamCount = event.getEventTeams().stream()
+                .map(EventTeam::getTeam)
+                .mapToInt(t ->
+                        (int) t.getUserTeams()
+                                .stream()
+                                .map(ut -> ut.getUser().getId())
+                                .distinct()
+                                .count()
+                )
+                .sum();
+
+        int bookedParticipants = individualCount + teamCount;
+
+        int teamSize = team.getUserTeams().size();
+
+        if (bookedParticipants + teamSize > event.getNumberOfParticipants()) {
+            throw new IllegalStateException("Not enough free spots for this team");
+        }
+
+        EventTeam eventTeam = new EventTeam();
+        eventTeam.setEvent(event);
+        eventTeam.setTeam(team);
+        eventTeam.setJoinedAt(LocalDateTime.now());
+        eventTeamRepository.save(eventTeam);
+    }
+    @Transactional
+    public void leaveEventAsTeam(
+            Integer eventId,
+            Integer teamId,
+            HttpServletRequest request
+    ) {
+        String token = TokenExtractor.extractToken(request);
+        if (token == null) {
+            throw new IllegalArgumentException("No token");
+        }
+
+        User user = userRepository.findByTokenValue(token)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (!event.isForTeam()) {
+            throw new IllegalStateException("Event is not team-based");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+
+        // ✅ tylko lider
+        if (!team.getLeader().getId().equals(user.getId())) {
+            throw new SecurityException("Only team leader can leave event");
+        }
+
+        // ✅ sprawdź czy drużyna jest zapisana
+        EventTeam eventTeam = eventTeamRepository
+                .findByEvent_EventIdAndTeam_Id(eventId, teamId).orElseThrow(() -> new IllegalStateException("Team is not part of this event"));
+
+        // ✅ wypisanie
+        eventTeamRepository.delete(eventTeam);
+    }
+
 }

@@ -1,13 +1,19 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.TokenExtractor;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
+import com.joinmatch.backend.dto.Event.JoinEventAsTeamRequest;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
+import com.joinmatch.backend.model.User;
+import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.EventService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventController {
     private final EventService eventService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<Page<EventResponseDto>> getAllEvents(
@@ -73,9 +81,13 @@ public class EventController {
     }
 
     @GetMapping("/byUser")
-    public ResponseEntity<List<EventResponseDto>> getEventsForUser(@RequestParam String token)
+    public ResponseEntity<List<EventResponseDto>> getEventsForUser(HttpServletRequest request)
     {
-        return ResponseEntity.ok(eventService.getEventsForUser(token));
+        try {
+            return ResponseEntity.ok(eventService.getEventsForUser(request));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/byParticipant")
@@ -84,33 +96,96 @@ public class EventController {
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "eventDate") String sortBy,
             @RequestParam(defaultValue = "DESC") String direction,
-            @RequestParam String token)
+            HttpServletRequest request)
     {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<EventResponseDto> events = eventService.getParticipatedEvents(
-                pageable,
-                sortBy,
-                direction,
-                token
-        );
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<EventResponseDto> events = eventService.getParticipatedEvents(
+                    pageable,
+                    sortBy,
+                    direction,
+                    request
+            );
 
-        if (events.isEmpty()) {
-            return ResponseEntity.noContent().build();
+            if (events.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(events);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok(events);
     }
     @GetMapping("/mutualEvents")
     public ResponseEntity<List<EventResponseDto>> getMutualEvents(@RequestParam Integer idLogUser, Integer idViewedUser){
         return ResponseEntity.ok(eventService.getMutualEvents(idLogUser,idViewedUser));
     }
     @PostMapping("/report/event")
-    public ResponseEntity<Void> reportEvent(@RequestBody EventReportDto eventReportDto){
+    public ResponseEntity<Void> reportEvent(@RequestBody EventReportDto eventReportDto, HttpServletRequest request){
         try {
-        eventService.reportEvent(eventReportDto);
+        eventService.reportEvent(eventReportDto, request);
         }catch (IllegalArgumentException exception){
+            return ResponseEntity.badRequest().build();
+        }catch (RuntimeException exception){
+            return ResponseEntity.status(HttpStatusCode.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @DeleteMapping("delete/event/{idEvent}")
+    public ResponseEntity<Void> deleteEvent(@PathVariable Integer idEvent){
+        try {
+            eventService.deleteEvent(idEvent);
+        } catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{eventId}/cancel")
+    public ResponseEntity<Void> cancelEvent(
+            @PathVariable Integer eventId,
+            HttpServletRequest request
+    ) {
+        try {
+            String token = TokenExtractor.extractToken(request);
+            if (token == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            User user = userRepository.findByTokenValue(token)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            eventService.cancelEvent(eventId, user.getEmail());
+            return ResponseEntity.noContent().build();
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+    @PostMapping("/{eventId}/join-team")
+    public ResponseEntity<Void> joinEventAsTeam(
+            @PathVariable Integer eventId,
+            @RequestBody JoinEventAsTeamRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        eventService.joinEventAsTeam(eventId, request.teamId(), httpRequest);
+        return ResponseEntity.ok().build();
+    }
+    @DeleteMapping("/{eventId}/leave-team")
+    public ResponseEntity<Void> leaveEventAsTeam(
+            @PathVariable Integer eventId,
+            @RequestParam Integer teamId,
+            HttpServletRequest request
+    ) {
+        try {
+            eventService.leaveEventAsTeam(eventId, teamId, request);
+            return ResponseEntity.noContent().build();
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
 }

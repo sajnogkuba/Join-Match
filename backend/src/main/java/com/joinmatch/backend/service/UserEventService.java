@@ -3,18 +3,18 @@ package com.joinmatch.backend.service;
 import com.joinmatch.backend.dto.Notification.EventInviteRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventRequestDto;
 import com.joinmatch.backend.dto.UserEvent.UserEventResponseDto;
-import com.joinmatch.backend.model.AttendanceStatus;
-import com.joinmatch.backend.model.Event;
-import com.joinmatch.backend.model.User;
-import com.joinmatch.backend.model.UserEvent;
-import com.joinmatch.backend.repository.AttendanceStatusRepository;
-import com.joinmatch.backend.repository.EventRepository;
-import com.joinmatch.backend.repository.UserEventRepository;
-import com.joinmatch.backend.repository.UserRepository;
+import com.joinmatch.backend.enums.EventStatus;
+import com.joinmatch.backend.model.*;
+import com.joinmatch.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +29,7 @@ public class UserEventService {
     private final ChatService chatService;
     private final NotificationService notificationService;
     private final BadgeAwardService badgeAwardService;
+    private final UserRatingRepository userRatingRepository;
 
     public List<UserEventResponseDto> getAllUserEvent() {
         return userEventRepository.findAll()
@@ -46,6 +47,12 @@ public class UserEventService {
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
         AttendanceStatus status = attendanceStatusRepository.findById(dto.attendanceStatusId())
                 .orElseThrow(() -> new IllegalArgumentException("Status not found"));
+
+        if (event.getEventVisibility().getId() != 1 && status.getId() == 1) {
+            throw new IllegalStateException(
+                    "Nie można zapisać się bezpośrednio na prywatne wydarzenie"
+            );
+        }
 
         UserEvent userEvent = new UserEvent();
         userEvent.setUser(user);
@@ -85,6 +92,24 @@ public class UserEventService {
         notificationService.sendEventJoinAccepted(user, event);
     }
 
+    public Page<UserEventResponseDto> getUserEventsByUserEmail(
+            Pageable pageable,
+            String sortBy,
+            String direction,
+            String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Sort sort = Sort.by(new Sort.Order(
+                Sort.Direction.fromString(direction),
+                sortBy
+        ).ignoreCase());
+
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<UserEvent> userEvents = userEventRepository.findByUserId(user.getId(), sortedPageable);
+        return userEvents.map(UserEventResponseDto::fromUserEvent);
+    }
+
     @Transactional
     public void rejectUser(Integer eventId, Integer userId) {
 
@@ -102,15 +127,6 @@ public class UserEventService {
         userEventRepository.save(ue);
 
         notificationService.sendEventJoinRejected(user, event);
-    }
-
-    public List<UserEventResponseDto> getUserEventsByUserEmail(String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return userEventRepository.findByUserId(user.getId())
-                .stream()
-                .map(UserEventResponseDto::fromUserEvent)
-                .toList();
     }
 
     public List<UserEventResponseDto> getUserEventsByEventId(Integer eventId) {
@@ -210,6 +226,17 @@ public class UserEventService {
 
         Optional<UserEvent> existingUserEvent = userEventRepository.findByEvent_EventIdAndUser_Id(eventId, user.getId());
 
+        if (event.getStatus() != EventStatus.PLANNED) {
+            throw new IllegalStateException("Nie można dołączyć do odwołanego wydarzenia");
+        }
+
+        Integer minLevel = event.getMinLevel();
+        Integer userLevel = user.getSportLevel(event.getSportEv().getId());
+
+        if (userLevel == null || userLevel < minLevel) {
+            throw new IllegalStateException("Nie spełniasz minimalnego poziomu zaawansowania");
+        }
+
         if (existingUserEvent.isPresent()) {
             UserEvent ue = existingUserEvent.get();
             if (ue.getAttendanceStatus().getId() == 5) {
@@ -244,5 +271,51 @@ public class UserEventService {
         userEvent.setIsPaid(!userEvent.getIsPaid());
 
         userEventRepository.save(userEvent);
+    }
+
+    @Transactional
+    public void checkAttendance(Integer eventId, List<Integer> presentUserIds, String organizerEmail) {
+        User organizer = userRepository.findByEmail(organizerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Organizer not found"));
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        if (!event.getOwner().getId().equals(organizer.getId())) {
+            throw new IllegalArgumentException("Tylko organizator może sprawdzać obecność.");
+        }
+
+        if (event.getEventDate().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Nie można sprawdzić obecności przed rozpoczęciem wydarzenia.");
+        }
+
+        if (Boolean.TRUE.equals(event.getIsAttendanceChecked())) {
+            throw new IllegalStateException("Obecność dla tego wydarzenia została już sprawdzona!");
+        }
+
+        List<UserEvent> confirmedParticipants = userEventRepository.findByEvent_EventId(eventId).stream()
+                .filter(ue -> ue.getAttendanceStatus().getId() == 1)
+                .toList();
+
+        User systemUser = userRepository.findByEmail("system@joinmatch.pl")
+                .orElseThrow(() -> new IllegalStateException("Brak użytkownika systemowego - upewnij się, że taki user istnieje w bazie"));
+
+        for (UserEvent ue : confirmedParticipants) {
+            boolean isPresent = presentUserIds.contains(ue.getUser().getId());
+
+            if (!isPresent) {
+                UserRating penalty = new UserRating();
+
+                penalty.setRater(systemUser);
+                penalty.setRated(ue.getUser());
+                penalty.setEvent(event);
+                penalty.setRating(1);
+                penalty.setComment("Brak obecności na wydarzeniu bez wcześniejszego odwołania");
+
+                event.setIsAttendanceChecked(true);
+                userRatingRepository.save(penalty);
+
+                System.out.println("KARA DLA UŻYTKOWNIKA ID: " + ue.getUser().getId());
+            }
+        }
     }
 }

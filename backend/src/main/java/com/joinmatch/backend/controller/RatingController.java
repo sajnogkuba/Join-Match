@@ -9,7 +9,9 @@ import com.joinmatch.backend.dto.Reports.UserRatingReportDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingRequestDto;
 import com.joinmatch.backend.dto.UserRating.UserRatingResponseDto;
 import com.joinmatch.backend.service.RatingService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -114,18 +116,20 @@ public class RatingController {
         return ResponseEntity.noContent().build();
     }
     @PostMapping("report/eventRating")
-    public ResponseEntity<Void> reportEventRating(@RequestBody EventRatingReportDto reportDto){
+    public ResponseEntity<Void> reportEventRating(@RequestBody EventRatingReportDto reportDto, HttpServletRequest request){
         try {
-            ratingService.reportEventRating(reportDto);
+            ratingService.reportEventRating(reportDto, request);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
+        }catch (RuntimeException runtimeException){
+            ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok().build();
     }
     @PostMapping("/report/userRating")
-    public ResponseEntity<Void> reportUserRating(@RequestBody UserRatingReportDto userRatingReportDto){
+    public ResponseEntity<Void> reportUserRating(@RequestBody UserRatingReportDto userRatingReportDto, HttpServletRequest request){
         try {
-            ratingService.reportUserRating(userRatingReportDto);
+            ratingService.reportUserRating(userRatingReportDto, request);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
         }

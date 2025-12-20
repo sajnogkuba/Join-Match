@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../Api/axios";
+import StarRatingDisplay from "./StarRatingDisplay";
 import StarRatingInput from "./StarRatingInput";
 import type { SportTypeOption, UserSport, UserSportsResponse } from "../Api/types/Sports";
 import type { SavedEventRef, EventDetails } from "../Api/types/Events";
@@ -144,9 +145,7 @@ const AddSportModal = ({
         if (!sportId || !levelValid || !selected) return;
         setSaving(true);
         try {
-            const token = localStorage.getItem("accessToken") || "";
             await api.post("/sport-type/user", {
-                token,
                 sportId,
                 rating: levelNum
             });
@@ -293,7 +292,9 @@ const SportsList = ({
                             />
                             <div className="min-w-0">
                                 <p className="text-white font-medium leading-tight truncate">{s.name}</p>
-                                <p className="text-xs text-zinc-400">Poziom: {s.level}</p>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                    <StarRatingDisplay value={s.level > 5 ? s.level / 2 : s.level} size={14} />
+                                </div>
                             </div>
                         </div>
 
@@ -366,10 +367,8 @@ const GeneralSection = ({
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        const token = localStorage.getItem("accessToken");
-        if (!token) return;
         api
-            .get<UserSportsResponse>("/sport-type/user", { params: { token } })
+            .get<UserSportsResponse>("/sport-type/user")
             .then(({ data }) => {
                 const mapped: UserSport[] = (data.sports ?? []).map((s) => ({
                     id: s.sportId,
@@ -420,9 +419,6 @@ const GeneralSection = ({
             return;
         }
 
-        const token = localStorage.getItem("accessToken");
-        if (!token) return;
-
         setErrorMessage(null);
         setRemovingIndex(index);
 
@@ -433,7 +429,6 @@ const GeneralSection = ({
         try {
             await api.delete("/sport-type/user/sport", {
                 data: {
-                    token: token,
                     idSport: item.id,
                 },
             });

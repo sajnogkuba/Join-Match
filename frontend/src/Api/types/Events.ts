@@ -15,6 +15,7 @@ export type EventDetails = {
     scoreTeam1: number | null;
     scoreTeam2: number | null;
     sportTypeName: string;
+    sportTypeURL?: string | null;
     sportObjectName: string;
     sportObjectId: number;
     city: string;
@@ -25,6 +26,7 @@ export type EventDetails = {
     eventVisibilityName: string;
     ownerId: number;
     ownerName: string;
+    ownerAvatarUrl?: string | null;
     skillLevel: string;
     paymentMethod: string;
     imageUrl?: string;

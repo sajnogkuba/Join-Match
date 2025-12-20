@@ -672,5 +672,61 @@ public class NotificationService {
         }
     }
 
+    @Transactional
+    public void sendEventCanceledNotification(Event event) {
+        event.getUserEvents().forEach(ue -> {
+            User user = ue.getUser();
+
+            try {
+                EventNotificationDataDto data = new EventNotificationDataDto(
+                        event.getEventId(),
+                        event.getEventName(),
+                        event.getOwner().getId(),
+                        event.getOwner().getName()
+                );
+
+                String json = objectMapper.writeValueAsString(data);
+
+                Notification n = Notification.builder()
+                        .user(user)
+                        .type(NotificationType.EVENT_CANCELED)
+                        .title("Wydarzenie odwołane")
+                        .message("Organizator odwołał wydarzenie: " + event.getEventName())
+                        .data(json)
+                        .build();
+
+                Notification saved = notificationRepository.save(n);
+
+                messagingTemplate.convertAndSendToUser(
+                        user.getId().toString(),
+                        "/queue/notifications",
+                        NotificationResponseDto.fromNotification(saved)
+                );
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+    @Transactional
+    public void sendModeratorWarning(User receiver) {
+
+        Notification notification = Notification.builder()
+                .user(receiver)
+                .type(NotificationType.MODERATOR_WARNING)
+                .title("Ostrzeżenie od moderatora")
+                .message("Przestrzegaj regulaminu. W przypadku dalszych naruszeń konto może zostać zablokowane.")
+                .data(null)
+                .build();
+
+        Notification saved = notificationRepository.save(notification);
+
+        messagingTemplate.convertAndSendToUser(
+                receiver.getId().toString(),
+                "/queue/notifications",
+                NotificationResponseDto.fromNotification(saved)
+        );
+    }
+
+
 
 }

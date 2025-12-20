@@ -1,127 +1,153 @@
 import axios, { AxiosError } from 'axios'
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import type { JwtResponse } from './types'
 
 const axiosInstance: AxiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
+	baseURL: import.meta.env.VITE_API_URL,
+	headers: {
+		'Content-Type': 'application/json',
+	},
+	withCredentials: true,
+})
 
-function parseJwt(token: string) {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-            atob(base64)
-                .split('')
-                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-        );
-        return JSON.parse(jsonPayload);
-    } catch (e) {
-        return null;
-    }
-}
-    
-let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+let isRefreshing = false
+let failedQueue: any[] = []
 
-let disconnectWebSocket: (() => void) | null = null;
+let disconnectWebSocket: (() => void) | null = null
 
 export function setDisconnectWebSocket(disconnectFn: () => void) {
-    disconnectWebSocket = disconnectFn;
+	disconnectWebSocket = disconnectFn
 }
 
-export function scheduleTokenRefresh() {
-    if (refreshTimeout) clearTimeout(refreshTimeout);
-
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) return;
-
-    const payload = parseJwt(accessToken);
-    if (!payload?.exp) return;
-
-    const expTime = payload.exp * 1000;
-    const now = Date.now();
-    const oneMinute = 60 * 1000;
-
-    const timeUntilRefresh = expTime - now - oneMinute;
-
-    if (timeUntilRefresh <= 0) {
-        refreshToken().then(() => scheduleTokenRefresh());
-    } else {
-        refreshTimeout = setTimeout(async () => {
-            await refreshToken();
-            scheduleTokenRefresh();
-        }, timeUntilRefresh);
-    }
-}
-
-
-const refreshToken = async (): Promise<string> => {
-    const storedRefreshToken = localStorage.getItem('refreshToken');
-    if (!storedRefreshToken) {
-        throw new Error('Brak refresh tokena');
-    }
-
-    try {
-        const response = await axios.post<JwtResponse>(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/auth/refreshToken`,
-            { refreshToken: storedRefreshToken }
-        );
-        const newAccessToken = response.data.token;
-        const newRefreshToken = response.data.refreshToken;
-
-        localStorage.setItem('accessToken', newAccessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-
-        scheduleTokenRefresh();
-
-        return newAccessToken;
-    } catch (error) {
-        console.error('Błąd odświeżania tokena:', error);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        throw error;
-    }
-}
-
-
-
-axiosInstance.interceptors.request.use(
-	(config: InternalAxiosRequestConfig) => {
-		const accessToken = localStorage.getItem('accessToken')
-		if (accessToken && config.headers) {
-			config.headers.Authorization = `Bearer ${accessToken}`
+const processQueue = (error: any, token: any = null) => {
+	failedQueue.forEach(prom => {
+		if (error) {
+			prom.reject(error)
+		} else {
+			prom.resolve(token)
 		}
-		return config
-	},
-	error => Promise.reject(error)
-)
+	})
+	failedQueue = []
+}
+
+const refreshToken = async (): Promise<void> => {
+	try {
+		await axiosInstance.post('/auth/refreshToken')
+	} catch (error) {
+		console.error('Błąd wewnątrz funkcji refreshToken:', error)
+		throw error
+	}
+}
+
+const publicEndpoints = [
+	'/auth/login',
+	'/auth/register',
+	'/auth/verify',
+	'/event',
+	'/team',
+	'/post',
+	'/sport-type',
+	'/user',
+	'/badge',
+	'/friends',
+	'/user-event',
+	'/user-saved-event',
+	'/ratings',
+	'/rankings',
+	'/conversations',
+	'/notifications',
+]
+
+const isPublicEndpoint = (url: string | undefined): boolean => {
+	if (!url) return false
+	const path = url.replace(import.meta.env.VITE_API_URL || '', '')
+	const isPublic = publicEndpoints.some(endpoint => path.startsWith(endpoint))
+
+	const isProtected =
+		path.includes('/auth/user/details') ||
+		path.includes('/auth/changePass') ||
+		path.includes('/auth/user/photo') ||
+		path.includes('/auth/report/') ||
+		path.includes('/team/report/') ||
+		path.includes('/event/report/') ||
+		path.includes('/ratings/report/') ||
+		path.includes('/user-event/request') ||
+		path.includes('/user-event/approve') ||
+		path.includes('/user-event/reject') ||
+		path.includes('/user-event/invite') ||
+		path.includes('/user-event/invitation/') ||
+		path.includes('/conversations/') ||
+		path.includes('/chat/')
+
+	return isPublic && !isProtected
+}
 
 axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => response,
 	async (error: AxiosError) => {
 		const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
+		if (originalRequest.url?.includes('/auth/refreshToken') || originalRequest.url?.includes('/auth/login')) {
+			return Promise.reject(error)
+		}
+
 		if (error.response?.status === 401 && !originalRequest._retry) {
+			if (isPublicEndpoint(originalRequest.url)) {
+				return Promise.reject(error)
+			}
+
+			if (isRefreshing) {
+				return new Promise(function (resolve, reject) {
+					failedQueue.push({ resolve, reject })
+				})
+					.then(() => {
+						return axiosInstance(originalRequest)
+					})
+					.catch(err => {
+						return Promise.reject(err)
+					})
+			}
+
 			originalRequest._retry = true
+			isRefreshing = true
 
 			try {
-				const newAccessToken = await refreshToken()
-				if (originalRequest.headers) {
-					originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
-				}
+				await refreshToken()
+				processQueue(null, true)
+				isRefreshing = false
 				return axiosInstance(originalRequest)
 			} catch (refreshError) {
-				console.error('Błąd podczas ponownego logowania:', refreshError);
-				localStorage.removeItem('accessToken')
-				localStorage.removeItem('refreshToken')
+				processQueue(refreshError, null)
+				isRefreshing = false
+
+				console.error('Krytyczny błąd odświeżania sesji - Wylogowywanie...', refreshError)
+
 				if (disconnectWebSocket) {
-					disconnectWebSocket();
+					disconnectWebSocket()
 				}
-				window.location.href = '/login'
+
+				const currentPath = window.location.pathname
+				const publicPaths = [
+					'/login',
+					'/register',
+					'/',
+					'/events',
+					'/teams',
+					'/about',
+					'/kontakt',
+					'/faq',
+					'/privacy',
+					'/terms',
+				]
+				if (
+					!publicPaths.includes(currentPath) &&
+					!currentPath.startsWith('/event/') &&
+					!currentPath.startsWith('/team/') &&
+					!currentPath.startsWith('/post/') &&
+					!currentPath.startsWith('/profile/')
+				) {
+					window.location.href = '/login'
+				}
+
 				return Promise.reject(refreshError)
 			}
 		}

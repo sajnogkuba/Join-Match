@@ -5,8 +5,9 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Filter, Eye, Ban, Undo2 } from "lucide-react";
+import { Search, Filter, Ban, Undo2, Send } from "lucide-react";
 import axiosInstance from "../Api/axios.tsx";
+import { getCookie } from "../utils/cookies";
 
 type BackendUserDto = {
     id: number;
@@ -41,7 +42,7 @@ const ModeratorUsersTab: React.FC = () => {
     const [qUsers, setQUsers] = useState("");
     const [users, setUsers] = useState<ModeratorUser[]>([]);
 
-    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [, setLoadingUsers] = useState(true);
     const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
     const [errorUsers, setErrorUsers] = useState<string | null>(null);
     const [hasNextUsers, setHasNextUsers] = useState(false);
@@ -49,10 +50,13 @@ const ModeratorUsersTab: React.FC = () => {
     const currentUsersPageRef = useRef(0);
     const observerTargetUsers = useRef<HTMLDivElement | null>(null);
 
+    // 🔔 MODERATOR WARNING – NOWE
+    const [notifyUser, setNotifyUser] = useState<ModeratorUser | null>(null);
+    const [sendingNotification, setSendingNotification] = useState(false);
+
     useEffect(() => {
         try {
-            const email = localStorage.getItem("email");
-            setLoggedEmail(email);
+            setLoggedEmail(getCookie("email"));
         } catch {
             setLoggedEmail(null);
         }
@@ -68,29 +72,18 @@ const ModeratorUsersTab: React.FC = () => {
                     PageResponse<BackendUserDto>
                 >(`/auth/moderation?page=${pageNum}&size=${PAGE_SIZE}`);
 
-                const data = res.data;
-
-                const mapped: ModeratorUser[] = data.content.map((u) => ({
+                const mapped: ModeratorUser[] = res.data.content.map((u) => ({
                     id: u.id,
                     nickname: u.username,
                     email: u.email,
                     status: u.isBlocked ? "BANNED" : "ACTIVE",
                 }));
 
-                if (append) {
-                    setUsers((prev) => [...prev, ...mapped]);
-                } else {
-                    setUsers(mapped);
-                }
-
-                setHasNextUsers(!data.last);
-                currentUsersPageRef.current = data.number;
+                setUsers((prev) => (append ? [...prev, ...mapped] : mapped));
+                setHasNextUsers(!res.data.last);
+                currentUsersPageRef.current = res.data.number;
             } catch (e) {
-                const msg =
-                    e instanceof Error
-                        ? e.message
-                        : "Wystąpił błąd podczas ładowania użytkowników.";
-                setErrorUsers(msg);
+                setErrorUsers("Wystąpił błąd podczas ładowania użytkowników.");
             } finally {
                 setLoadingUsers(false);
                 setLoadingMoreUsers(false);
@@ -112,11 +105,9 @@ const ModeratorUsersTab: React.FC = () => {
 
         const observer = new IntersectionObserver(
             (entries) => {
-                const entry = entries[0];
                 if (
-                    entry.isIntersecting &&
-                    !loadingMoreUsers &&
-                    hasNextUsers
+                    entries[0].isIntersecting &&
+                    !loadingMoreUsers
                 ) {
                     fetchUsers(currentUsersPageRef.current + 1, true);
                 }
@@ -139,28 +130,37 @@ const ModeratorUsersTab: React.FC = () => {
     );
 
     const blockUser = async (email: string) => {
-        try {
-            await axiosInstance.patch("/auth/block/user", { email });
-            setUsers((prev) =>
-                prev.map((u) =>
-                    u.email === email ? { ...u, status: "BANNED" } : u
-                )
-            );
-        } catch (err) {
-            console.error("Błąd blokowania użytkownika", err);
-        }
+        await axiosInstance.patch("/auth/block/user", { email });
+        setUsers((prev) =>
+            prev.map((u) =>
+                u.email === email ? { ...u, status: "BANNED" } : u
+            )
+        );
     };
 
     const unlockUser = async (email: string) => {
+        await axiosInstance.patch("/auth/unlock/user", { email });
+        setUsers((prev) =>
+            prev.map((u) =>
+                u.email === email ? { ...u, status: "ACTIVE" } : u
+            )
+        );
+    };
+
+    // 🔔 WYSYŁANIE OSTRZEŻENIA
+    const sendNotification = async () => {
+        if (!notifyUser) return;
+
         try {
-            await axiosInstance.patch("/auth/unlock/user", { email });
-            setUsers((prev) =>
-                prev.map((u) =>
-                    u.email === email ? { ...u, status: "ACTIVE" } : u
-                )
-            );
-        } catch (err) {
-            console.error("Błąd odblokowywania użytkownika", err);
+            setSendingNotification(true);
+            await axiosInstance.post("/moderator/notification/warning", {
+                usermailOfReceiver: notifyUser.email,
+            });
+            setNotifyUser(null);
+        } catch {
+            alert("Nie udało się wysłać ostrzeżenia");
+        } finally {
+            setSendingNotification(false);
         }
     };
 
@@ -173,7 +173,7 @@ const ModeratorUsersTab: React.FC = () => {
                         value={qUsers}
                         onChange={(e) => setQUsers(e.target.value)}
                         placeholder="Szukaj po nicku lub e-mailu…"
-                        className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-600"
+                        className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100"
                     />
                 </div>
                 <button className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800">
@@ -198,75 +198,82 @@ const ModeratorUsersTab: React.FC = () => {
                     </thead>
 
                     <tbody>
-                    {loadingUsers && users.length === 0 && (
-                        <tr>
-                            <td
-                                colSpan={4}
-                                className="px-4 py-6 text-center text-zinc-400"
-                            >
-                                Ładowanie…
-                            </td>
-                        </tr>
-                    )}
-
                     {filteredUsers.map((u) => (
-                        <tr
-                            key={u.id}
-                            className="border-t border-zinc-800"
-                        >
+                        <tr key={u.id} className="border-t border-zinc-800">
                             <td className="px-4 py-3">{u.nickname}</td>
                             <td className="px-4 py-3">{u.email}</td>
 
-                            {/* STATUS */}
                             <td className="px-4 py-3">
                                 {u.status === "ACTIVE" ? (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
+                                    <span className="bg-emerald-500/15 text-emerald-300 px-2 py-1 rounded-full text-xs">
                                             Odblokowany
                                         </span>
                                 ) : (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-500/15 text-red-300 border border-red-500/40">
+                                    <span className="bg-red-500/15 text-red-300 px-2 py-1 rounded-full text-xs">
                                             Zablokowany
                                         </span>
                                 )}
                             </td>
 
-                            {/* AKCJE */}
                             <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                    <button className="p-2 rounded-lg border border-zinc-700 hover:bg-zinc-800">
-                                        <Eye className="h-4 w-4" />
-                                    </button>
+                                <div className="flex justify-end gap-2">
+                                    {u.email !== loggedEmail && (
+                                        <button
+                                            onClick={() => setNotifyUser(u)}
+                                            className="
+        inline-flex items-center justify-center
+        h-9 w-9
+        rounded-lg
+        border border-violet-600/40
+        text-violet-300
+        hover:bg-violet-900/20
+    "
+                                            title="Wyślij ostrzeżenie"
+                                        >
+                                            <Send className="h-4 w-4" />
+                                        </button>
+
+                                    )}
 
                                     {u.email === loggedEmail ? (
-                                        // nie można zablokować samego siebie
                                         <button
                                             disabled
-                                            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 text-zinc-600 cursor-not-allowed"
-                                            title="Nie możesz zablokować własnego konta"
+                                            className="px-3 py-2 rounded-lg border border-zinc-700 text-zinc-600 cursor-not-allowed"
                                         >
-                                            <Ban className="h-4 w-4" />
                                             Nieaktywne
                                         </button>
                                     ) : u.status === "ACTIVE" ? (
                                         <button
-                                            onClick={() =>
-                                                blockUser(u.email)
-                                            }
-                                            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-600/40 text-red-300 hover:bg-red-900/20"
+                                            onClick={() => blockUser(u.email)}
+                                            className="
+        inline-flex items-center gap-2
+        h-9 px-3
+        rounded-lg
+        border border-red-600/40
+        text-red-300
+        hover:bg-red-900/20
+    "
                                         >
                                             <Ban className="h-4 w-4" />
                                             Zablokuj
                                         </button>
+
                                     ) : (
                                         <button
-                                            onClick={() =>
-                                                unlockUser(u.email)
-                                            }
-                                            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-600/40 text-emerald-300 hover:bg-emerald-900/20"
+                                            onClick={() => unlockUser(u.email)}
+                                            className="
+        inline-flex items-center gap-2
+        h-9 px-3
+        rounded-lg
+        border border-emerald-600/40
+        text-emerald-300
+        hover:bg-emerald-900/20
+    "
                                         >
                                             <Undo2 className="h-4 w-4" />
                                             Odblokuj
                                         </button>
+
                                     )}
                                 </div>
                             </td>
@@ -288,6 +295,41 @@ const ModeratorUsersTab: React.FC = () => {
                             ? "Załadowano wszystkich użytkowników."
                             : null}
             </div>
+
+            {/* 🔔 MODAL OSTRZEŻENIA */}
+            {notifyUser && (
+                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+                    <div className="bg-[#1f2632] p-6 rounded-2xl w-full max-w-md border border-zinc-800">
+                        <h2 className="text-white font-semibold mb-2">
+                            Wyślij ostrzeżenie
+                        </h2>
+                        <p className="text-zinc-400 mb-4">
+                            Do użytkownika:{" "}
+                            <span className="text-zinc-200">
+                                {notifyUser.email}
+                            </span>
+                        </p>
+
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setNotifyUser(null)}
+                                className="px-4 py-2 rounded-xl border border-zinc-700 text-zinc-300"
+                            >
+                                Anuluj
+                            </button>
+                            <button
+                                onClick={sendNotification}
+                                disabled={sendingNotification}
+                                className="px-4 py-2 rounded-xl bg-violet-600 text-white"
+                            >
+                                {sendingNotification
+                                    ? "Wysyłanie…"
+                                    : "Wyślij"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

@@ -1,8 +1,10 @@
 package com.joinmatch.backend.service;
 
 import com.joinmatch.backend.dto.UserTeam.UserTeamResponseDto;
+import com.joinmatch.backend.model.TeamRole;
 import com.joinmatch.backend.model.UserTeam;
 import com.joinmatch.backend.repository.TeamRepository;
+import com.joinmatch.backend.repository.TeamRoleRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.repository.UserTeamRepository;
 import lombok.AllArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @AllArgsConstructor
@@ -18,6 +21,7 @@ public class UserTeamService {
     private final UserTeamRepository userTeamRepository;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
+    private final TeamRoleRepository teamRoleRepository;
     private final NotificationService notificationService;
     private final ChatService chatService;
 
@@ -82,5 +86,40 @@ public class UserTeamService {
         notificationService.sendTeamLeftNotification(userTeam);
 
         chatService.removeUserFromTeamChat(team.getId(), user.getId());
+    }
+
+    @Transactional
+    public UserTeamResponseDto assignRole(Integer teamId, Integer userId, Integer roleId) {
+        var team = teamRepository.findById(teamId).orElseThrow(
+                () -> new IllegalArgumentException("Team with id " + teamId + " not found")
+        );
+
+        var user = userRepository.findById(userId).orElseThrow(
+                () -> new IllegalArgumentException("User with id " + userId + " not found")
+        );
+
+        var userTeam = userTeamRepository.findByUserAndTeam(user, team).orElseThrow(
+                () -> new IllegalArgumentException("User with id " + userId + " is not a member of team with id " + teamId)
+        );
+
+        var leader = team.getLeader();
+        if (leader.getId().equals(userId)) {
+            throw new IllegalArgumentException("Cannot assign role to the leader of the team");
+        }
+
+        TeamRole role = null;
+        if (roleId != null) {
+            role = teamRoleRepository.findById(roleId).orElseThrow(
+                    () -> new IllegalArgumentException("Team role with id " + roleId + " not found")
+            );
+            
+            if (!role.getTeam().getId().equals(teamId)) {
+                throw new IllegalArgumentException("Role does not belong to this team");
+            }
+        }
+
+        userTeam.setRole(role);
+        UserTeam savedUserTeam = userTeamRepository.save(userTeam);
+        return UserTeamResponseDto.fromUserTeam(savedUserTeam);
     }
 }

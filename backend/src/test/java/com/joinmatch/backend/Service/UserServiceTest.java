@@ -12,6 +12,8 @@ import com.joinmatch.backend.service.GoogleTokenVerifier;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,6 +42,7 @@ class UserServiceTest {
     @Mock private FriendshipRepository friendshipRepository;
     @Mock private GoogleTokenVerifier tokenVerifier;
     @Mock private ReportUserRepository reportUserRepository;
+    @Mock private com.joinmatch.backend.service.EmailService emailService;
 
     @InjectMocks
     private UserService userService;
@@ -78,6 +81,7 @@ class UserServiceTest {
         User u = new User();
         u.setPassword("HASH");
         u.setIsBlocked(false);
+        u.setIsVerified(true);
 
         when(userRepository.findByEmail("a@a.com")).thenReturn(Optional.of(u));
         when(passwordEncoder.matches("pass", "HASH")).thenReturn(true);
@@ -108,6 +112,7 @@ class UserServiceTest {
         User u = new User();
         u.setPassword("HASH");
         u.setIsBlocked(true);
+        u.setIsVerified(true);
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.of(u));
         when(passwordEncoder.matches(any(), any())).thenReturn(true);
@@ -175,13 +180,17 @@ class UserServiceTest {
         User u = new User();
         u.setPassword("HASH");
 
-        ChangePassDto dto = new ChangePassDto("T", "old", "new");
+        ChangePassDto dto = new ChangePassDto("old", "new");
 
         when(userRepository.findByTokenValue("T")).thenReturn(Optional.of(u));
         when(passwordEncoder.matches("old", "HASH")).thenReturn(true);
         when(passwordEncoder.encode("new")).thenReturn("N_HASH");
 
-        userService.changePassword(dto);
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", "T");
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+
+        userService.changePassword(dto, request);
 
         assertEquals("N_HASH", u.getPassword());
     }
@@ -191,12 +200,16 @@ class UserServiceTest {
         User u = new User();
         u.setPassword("HASH");
 
-        ChangePassDto dto = new ChangePassDto("T", "old", "new");
+        ChangePassDto dto = new ChangePassDto("old", "new");
 
         when(userRepository.findByTokenValue("T")).thenReturn(Optional.of(u));
         when(passwordEncoder.matches("old", "HASH")).thenReturn(false);
 
-        assertThrows(RuntimeException.class, () -> userService.changePassword(dto));
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", "T");
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+
+        assertThrows(RuntimeException.class, () -> userService.changePassword(dto, request));
     }
 
     // -------------------------------------------------------------------------
@@ -210,7 +223,11 @@ class UserServiceTest {
 
         when(userRepository.findByTokenValue("T")).thenReturn(Optional.of(u));
 
-        var dto = userService.getSimpleInfo("T");
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", "T");
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+
+        var dto = userService.getSimpleInfo(request);
 
         assertEquals("Kuba", dto.name());
     }
@@ -219,7 +236,11 @@ class UserServiceTest {
     void getSimpleInfo_shouldThrow_whenMissing() {
         when(userRepository.findByTokenValue(any())).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> userService.getSimpleInfo("T"));
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", "T");
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+
+        assertThrows(IllegalArgumentException.class, () -> userService.getSimpleInfo(request));
     }
 
     // -------------------------------------------------------------------------
@@ -231,7 +252,11 @@ class UserServiceTest {
 
         when(userRepository.findByTokenValue("T")).thenReturn(Optional.of(u));
 
-        userService.updateUserPhoto("T", "URL");
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", "T");
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+
+        userService.updateUserPhoto("URL", request);
 
         assertEquals("URL", u.getUrlOfPicture());
         verify(userRepository).save(u);
@@ -379,12 +404,16 @@ class UserServiceTest {
         User suspect = new User();
         suspect.setSuspectUser(new HashSet<>());
 
-        UserReportDto dto = new UserReportDto("T", 2, "desc");
+        UserReportDto dto = new UserReportDto(2, "desc");
 
         when(userRepository.findByTokenValue("T")).thenReturn(Optional.of(reporter));
         when(userRepository.findById(2)).thenReturn(Optional.of(suspect));
 
-        userService.reportUser(dto);
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", "T");
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+
+        userService.reportUser(dto, request);
 
         verify(reportUserRepository).save(any(ReportUser.class));
         assertEquals(1, reporter.getUserReportSender().size());

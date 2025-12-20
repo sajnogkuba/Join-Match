@@ -1,12 +1,16 @@
 package com.joinmatch.backend.Service;
 
+import com.joinmatch.backend.config.CookieUtil;
 import com.joinmatch.backend.dto.Event.EventDetailsResponseDto;
 import com.joinmatch.backend.dto.Event.EventRequestDto;
 import com.joinmatch.backend.dto.Event.EventResponseDto;
 import com.joinmatch.backend.dto.Reports.EventReportDto;
+import com.joinmatch.backend.enums.EventStatus;
 import com.joinmatch.backend.model.*;
 import com.joinmatch.backend.repository.*;
 import com.joinmatch.backend.service.EventService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -78,7 +82,7 @@ public class EventServiceTest {
         e.setEventName("Test Event");
         e.setNumberOfParticipants(10);
         e.setCost(BigDecimal.valueOf(20));
-        e.setStatus("OPEN");
+        e.setStatus(EventStatus.PLANNED);
         e.setScoreTeam1(1);
         e.setScoreTeam2(2);
         e.setEventDate(LocalDateTime.now());
@@ -92,6 +96,13 @@ public class EventServiceTest {
         e.setUserEvents(new ArrayList<>());
 
         return e;
+    }
+
+    private HttpServletRequest mockRequestWithToken(String token) {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", token);
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+        return request;
     }
 
     // ----------------------------------------------------------------------
@@ -159,11 +170,12 @@ public class EventServiceTest {
                 "owner@gmail.com",
                 10,
                 3,
-                "OPEN",
+                EventStatus.PLANNED,
                 LocalDateTime.now(),
                 5,
                 3,
                 "img.png",
+                Boolean.TRUE,
                 List.of()
         );
 
@@ -197,7 +209,8 @@ public class EventServiceTest {
 
         when(eventRepository.findAllOwnedByUserToken("abc")).thenReturn(List.of(e));
 
-        List<EventResponseDto> list = eventService.getEventsForUser("abc");
+        HttpServletRequest request = mockRequestWithToken("abc");
+        List<EventResponseDto> list = eventService.getEventsForUser(request);
 
         assertEquals(1, list.size());
         assertEquals("Test Event", list.get(0).eventName());
@@ -226,7 +239,7 @@ public class EventServiceTest {
 
     @Test
     void reportEvent_shouldSaveReport() {
-        EventReportDto dto = new EventReportDto("token123", 1, "Bad event");
+        EventReportDto dto = new EventReportDto(1, "Bad event");
 
         User u = mockUser(5);
         when(userRepository.findByTokenValue("token123")).thenReturn(Optional.of(u));
@@ -234,7 +247,8 @@ public class EventServiceTest {
         Event e = mockEvent();
         when(eventRepository.getReferenceById(1)).thenReturn(e);
 
-        eventService.reportEvent(dto);
+        HttpServletRequest request = mockRequestWithToken("token123");
+        eventService.reportEvent(dto, request);
 
         verify(reportEventRepository, times(1)).save(any(ReportEvent.class));
     }

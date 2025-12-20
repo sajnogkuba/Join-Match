@@ -31,14 +31,8 @@ export default function CreateTeamForm() {
 	const [uploadingImage, setUploadingImage] = useState(false)
 
 	useEffect(() => {
-		const token = localStorage.getItem('accessToken')
-		if (!token) {
-			setServerError('Brak tokenu autoryzacyjnego.')
-			return
-		}
-
 		// Pobierz leaderId
-		api.get<User>('/auth/user', { params: { token } })
+		api.get<User>('/auth/user')
 			.then(({ data }) => setLeaderId(data.id))
 			.catch(() => setServerError('Nie udało się pobrać danych użytkownika.'))
 	}, [])
@@ -70,12 +64,13 @@ export default function CreateTeamForm() {
 		e.preventDefault()
 		if (!validate()) return
 		if (!leaderId) {
-			setServerError('Brak zalogowanego użytkownika.')
+			setServerError('Brak zalogowanego użytkownika. Odśwież stronę i spróbuj ponownie.')
 			return
 		}
 
 		try {
 			setSubmitting(true)
+			setServerError(null)
 			let photoUrl = null
 			if (selectedFile) {
 				setUploadingImage(true)
@@ -85,6 +80,7 @@ export default function CreateTeamForm() {
 					headers: { 'Content-Type': 'multipart/form-data' },
 				})
 				photoUrl = res.data
+				setUploadingImage(false)
 			}
 
 			await api.post('/team', {

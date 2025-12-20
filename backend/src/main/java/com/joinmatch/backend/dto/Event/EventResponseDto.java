@@ -21,6 +21,7 @@ public record EventResponseDto(
         Integer minLevel,
         String imageUrl,
         Boolean isBanned
+
 ) {
     public static EventResponseDto fromEvent(Event event) {
         return new EventResponseDto(
@@ -31,7 +32,7 @@ public record EventResponseDto(
                 event.getOwner().getId(),
                 event.getSportObject().getName(),
                 event.getEventVisibility().getId(),
-                event.getStatus(),
+                event.getStatus().name(),
                 event.getScoreTeam1(),
                 event.getScoreTeam2(),
                 event.getEventDate(),

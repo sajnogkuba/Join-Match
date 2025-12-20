@@ -1,16 +1,20 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.config.CookieUtil;
 import com.joinmatch.backend.config.JwtService;
 
 import com.joinmatch.backend.dto.*;
 import com.joinmatch.backend.dto.Auth.*;
 import com.joinmatch.backend.dto.ChangePass.ChangePassDto;
+import com.joinmatch.backend.dto.Email.VerifyAccountRequest;
 import com.joinmatch.backend.dto.Moderator.GetUsersDto;
 import com.joinmatch.backend.dto.Reports.UserReportDto;
 import com.joinmatch.backend.service.SportService;
 import com.joinmatch.backend.service.UserService;
 import com.joinmatch.backend.supportObject.RefreshSupportObject;
 import com.joinmatch.backend.supportObject.TokenSupportObject;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -40,39 +45,73 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         TokenSupportObject tokenSupportObject;
         try {
             tokenSupportObject = userService.login(request);
-        }catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        JwtResponse response = new JwtResponse(tokenSupportObject.getToken(), tokenSupportObject.getRefreshToken(), request.email());
-        return ResponseEntity.ok(response);
+        CookieUtil.setAccessTokenCookie(response, tokenSupportObject.getToken());
+        CookieUtil.setRefreshTokenCookie(response, tokenSupportObject.getRefreshToken());
+        CookieUtil.setEmailCookie(response, request.email());
+        return ResponseEntity.ok(Map.of("email", request.email()));
     }
 
     @PostMapping("/refreshToken")
-    public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken) {
-        RefreshSupportObject refreshObject = userService.refreshToken(refreshToken.refreshToken());
-        JwtResponse response = new JwtResponse(refreshObject.getTokenSupportObject().getToken(), refreshObject.getTokenSupportObject().getRefreshToken(), refreshObject.getUser().getEmail());
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Void> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        System.out.println("--- REFRESH TOKEN ENDPOINT START ---");
+
+        // 1. Sprawdźmy co przyszło w ciasteczkach
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie c : cookies) {
+                System.out.println("Ciastko: " + c.getName() + " = " + c.getValue());
+            }
+        } else {
+            System.out.println("BRAK CIASTECZEK W REQUEST!");
+        }
+
+        String refreshTokenValue = CookieUtil.getCookieValue(request, "refreshToken");
+        System.out.println("Odczytany refreshTokenValue: " + refreshTokenValue);
+
+        if (refreshTokenValue == null) {
+            System.out.println("BŁĄD: Wartość tokena jest null -> zwracam 401");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            RefreshSupportObject refreshObject = userService.refreshToken(refreshTokenValue);
+            System.out.println("SUKCES: Token odświeżony dla usera: " + refreshObject.getUser().getEmail());
+
+            CookieUtil.setAccessTokenCookie(response, refreshObject.getTokenSupportObject().getToken());
+            CookieUtil.setRefreshTokenCookie(response, refreshObject.getTokenSupportObject().getRefreshToken());
+            CookieUtil.setEmailCookie(response, refreshObject.getUser().getEmail());
+
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.out.println("WYJĄTEK w userService: " + e.getMessage());
+            e.printStackTrace(); // Zobaczysz pełny błąd w konsoli
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest) {
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequest logoutRequest, HttpServletResponse response) {
         try {
             userService.logoutUser(logoutRequest.email());
         } catch (RuntimeException runtimeException) {
             return ResponseEntity.badRequest().build();
         }
+        CookieUtil.clearAllAuthCookies(response);
         return ResponseEntity.ok().build();
     }
     //TODO do przeniesienia do sportControllera
 
     @PatchMapping("/changePass")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto) {
+    public ResponseEntity<String> changePassword(@RequestBody ChangePassDto changePassDto, HttpServletRequest request) {
         try {
-            userService.changePassword(changePassDto);
+            userService.changePassword(changePassDto, request);
         } catch (IllegalArgumentException illegalArgumentException) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
@@ -86,21 +125,21 @@ public class UserController {
     }
 
     @GetMapping("/user/details")
-    public ResponseEntity<UserResponseDto> getUserDetails(@RequestParam String token) {
+    public ResponseEntity<UserResponseDto> getUserDetails(HttpServletRequest request) {
         UserResponseDto simpleInfo;
         try {
-            simpleInfo = userService.getSimpleInfo(token);
+            simpleInfo = userService.getSimpleInfo(request);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         return ResponseEntity.ok().body(simpleInfo);
     }
 
     @PatchMapping("/user/photo")
-    public ResponseEntity<String> updateUserPhoto(@RequestBody UpdateUserPhotoRequestDto request) {
+    public ResponseEntity<String> updateUserPhoto(@RequestBody UpdateUserPhotoRequestDto requestDto, HttpServletRequest request) {
         try {
-            userService.updateUserPhoto(request.token(), request.photoUrl());
+            userService.updateUserPhoto(requestDto.photoUrl(), request);
             return ResponseEntity.ok("Photo updated");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
@@ -113,9 +152,13 @@ public class UserController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<UserResponseDto> getUser(@RequestParam String token) {
-        UserResponseDto user =  userService.getSimpleInfo(token);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<UserResponseDto> getUser(HttpServletRequest request) {
+        try {
+            UserResponseDto user = userService.getSimpleInfo(request);
+            return ResponseEntity.ok(user);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/user/{id}")
@@ -126,32 +169,35 @@ public class UserController {
         UsersResponseDto user = userService.getUserById(id, viewerId);
         return ResponseEntity.ok(user);
     }
+
     @PatchMapping("/block/user")
-    public ResponseEntity<Void> blockUser(@RequestBody BlockUserDto blockUserDto){
+    public ResponseEntity<Void> blockUser(@RequestBody BlockUserDto blockUserDto) {
         try {
-            userService.changeStatusOfBlock(blockUserDto.email(),true);
-        }catch (
+            userService.changeStatusOfBlock(blockUserDto.email(), true);
+        } catch (
                 IllegalArgumentException e
-        ){
+        ) {
             return ResponseEntity.notFound().build();
-        }catch (RuntimeException ex){
+        } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
     }
+
     @PatchMapping("/unlock/user")
-    public ResponseEntity<Void> unlockUser(@RequestBody BlockUserDto blockUserDto){
+    public ResponseEntity<Void> unlockUser(@RequestBody BlockUserDto blockUserDto) {
         try {
-            userService.changeStatusOfBlock(blockUserDto.email(),false);
-        }catch (
+            userService.changeStatusOfBlock(blockUserDto.email(), false);
+        } catch (
                 IllegalArgumentException e
-        ){
+        ) {
             return ResponseEntity.notFound().build();
-        }catch (RuntimeException ex){
+        } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
     }
+
     @GetMapping("/moderation")
     public ResponseEntity<Page<GetUsersDto>> getUsersForModeration(
             @RequestParam(defaultValue = "0") int page,
@@ -161,13 +207,24 @@ public class UserController {
         Page<GetUsersDto> result = userService.getUsersForModeration(pageable);
         return ResponseEntity.ok(result);
     }
+
     @PostMapping("/report/user")
-    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto){
-        try{
-            userService.reportUser(userReportDto);
-        }catch (IllegalArgumentException exception){
+    public ResponseEntity<Void> reportUser(@RequestBody UserReportDto userReportDto, HttpServletRequest request) {
+        try {
+            userService.reportUser(userReportDto, request);
+        } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyAccount(@RequestBody VerifyAccountRequest request) {
+        try {
+            userService.verifyUser(request.email(), request.code());
+            return ResponseEntity.ok("Account verified successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

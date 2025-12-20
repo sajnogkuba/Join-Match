@@ -2,9 +2,12 @@ package com.joinmatch.backend.controller;
 
 import com.joinmatch.backend.dto.Moderator.*;
 import com.joinmatch.backend.service.ModeratorService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +17,15 @@ import org.springframework.web.bind.annotation.*;
 public class ModeratorController {
     private final ModeratorService moderatorService;
 
+    @GetMapping("/auth/me")
+    public ResponseEntity<Boolean> getModeratorPage(HttpServletRequest httpServletRequest){
+        try {
+            moderatorService.authenticate(httpServletRequest);
+        }catch (IllegalArgumentException exception){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(false);
+        }
+        return ResponseEntity.ok(true);
+    }
     @GetMapping("/dashboard")
     public ResponseEntity<GetStatisticsForDashboard> getStatisticsForDashboardResponseEntity(){
         GetStatisticsForDashboard statisticsForDashboard = moderatorService.getStatisticsForDashboard();
@@ -287,6 +299,18 @@ public class ModeratorController {
             moderatorService.deleteReportUser(idReportUser);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("/notification/warning")
+    public ResponseEntity<Void> sendWarning(
+            @RequestBody ModeratorWarningRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        try {
+            moderatorService.sendWarning(request, httpRequest);
+        }catch (IllegalArgumentException exception){
+            return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok().build();
     }

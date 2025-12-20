@@ -10,4 +10,8 @@ public interface ReportUserRatingRepository extends JpaRepository<ReportUserRati
     long countByReviewedIsFalse();
     Page<ReportUserRating> findAllByOrderByIdDesc(Pageable pageable);
 
+    boolean existsByUserRating_UserRateIdAndUserRatingReporter_IdAndActiveTrue(
+            Integer userRateId,
+            Integer reporterUserId
+    );
 }

@@ -92,12 +92,9 @@ const TeamDiscussionTab: React.FC<TeamDiscussionTabProps> = ({ teamMembers, team
 	const [showReplyEmojiPicker, setShowReplyEmojiPicker] = useState<Map<string, boolean>>(new Map())
 
 	useEffect(() => {
-		const token = localStorage.getItem('accessToken')
-		if (token) {
-			api.get<User>('/auth/user', { params: { token } })
-				.then(({ data }) => setCurrentUserId(data.id))
-				.catch(() => setCurrentUserId(null))
-		}
+		api.get<User>('/auth/user')
+			.then(({ data }) => setCurrentUserId(data.id))
+			.catch(() => setCurrentUserId(null))
 	}, [])
 
 	useEffect(() => {

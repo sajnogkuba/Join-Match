@@ -11,6 +11,7 @@ import type { UserSportsResponse } from '../Api/types/Sports'
 import AlertModal from '../components/AlertModal'
 import SportTypeFilter from '../components/SportTypeFilter'
 import { parseEventDate } from '../utils/formatDate'
+import { getCookie } from '../utils/cookies'
 import {
 	Map as MapIcon,
 	Grid as GridIcon,
@@ -63,9 +64,12 @@ const EventsPage = () => {
 
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
+	const [confirmedCounts, setConfirmedCounts] = useState<Record<number, number>>({})
 	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
-	const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; }>({
-		isOpen: false, title: "", message: ""
+	const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+		isOpen: false,
+		title: '',
+		message: '',
 	})
 
 	const [view, setView] = useState<'grid' | 'map'>('grid')
@@ -86,7 +90,7 @@ const EventsPage = () => {
 	const currentPageRef = useRef(0)
 
 	useEffect(() => {
-		setUserEmail(localStorage.getItem('email'))
+		setUserEmail(getCookie('email'))
 	}, [])
 
 	// --- Pobieranie sport objects przy starcie ---
@@ -102,15 +106,33 @@ const EventsPage = () => {
 			}
 		}
 		loadInitial()
-		return () => { cancelled = true }
+		return () => {
+			cancelled = true
+		}
 	}, [])
 
-	// --- reszta Twoich efektów bez zmian ---
 	useEffect(() => {
 		if (!userEmail) return
+
 		axiosInstance
-			.get('/user-event/by-user-email', { params: { userEmail } })
-			.then(({ data }) => setJoinedEventIds(new Set((data || []).map((ue: any) => ue.eventId))))
+			.get('/user-event/by-user-email', {
+				params: {
+					userEmail,
+					page: 0,
+					size: 1000,
+					sortBy: 'id',
+					direction: 'ASC',
+				},
+			})
+			.then(({ data }) => {
+				if (data?.content) {
+					const joinedIds = data.content
+						.filter((ue: any) => ue.attendanceStatusName === 'Zapisany')
+						.map((ue: any) => ue.eventId)
+
+					setJoinedEventIds(new Set(joinedIds))
+				}
+			})
 			.catch(e => console.error('Nie udało się pobrać dołączonych wydarzeń:', e))
 	}, [userEmail])
 
@@ -121,18 +143,16 @@ const EventsPage = () => {
 			.then(({ data }) => setSavedEventIds(new Set((data || []).map((se: any) => se.eventId))))
 			.catch(e => console.error('Nie udało się pobrać zapisanych wydarzeń:', e))
 
-		const token = localStorage.getItem('accessToken')
-		if (token) {
-			axiosInstance.get<UserSportsResponse>('/sport-type/user', { params: { token } })
-				.then(({ data }) => {
-					const sportsMap = new Map<string, number>()
-					data.sports?.forEach((s: any) => {
-						sportsMap.set(s.name, s.rating)
-					})
-					setUserSports(sportsMap)
+		axiosInstance
+			.get<UserSportsResponse>('/sport-type/user')
+			.then(({ data }) => {
+				const sportsMap = new Map<string, number>()
+				data.sports?.forEach((s: any) => {
+					sportsMap.set(s.name, s.rating)
 				})
-				.catch(e => console.error('Nie udało się pobrać sportów użytkownika:', e))
-		}
+				setUserSports(sportsMap)
+			})
+			.catch(e => console.error('Nie udało się pobrać sportów użytkownika:', e))
 	}, [userEmail])
 
 	// Mapowanie SortKey na sortBy + direction
@@ -154,78 +174,131 @@ const EventsPage = () => {
 	}
 
 	// Funkcja pobierająca eventy z backendu
-	const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
-		try {
-			if (append) {
-				setLoadingMore(true)
-			} else {
-				setLoading(true)
-			}
+	const fetchEvents = useCallback(
+		async (pageNum: number, append: boolean = false) => {
+			try {
+				if (append) {
+					setLoadingMore(true)
+				} else {
+					setLoading(true)
+				}
 
-			const { sortBy: currentSortBy, direction: currentDirection } = getSortParams(sort)
-			const params: Record<string, any> = {
-				page: pageNum,
-				size: PAGE_SIZE,
-				sortBy: currentSortBy,
-				direction: currentDirection,
-			}
+				const { sortBy: currentSortBy, direction: currentDirection } = getSortParams(sort)
 
-			// Dodaj filtry
-			if (search.trim() !== '') {
-				params.name = search.trim()
-			}
-			if (sportTypeId !== null) {
-				params.sportTypeId = sportTypeId
-			}
-			if (city.trim() !== '') {
-				params.city = city.trim()
-			}
-			if (dateFrom) {
-				params.dateFrom = dateFrom
-			}
-			if (dateTo) {
-				params.dateTo = dateTo
-			}
-			if (onlyFree) {
-				params.free = true
-			}
-			if (onlyAvailable) {
-				params.available = true
-			}
+				const currentSize = view === 'map' ? 500 : PAGE_SIZE
 
-			const response = await axiosInstance.get<EventsPageResponse>('/event', { params })
-			const data = response.data
+				const params: Record<string, any> = {
+					page: pageNum,
+					size: currentSize,
+					sortBy: currentSortBy,
+					direction: currentDirection,
+				}
 
-			if (append) {
-				setEvents(prev => [...prev, ...(data.content || [])])
-			} else {
-				setEvents(data.content || [])
+				// Dodaj filtry
+				if (search.trim() !== '') {
+					params.name = search.trim()
+				}
+				if (sportTypeId !== null) {
+					params.sportTypeId = sportTypeId
+				}
+				if (city.trim() !== '') {
+					params.city = city.trim()
+				}
+				if (dateFrom) {
+					params.dateFrom = dateFrom
+				}
+				if (dateTo) {
+					params.dateTo = dateTo
+				}
+				if (onlyFree) {
+					params.free = true
+				}
+				if (onlyAvailable) {
+					params.available = true
+				}
+
+				if (search.trim() !== '') {
+					params.name = search.trim()
+				}
+
+				const response = await axiosInstance.get<EventsPageResponse>('/event', { params })
+				const data = response.data
+
+				if (append) {
+					setEvents(prev => [...prev, ...(data.content || [])])
+				} else {
+					setEvents(data.content || [])
+				}
+				// Pobierz liczbę potwierdzonych uczestników dla załadowanych eventów
+				;(async () => {
+					try {
+						const items = data.content || []
+						const promises = items.map(async (ev: any) => {
+							try {
+								const res = await axiosInstance.get(`/user-event/${ev.eventId}/participants`)
+								let confirmed = Array.isArray(res.data)
+									? res.data.filter((p: any) => p.attendanceStatusName === 'Zapisany').length
+									: 0
+
+								// If event is team-based, include team participants count if available
+								const teamCount = (ev as any).teamParticipants ?? null
+								if (teamCount == null) {
+									// try fetching event details for teamParticipants
+									try {
+										const det = await axiosInstance.get(`/event/${ev.eventId}`)
+										const td = det.data as any
+										if (td?.isForTeam) confirmed += td.teamParticipants ?? 0
+									} catch (_) {
+										// ignore
+									}
+								} else {
+									confirmed += teamCount
+								}
+
+								return { id: ev.eventId, confirmed }
+							} catch (e) {
+								const fallback = (ev as any).bookedParticipants || 0
+								const teamCount = (ev as any).teamParticipants ?? 0
+								return { id: ev.eventId, confirmed: fallback + (teamCount || 0) }
+							}
+						})
+						const results = await Promise.all(promises)
+						setConfirmedCounts(prev => {
+							const copy = { ...prev }
+							results.forEach((r: any) => (copy[r.id] = r.confirmed))
+							return copy
+						})
+					} catch (e) {
+						console.error('Błąd pobierania potwierdzonych uczestników:', e)
+					}
+				})()
+				setHasNext(!data.last)
+			} catch (err) {
+				console.error('Błąd pobierania wydarzeń:', err)
+				setError('Nie udało się pobrać wydarzeń.')
+			} finally {
+				setLoading(false)
+				setLoadingMore(false)
 			}
-			setHasNext(!data.last)
-		} catch (err) {
-			console.error('Błąd pobierania wydarzeń:', err)
-			setError('Nie udało się pobrać wydarzeń.')
-		} finally {
-			setLoading(false)
-			setLoadingMore(false)
-		}
-	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable])
+		},
+		[sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable, view]
+	)
 
 	// Reset page i pobieranie eventów przy zmianie filtrów/sortowania
 	useEffect(() => {
 		currentPageRef.current = 0
 		setEvents([])
 		fetchEvents(0, false)
-	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable, fetchEvents])
+	}, [sort, search, sportTypeId, city, dateFrom, dateTo, onlyFree, onlyAvailable, view, fetchEvents])
 
 	// Infinite scroll z IntersectionObserver
 	useEffect(() => {
 		const observer = new IntersectionObserver(
 			entries => {
 				if (entries[0].isIntersecting && hasNext && !loading && !loadingMore) {
-			const nextPage = currentPageRef.current + 1
-			currentPageRef.current = nextPage
-			fetchEvents(nextPage, true)
+					const nextPage = currentPageRef.current + 1
+					currentPageRef.current = nextPage
+					fetchEvents(nextPage, true)
 				}
 			},
 			{ threshold: 0.1 }
@@ -273,7 +346,6 @@ const EventsPage = () => {
 			.filter(Boolean) as any[]
 	}, [events, sportObjects])
 
-
 	const handleSave = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
 		const isSaved = savedEventIds.has(eventId)
@@ -297,6 +369,20 @@ const EventsPage = () => {
 	const handleJoin = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
 		const isJoined = joinedEventIds.has(eventId)
+		const event = events.find(ev => ev.eventId === eventId)
+
+		// Sprawdź czy wydarzenie się zakończyło
+		if (event?.eventDate) {
+			const isEventPast = parseEventDate(event.eventDate).isBefore(dayjs())
+			if (isEventPast) {
+				setAlertModal({
+					isOpen: true,
+					title: 'Wydarzenie zakończone',
+					message: 'Nie można dołączać ani opuszczać zakończonych wydarzeń.',
+				})
+				return
+			}
+		}
 
 		try {
 			if (isJoined) {
@@ -306,21 +392,25 @@ const EventsPage = () => {
 					s.delete(eventId)
 					return s
 				})
-				setEvents(prev => prev.map(ev =>
-					ev.eventId === eventId
-						? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) }
-						: ev
-				))
+				// decrement confirmed count
+				setConfirmedCounts(prev => ({
+					...prev,
+					[eventId]: Math.max(0, (prev[eventId] ?? ((event as any).bookedParticipants || 0)) - 1),
+				}))
+				setEvents(prev =>
+					prev.map(ev =>
+						ev.eventId === eventId ? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) } : ev
+					)
+				)
 			} else {
-				const event = events.find(ev => ev.eventId === eventId)
-				const bookedParticipants = (event as any)?.bookedParticipants || 0
+				const bookedParticipants = (confirmedCounts[eventId] ?? (event as any)?.bookedParticipants) || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
 
 				if (bookedParticipants >= numberOfParticipants) {
 					setAlertModal({
 						isOpen: true,
-						title: "Wydarzenie pełne",
-						message: "Przepraszamy, to wydarzenie jest już pełne."
+						title: 'Wydarzenie pełne',
+						message: 'Przepraszamy, to wydarzenie jest już pełne.',
 					})
 					return
 				}
@@ -329,21 +419,27 @@ const EventsPage = () => {
 					const userLevel = userSports.get(event.sportTypeName)
 					const requiredLevel = event.minLevel
 					if (userLevel === undefined || userLevel < requiredLevel) {
-						const modalMessage = userLevel === undefined
-							? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
-							: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
-						setAlertModal({ isOpen: true, title: "Niewystarczający poziom", message: modalMessage })
+						const modalMessage =
+							userLevel === undefined
+								? `To wydarzenie wymaga poziomu ${requiredLevel} w ${event.sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+								: `To wydarzenie wymaga poziomu ${requiredLevel}, a Twoje umiejętności to ${userLevel}. Zaktualizuj swój profil, aby dołączyć.`
+						setAlertModal({ isOpen: true, title: 'Niewystarczający poziom', message: modalMessage })
 						return
 					}
 				}
 
-				await axiosInstance.post('/user-event', { userEmail, eventId, attendanceStatusId: 1 })
+				await axiosInstance.post('/user-event', { userEmail, eventId })
 				setJoinedEventIds(prev => new Set([...prev, eventId]))
-				setEvents(prev => prev.map(ev =>
-					ev.eventId === eventId
-						? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 }
-						: ev
-				))
+				// increment confirmed count
+				setConfirmedCounts(prev => ({
+					...prev,
+					[eventId]: (prev[eventId] ?? ((event as any).bookedParticipants || 0)) + 1,
+				}))
+				setEvents(prev =>
+					prev.map(ev =>
+						ev.eventId === eventId ? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 } : ev
+					)
+				)
 			}
 		} catch (e) {
 			console.error('Błąd dołączania/opuszczania:', e)
@@ -369,7 +465,10 @@ const EventsPage = () => {
 			<header className='relative h-[140px] w-full overflow-hidden'>
 				<div
 					className='absolute inset-0 bg-cover bg-center'
-					style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)' }}
+					style={{
+						backgroundImage:
+							'url(https://images.unsplash.com/photo-1604948501466-4e9b4d6f3e2b?q=80&w=1600&auto=format&fit=crop)',
+					}}
 				/>
 				<div className='absolute inset-0 bg-black/60' />
 				<div className='relative z-10 mx-auto flex h-full max-w-7xl items-end justify-between px-4 pb-6 md:px-8'>
@@ -378,9 +477,8 @@ const EventsPage = () => {
 						<div className='mt-2 h-1 w-28 rounded-full bg-violet-600' />
 					</div>
 					<Link
-						to="/stworz-wydarzenie"
-						className='bg-white/10 border border-white/20 px-4 py-2 rounded-xl font-semibold text-white hover:bg-white/20 transition-all inline-flex items-center gap-2'
-					>
+						to='/stworz-wydarzenie'
+						className='bg-white/10 border border-white/20 px-4 py-2 rounded-xl font-semibold text-white hover:bg-white/20 transition-all inline-flex items-center gap-2'>
 						<Plus size={18} />
 						Stwórz wydarzenie
 					</Link>
@@ -408,12 +506,16 @@ const EventsPage = () => {
 							<div className='flex items-center gap-2'>
 								<button
 									onClick={() => setView('grid')}
-									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'grid' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>
+									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+										view === 'grid' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+									}`}>
 									<GridIcon size={16} /> <span className='hidden sm:inline'>Lista</span>
 								</button>
 								<button
 									onClick={() => setView('map')}
-									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${view === 'map' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}`}>
+									className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+										view === 'map' ? 'border-violet-600 text-white' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+									}`}>
 									<MapIcon size={16} /> <span className='hidden sm:inline'>Mapa</span>
 								</button>
 							</div>
@@ -430,7 +532,10 @@ const EventsPage = () => {
 									<option value='price_desc'>Cena malejąco</option>
 									<option value='popularity'>Popularność</option>
 								</select>
-								<ArrowUpDown className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60' size={16} />
+								<ArrowUpDown
+									className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
+									size={16}
+								/>
 							</div>
 
 							{/* Przycisk wyczyść */}
@@ -454,10 +559,18 @@ const EventsPage = () => {
 							<PlaceAutocomplete
 								onSelect={(place: google.maps.places.PlaceResult) => {
 									const getAddr = (types: string[]) =>
-										(place.address_components || []).find((c: any) => c.types.some((t: string) => types.includes(t)))?.long_name
+										(place.address_components || []).find((c: any) => c.types.some((t: string) => types.includes(t)))
+											?.long_name
 									const cityName =
-										getAddr(['locality', 'postal_town', 'administrative_area_level_2', 'administrative_area_level_1']) ||
-										place.formatted_address || place.name || ''
+										getAddr([
+											'locality',
+											'postal_town',
+											'administrative_area_level_2',
+											'administrative_area_level_1',
+										]) ||
+										place.formatted_address ||
+										place.name ||
+										''
 									setCity(cityName)
 								}}
 								placeholder='Miasto lub adres'
@@ -467,13 +580,21 @@ const EventsPage = () => {
 						<div className='grid grid-cols-2 gap-2'>
 							<div>
 								<label className='mb-1 block text-xs text-zinc-400'>Od</label>
-								<input type='date' value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-									   className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200' />
+								<input
+									type='date'
+									value={dateFrom}
+									onChange={e => setDateFrom(e.target.value)}
+									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
+								/>
 							</div>
 							<div>
 								<label className='mb-1 block text-xs text-zinc-400'>Do</label>
-								<input type='date' value={dateTo} onChange={e => setDateTo(e.target.value)}
-									   className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200' />
+								<input
+									type='date'
+									value={dateTo}
+									onChange={e => setDateTo(e.target.value)}
+									className='w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-200'
+								/>
 							</div>
 						</div>
 
@@ -482,12 +603,21 @@ const EventsPage = () => {
 								<input type='checkbox' checked={onlyFree} onChange={e => setOnlyFree(e.target.checked)} /> Darmowe
 							</label>
 							<label className='flex items-center gap-2 text-sm'>
-								<input type='checkbox' checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} /> Dostępne
+								<input type='checkbox' checked={onlyAvailable} onChange={e => setOnlyAvailable(e.target.checked)} />{' '}
+								Dostępne
 							</label>
-							<input placeholder='Cena od' value={priceMin} onChange={e => setPriceMin(e.target.value)}
-								   className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1' />
-							<input placeholder='Cena do' value={priceMax} onChange={e => setPriceMax(e.target.value)}
-								   className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1' />
+							<input
+								placeholder='Cena od'
+								value={priceMin}
+								onChange={e => setPriceMin(e.target.value)}
+								className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1'
+							/>
+							<input
+								placeholder='Cena do'
+								value={priceMax}
+								onChange={e => setPriceMax(e.target.value)}
+								className='rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-sm col-span-1'
+							/>
 						</div>
 					</div>
 
@@ -497,7 +627,9 @@ const EventsPage = () => {
 							<MapView events={eventsWithCoords} selectedCity={city} />
 						) : loading ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10'>
-								<div className='flex items-center gap-2 text-zinc-300'><Loader2 className='animate-spin' /> Ładowanie…</div>
+								<div className='flex items-center gap-2 text-zinc-300'>
+									<Loader2 className='animate-spin' /> Ładowanie…
+								</div>
 							</div>
 						) : error ? (
 							<div className='grid place-items-center rounded-2xl border border-zinc-800 bg-rose-500/10 p-10 text-rose-200'>
@@ -514,13 +646,13 @@ const EventsPage = () => {
 								<div className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3'>
 									{events.map(ev => {
 										const isBanned = ev.isBanned === true
+										const confirmedCount = confirmedCounts[ev.eventId] ?? ((ev as any).bookedParticipants || 0)
 										return (
-											<article 
-												key={ev.eventId} 
+											<article
+												key={ev.eventId}
 												className={`overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 ${
 													isBanned ? 'opacity-60 grayscale' : ''
-												}`}
-											>
+												}`}>
 												{isBanned ? (
 													<div className='block relative h-40 bg-zinc-800 overflow-hidden'>
 														<div className='h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800'>
@@ -546,7 +678,9 @@ const EventsPage = () => {
 															/>
 														) : null}
 														<div
-															className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'}`}
+															className={`h-full w-full flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-800 group-hover:scale-105 transition-transform duration-500 ${
+																ev.imageUrl && ev.imageUrl.trim() !== '' ? 'hidden' : 'flex'
+															}`}
 															style={{ display: ev.imageUrl && ev.imageUrl.trim() !== '' ? 'none' : 'flex' }}>
 															<div className='text-center text-zinc-400'>
 																<div className='text-4xl mb-2'>JoinMatch</div>
@@ -570,7 +704,9 @@ const EventsPage = () => {
 															)}
 														</h3>
 														{!isBanned && (
-															<button onClick={() => handleSave(ev.eventId)} className='rounded-full p-2 ring-1 bg-zinc-800 hover:bg-zinc-700'>
+															<button
+																onClick={() => handleSave(ev.eventId)}
+																className='rounded-full p-2 ring-1 bg-zinc-800 hover:bg-zinc-700'>
 																{savedEventIds.has(ev.eventId) ? (
 																	<BookmarkCheck size={18} className='text-violet-400' />
 																) : (
@@ -587,7 +723,7 @@ const EventsPage = () => {
 															<MapPin size={16} /> {ev.sportObjectName}
 														</div>
 														<div className='flex items-center gap-2'>
-															<Users size={16} /> {(ev as any).bookedParticipants}/{ev.numberOfParticipants}
+															<Users size={16} /> {confirmedCount}/{ev.numberOfParticipants}
 														</div>
 														<div className='flex items-center gap-2'>
 															<Ticket size={16} />
@@ -604,22 +740,28 @@ const EventsPage = () => {
 															<>
 																{(() => {
 																	const isJoined = joinedEventIds.has(ev.eventId)
-																	const isFull = (ev as any).bookedParticipants >= ev.numberOfParticipants && !isJoined
+																	const isFull = confirmedCount >= ev.numberOfParticipants && !isJoined
+																	const isEventPast = ev.eventDate && parseEventDate(ev.eventDate).isBefore(dayjs())
 																	return (
 																		<button
 																			onClick={() => handleJoin(ev.eventId)}
-																			disabled={isFull}
-																			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${isJoined
-																				? 'bg-red-600 text-white hover:bg-red-500'
-																				: isFull
+																			disabled={isFull || isEventPast}
+																			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+																				isEventPast
+																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																					: isJoined
+																					? 'bg-red-600 text-white hover:bg-red-500'
+																					: isFull
 																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
 																					: 'bg-violet-600 text-white hover:bg-violet-500'
 																			}`}>
-																			{isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+																			{isEventPast ? 'Zakończone' : isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
 																		</button>
 																	)
 																})()}
-																<Link to={`/event/${ev.eventId}`} className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
+																<Link
+																	to={`/event/${ev.eventId}`}
+																	className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
 																	Szczegóły <ChevronRight size={16} />
 																</Link>
 															</>
@@ -650,10 +792,10 @@ const EventsPage = () => {
 
 			<AlertModal
 				isOpen={alertModal.isOpen}
-				onClose={() => setAlertModal({ isOpen: false, title: "", message: "" })}
+				onClose={() => setAlertModal({ isOpen: false, title: '', message: '' })}
 				title={alertModal.title}
 				message={alertModal.message}
-				variant="warning"
+				variant='warning'
 			/>
 		</div>
 	)

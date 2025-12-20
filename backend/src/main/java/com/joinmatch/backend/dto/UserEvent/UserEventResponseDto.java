@@ -1,6 +1,11 @@
 package com.joinmatch.backend.dto.UserEvent;
 
+import com.joinmatch.backend.model.Sport;
+import com.joinmatch.backend.model.SportUser;
 import com.joinmatch.backend.model.UserEvent;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 public record UserEventResponseDto(
         Integer id,
@@ -11,11 +16,22 @@ public record UserEventResponseDto(
         String attendanceStatusName,
         Integer eventId,
         String eventName,
-        Boolean isPaid
+        Boolean isPaid,
+        Integer sportRating,
+        LocalDateTime eventDate
 ) {
     public static UserEventResponseDto fromUserEvent(UserEvent userEvent) {
         var user = userEvent.getUser();
         var event = userEvent.getEvent();
+        Sport sport = event.getSportEv();
+        Integer sportRating = null;
+        Optional<SportUser> first = user.getSportUsers()
+                .stream()
+                .filter(sportUser -> sportUser.getSport().equals(sport))
+                .findFirst();
+        if (first.isPresent()) {
+            sportRating = first.get().getRating();
+        }
 
         return new UserEventResponseDto(
                 userEvent.getId(),
@@ -26,7 +42,9 @@ public record UserEventResponseDto(
                 userEvent.getAttendanceStatus().getName(),
                 event.getEventId(),
                 event.getEventName(),
-                userEvent.getIsPaid()
+                userEvent.getIsPaid(),
+                sportRating,
+                event.getEventDate()
         );
     }
 }

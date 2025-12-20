@@ -5,9 +5,10 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Eye, Check, X, Trash2 } from "lucide-react";
+import { Eye, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
+import { getCookie } from "../utils/cookies";
 
 type PageResponse<T> = {
     content: T[];
@@ -61,7 +62,6 @@ type ReportedUserItem = {
 const PAGE_SIZE = 20;
 
 const ModeratorReportedUsersTab: React.FC = () => {
-    const [query, setQuery] = useState("");
     const [reports, setReports] = useState<ReportedUserItem[]>([]);
 
     const [loading, setLoading] = useState(true);
@@ -73,7 +73,7 @@ const ModeratorReportedUsersTab: React.FC = () => {
     const observerTargetRef = useRef<HTMLDivElement | null>(null);
 
     const loggedEmail =
-        typeof window !== "undefined" ? localStorage.getItem("email") : null;
+        typeof window !== "undefined" ? getCookie("email") : null;
 
     const getUserProfileLink = (
         email: string | null | undefined,
@@ -160,7 +160,7 @@ const ModeratorReportedUsersTab: React.FC = () => {
     }, [hasNext, loadingMore, fetchReports]);
 
     const filteredReports = useMemo(() => {
-        const q = (query ?? "").toLowerCase();
+        const q = "".toLowerCase();
         if (!q) return reports;
 
         return reports.filter((r) => {
@@ -176,7 +176,7 @@ const ModeratorReportedUsersTab: React.FC = () => {
                 reporterEmail.includes(q)
             );
         });
-    }, [query, reports]);
+    }, [reports]);
 
     // ==== AKCJE ====
 
@@ -257,18 +257,6 @@ const ModeratorReportedUsersTab: React.FC = () => {
 
     return (
         <section className="p-4 md:p-0">
-            {/* search */}
-            <div className="flex items-center gap-2 mb-4">
-                <div className="relative flex-1">
-                    <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                    <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Szukaj po zgłoszonym użytkowniku, zgłaszającym lub emailu…"
-                        className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-600"
-                    />
-                </div>
-            </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
 

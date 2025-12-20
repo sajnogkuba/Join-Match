@@ -1,8 +1,9 @@
 import { Navigate } from "react-router-dom";
 import CreateTeamForm from "../components/CreateTeamForm.tsx";
+import { getCookie } from "../utils/cookies";
 
 const CreateTeamPage = () => {
-  const ownerEmail = localStorage.getItem("email");
+  const ownerEmail = getCookie("email");
 
   if (!ownerEmail) {
     return <Navigate to="/login" replace />;

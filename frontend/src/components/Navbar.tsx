@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, User, LogOut, LogIn, UserPlus } from 'lucide-react'
@@ -29,19 +29,17 @@ export const Navbar: React.FC = () => {
 		{ to: '/events', label: 'Eventy' },
 		{ to: '/teams', label: 'Drużyny' },
 		{ to: '/about', label: 'O nas' },
+		{ to: '/rankings', label: 'Rankingi' },
 	]
 
 	useEffect(() => {
 		if (isAuthenticated && user) {
 			setLoadingUserDetails(true)
-			const token = localStorage.getItem('accessToken')
-			if (token) {
-				api
-					.get<UserDetails>('/auth/user/details', { params: { token } })
-					.then(({ data }) => setUserDetails(data))
-					.catch(() => setUserDetails(null))
-					.finally(() => setLoadingUserDetails(false))
-			}
+			api
+				.get<UserDetails>('/auth/user/details')
+				.then(({ data }) => setUserDetails(data))
+				.catch(() => setUserDetails(null))
+				.finally(() => setLoadingUserDetails(false))
 		} else {
 			setUserDetails(null)
 			setLoadingUserDetails(false)
@@ -50,7 +48,7 @@ export const Navbar: React.FC = () => {
 
 	return (
 		<nav
-			className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-black/50 backdrop-blur-xl shadow-lg`}>
+			className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 bg-black/50 backdrop-blur-xl shadow-lg`}>
 			<div className='container mx-auto px-4 relative'>
 				<div className='flex justify-between items-center py-3 md:py-4'>
 					{/* Logo */}

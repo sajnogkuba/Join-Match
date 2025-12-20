@@ -9,6 +9,7 @@ import com.joinmatch.backend.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -94,11 +95,13 @@ public class TeamController {
         return ResponseEntity.ok(updatedTeam);
     }
     @PostMapping("/report/team")
-    public ResponseEntity<Void> reportTeam(@RequestBody TeamReportDto teamReportDto){
+    public ResponseEntity<Void> reportTeam(@RequestBody TeamReportDto teamReportDto, jakarta.servlet.http.HttpServletRequest request){
         try {
-            teamService.reportUserRating(teamReportDto);
+            teamService.reportUserRating(teamReportDto, request);
         }catch (IllegalArgumentException e){
             return ResponseEntity.badRequest().build();
+        }catch (RuntimeException exception){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         return ResponseEntity.ok().build();
     }

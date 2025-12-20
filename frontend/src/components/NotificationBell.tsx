@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, X, UserPlus, Clock, Users, UserMinus, MessageSquare, Heart } from 'lucide-react'
+import { Bell, X, UserPlus, Clock, Users, UserMinus, MessageSquare, Heart , AlertTriangle} from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useNotification } from '../Context/NotificationContext'
 import type { Notification } from '../Api/types/Notification'
@@ -48,6 +48,7 @@ const NotificationBell: React.FC = () => {
 
 	const handleNotificationClick = async (notification: Notification) => {
 		// Oznacz jako przeczytane
+
 		if (!notification.isRead) {
 			await markAsRead(notification.id)
 		}
@@ -196,6 +197,8 @@ const NotificationBell: React.FC = () => {
 
 	const getNotificationIcon = (type: NotificationType) => {
 		switch (type) {
+			case NotificationType.MODERATOR_WARNING:
+				return <AlertTriangle size={16} className='text-yellow-400' />
 			case NotificationType.FRIEND_REQUEST:
 				return <UserPlus size={16} className='text-violet-400' />
 			case NotificationType.FRIEND_REQUEST_ACCEPTED:

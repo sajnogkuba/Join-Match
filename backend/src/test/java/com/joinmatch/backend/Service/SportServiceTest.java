@@ -8,6 +8,8 @@ import com.joinmatch.backend.repository.SportRepository;
 import com.joinmatch.backend.repository.SportUserRepository;
 import com.joinmatch.backend.repository.UserRepository;
 import com.joinmatch.backend.service.SportService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -32,6 +34,13 @@ class SportServiceTest {
 
     @InjectMocks
     SportService sportService;
+
+    private HttpServletRequest mockRequestWithToken(String token) {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        Cookie cookie = new Cookie("accessToken", token);
+        when(request.getCookies()).thenReturn(new Cookie[]{cookie});
+        return request;
+    }
 
     // --------------------------------------------------
     // getSportsForUser()
@@ -105,7 +114,8 @@ class SportServiceTest {
         when(userRepository.findByTokenValue("t")).thenReturn(Optional.of(user));
         when(sportRepository.findSportById(10)).thenReturn(Optional.of(sport));
 
-        sportService.addNewSportForUser("t", 10, 7);
+        HttpServletRequest request = mockRequestWithToken("t");
+        sportService.addNewSportForUser(10, 7, request);
 
         assertEquals(1, user.getSportUsers().size());
         SportUser su = user.getSportUsers().iterator().next();
@@ -118,8 +128,9 @@ class SportServiceTest {
     void addNewSportForUser_shouldThrowWhenUserNotFound() {
         when(userRepository.findByTokenValue("t")).thenReturn(Optional.empty());
 
+        HttpServletRequest request = mockRequestWithToken("t");
         assertThrows(IllegalArgumentException.class,
-                () -> sportService.addNewSportForUser("t", 1, 5));
+                () -> sportService.addNewSportForUser(1, 5, request));
     }
 
     @Test
@@ -129,8 +140,9 @@ class SportServiceTest {
 
         when(sportRepository.findSportById(99)).thenReturn(Optional.empty());
 
+        HttpServletRequest request = mockRequestWithToken("t");
         assertThrows(IllegalArgumentException.class,
-                () -> sportService.addNewSportForUser("t", 99, 5));
+                () -> sportService.addNewSportForUser(99, 5, request));
     }
 
     @Test
@@ -148,8 +160,9 @@ class SportServiceTest {
         when(userRepository.findByTokenValue("t")).thenReturn(Optional.of(user));
         when(sportRepository.findSportById(10)).thenReturn(Optional.of(sport));
 
+        HttpServletRequest request = mockRequestWithToken("t");
         assertThrows(IllegalArgumentException.class,
-                () -> sportService.addNewSportForUser("t", 10, 7));
+                () -> sportService.addNewSportForUser(10, 7, request));
     }
 
     // --------------------------------------------------
@@ -228,13 +241,14 @@ class SportServiceTest {
         user.getSportUsers().add(su);
         sport.getSportUsers().add(su);
 
-        RemoveSportDto dto = new RemoveSportDto("t", 10);
+        RemoveSportDto dto = new RemoveSportDto(10);
 
         when(userRepository.findByTokenValue("t")).thenReturn(Optional.of(user));
         when(sportUserRepository.findByUserIdAndSportId(1, 10)).thenReturn(Optional.of(su));
         when(sportRepository.findSportById(10)).thenReturn(Optional.of(sport));
 
-        sportService.removeSport(dto);
+        HttpServletRequest request = mockRequestWithToken("t");
+        sportService.removeSport(dto, request);
 
         assertTrue(user.getSportUsers().isEmpty());
         assertTrue(sport.getSportUsers().isEmpty());
@@ -253,8 +267,9 @@ class SportServiceTest {
         when(sportUserRepository.findByUserIdAndSportId(1, 10))
                 .thenReturn(Optional.of(su));
 
+        HttpServletRequest request = mockRequestWithToken("t");
         assertThrows(IllegalArgumentException.class,
-                () -> sportService.removeSport(new RemoveSportDto("t", 10)));
+                () -> sportService.removeSport(new RemoveSportDto(10), request));
     }
 
     @Test
@@ -268,8 +283,9 @@ class SportServiceTest {
         when(sportUserRepository.findByUserIdAndSportId(anyInt(), anyInt()))
                 .thenReturn(Optional.empty());
 
+        HttpServletRequest request = mockRequestWithToken("t");
         assertThrows(IllegalArgumentException.class,
-                () -> sportService.removeSport(new RemoveSportDto("t", 10)));
+                () -> sportService.removeSport(new RemoveSportDto(10), request));
     }
 
 

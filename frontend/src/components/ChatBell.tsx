@@ -26,9 +26,8 @@ const ChatBell: React.FC = () => {
 
 	useEffect(() => {
 		const fetchUserId = async () => {
-			if (!accessToken) return
 			try {
-				const res = await api.get('/auth/user', { params: { token: accessToken } })
+				const res = await api.get('/auth/user')
 				setMyUserId(res.data.id)
 			} catch (err) {
 				console.error('❌ Nie udało się pobrać userId:', err)

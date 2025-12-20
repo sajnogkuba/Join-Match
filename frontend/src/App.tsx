@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { LoadScript } from '@react-google-maps/api'
 import Layout from './components/Layout'
+import ScrollToTop from './components/ScrollToTop'
 import MainPage from './pages/MainPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -26,8 +27,8 @@ import { default as api } from './Api/axios.tsx'
 import CreateTeamPage from './pages/CreateTeamPage.tsx'
 import PostPage from './pages/PostPage.tsx'
 import ModeratorPanelPage from "./pages/ModeratorPanelPage.tsx";
+import RankingsPage from './pages/RankingsPage.tsx'
 
-const RankingsPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona rankingów</div>
 const NotFoundPage = () => <div className='container mx-auto px-4 py-20 mt-20'>Strona nie znaleziona</div>
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string
@@ -38,12 +39,12 @@ const App: React.FC = () => (
 			<ChatProviderWrapper>
 				<LoadScript googleMapsApiKey={GOOGLE_MAPS_KEY} libraries={['places']}>
 					<BrowserRouter>
+						<ScrollToTop />
 						<Routes>
 							<Route path='/' element={<Layout />}>
 								<Route index element={<MainPage />} />
 								<Route path='events' element={<EventsPage />} />
 								<Route path='event/:id' element={<EventPage />} />
-								<Route path='rankingi' element={<RankingsPage />} />
 								<Route path='about' element={<AboutUsPage />} />
 								<Route path='teams' element={<TeamsPage />} />
 								<Route path='team/:id' element={<TeamPage />} />
@@ -68,6 +69,7 @@ const App: React.FC = () => (
 								<Route path='chat' element={<ChatPage />} />
 								<Route path='*' element={<NotFoundPage />} />
 								<Route path='/moderator' element={<ModeratorPanelPage/>}/>
+								<Route path='/rankings' element={<RankingsPage />} />
 							</Route>
 						</Routes>
 					</BrowserRouter>
@@ -83,13 +85,10 @@ const NotificationProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
 
 	React.useEffect(() => {
 		if (isAuthenticated) {
-			const token = localStorage.getItem('accessToken')
-			if (token) {
-				api
-					.get('/auth/user', { params: { token } })
-					.then(response => setUserId(response.data.id))
-					.catch(() => setUserId(null))
-			}
+			api
+				.get('/auth/user')
+				.then(response => setUserId(response.data.id))
+				.catch(() => setUserId(null))
 		} else {
 			setUserId(null)
 		}
@@ -105,21 +104,18 @@ const ChatProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children
 
 	React.useEffect(() => {
 		if (isAuthenticated) {
-			const token = localStorage.getItem('accessToken')
-			if (token) {
-				api
-					.get('/auth/user', { params: { token } })
-					.then(response => {
-						setUserId(response.data.id)
+			api
+				.get('/auth/user')
+				.then(response => {
+					setUserId(response.data.id)
 
-						const nameFromAuth = (user as any)?.name || (user as any)?.username || null
-						setUserName(response.data.name || nameFromAuth)
-					})
-					.catch(() => {
-						setUserId(null)
-						setUserName(null)
-					})
-			}
+					const nameFromAuth = (user as any)?.name || (user as any)?.username || null
+					setUserName(response.data.name || nameFromAuth)
+				})
+				.catch(() => {
+					setUserId(null)
+					setUserName(null)
+				})
 		} else {
 			setUserId(null)
 			setUserName(null)

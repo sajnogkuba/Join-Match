@@ -1,9 +1,7 @@
 package com.joinmatch.backend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -49,11 +47,23 @@ public class Team {
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserTeam> userTeams = new ArrayList<>();
 
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TeamRole> roles = new ArrayList<>();
+
     @OneToMany(mappedBy = "team")
     private List<Conversation> conversations;
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<ReportTeam> reportTeamSet;
+    private Set<ReportTeam> reportTeamSet = new HashSet<>();
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CompetitionTeam> competitionTeams = new HashSet<>();
+    @OneToMany(
+            mappedBy = "team",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<EventTeam> eventTeams = new HashSet<>();
+
 
 }
