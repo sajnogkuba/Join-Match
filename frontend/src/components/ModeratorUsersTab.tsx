@@ -42,7 +42,7 @@ const ModeratorUsersTab: React.FC = () => {
     const [qUsers, setQUsers] = useState("");
     const [users, setUsers] = useState<ModeratorUser[]>([]);
 
-    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [, setLoadingUsers] = useState(true);
     const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
     const [errorUsers, setErrorUsers] = useState<string | null>(null);
     const [hasNextUsers, setHasNextUsers] = useState(false);

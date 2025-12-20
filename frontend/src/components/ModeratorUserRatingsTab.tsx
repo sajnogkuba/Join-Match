@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Eye, Check, X, Trash2, Star } from "lucide-react";
+import { Eye, Check, X, Trash2, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -66,7 +66,6 @@ type UserRatingReportItem = {
 const PAGE_SIZE = 20;
 
 const ModeratorUserRatingsTab: React.FC = () => {
-    const [query, setQuery] = useState("");
     const [reports, setReports] = useState<UserRatingReportItem[]>([]);
 
     const [loading, setLoading] = useState(true);
@@ -171,7 +170,7 @@ const ModeratorUserRatingsTab: React.FC = () => {
     const filteredReports = useMemo(
         () =>
             reports.filter((r) => {
-                const q = query.toLowerCase();
+                const q = "".toLowerCase();
                 return (
                     (r.ratedUserUsername ?? "").toLowerCase().includes(q) ||
                     (r.reporterUsername ?? "").toLowerCase().includes(q) ||
@@ -179,7 +178,7 @@ const ModeratorUserRatingsTab: React.FC = () => {
                     (r.reporterUserEmail ?? "").toLowerCase().includes(q)
                 );
             }),
-        [query, reports]
+        [reports]
     );
 
     // ==== AKCJE ====
@@ -261,18 +260,7 @@ const ModeratorUserRatingsTab: React.FC = () => {
 
     return (
         <section className="p-4 md:p-0">
-            {/* search */}
-            <div className="flex items-center gap-2 mb-4">
-                <div className="relative flex-1">
-                    <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                    <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Szukaj po ocenianym użytkowniku, zgłaszającym lub emailu…"
-                        className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-600"
-                    />
-                </div>
-            </div>
+
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
 

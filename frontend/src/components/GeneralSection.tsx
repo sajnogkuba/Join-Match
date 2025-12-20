@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../Api/axios";
-import { getCookie } from "../utils/cookies";
 import StarRatingDisplay from "./StarRatingDisplay";
 import StarRatingInput from "./StarRatingInput";
 import type { SportTypeOption, UserSport, UserSportsResponse } from "../Api/types/Sports";

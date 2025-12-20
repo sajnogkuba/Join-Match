@@ -48,6 +48,12 @@ public class UserEventService {
         AttendanceStatus status = attendanceStatusRepository.findById(dto.attendanceStatusId())
                 .orElseThrow(() -> new IllegalArgumentException("Status not found"));
 
+        if (event.getEventVisibility().getId() != 1 && status.getId() == 1) {
+            throw new IllegalStateException(
+                    "Nie można zapisać się bezpośrednio na prywatne wydarzenie"
+            );
+        }
+
         UserEvent userEvent = new UserEvent();
         userEvent.setUser(user);
         userEvent.setEvent(event);

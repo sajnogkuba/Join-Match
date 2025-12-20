@@ -104,8 +104,8 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 		setSearchQuery('')
 	}
 
-	const handleClear = (e: React.MouseEvent) => {
-		e.stopPropagation()
+	const handleClear = (e?: React.MouseEvent | React.KeyboardEvent) => {
+		e?.stopPropagation()
 		onChange(null)
 		setSearchQuery('')
 	}
@@ -126,7 +126,7 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 							<div
 								onClick={(e) => {
 									e.stopPropagation();
-									handleClear();
+									handleClear(e);
 								}}
 								className='p-0.5 hover:bg-zinc-700 rounded transition cursor-pointer'
 								role='button'
@@ -135,7 +135,7 @@ const SportTypeFilter: React.FC<SportTypeFilterProps> = ({ value, onChange }) =>
 									if (e.key === 'Enter' || e.key === ' ') {
 										e.preventDefault();
 										e.stopPropagation();
-										handleClear();
+										handleClear(e);
 									}
 								}}
 							>

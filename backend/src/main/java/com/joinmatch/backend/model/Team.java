@@ -47,6 +47,9 @@ public class Team {
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserTeam> userTeams = new ArrayList<>();
 
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TeamRole> roles = new ArrayList<>();
+
     @OneToMany(mappedBy = "team")
     private List<Conversation> conversations;
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)

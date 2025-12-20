@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { X, Search, UserPlus, Loader2 } from 'lucide-react'
 import axiosInstance from '../Api/axios'
 import Avatar from './Avatar'
-import { getCookie } from '../utils/cookies'
 
 import type { User } from '../Api/types/User'
 import type { Friend, SearchResult } from '../Api/types/Friends'

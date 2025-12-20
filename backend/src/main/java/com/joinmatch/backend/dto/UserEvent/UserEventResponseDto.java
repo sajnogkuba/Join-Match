@@ -4,6 +4,7 @@ import com.joinmatch.backend.model.Sport;
 import com.joinmatch.backend.model.SportUser;
 import com.joinmatch.backend.model.UserEvent;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public record UserEventResponseDto(
@@ -16,7 +17,8 @@ public record UserEventResponseDto(
         Integer eventId,
         String eventName,
         Boolean isPaid,
-        Integer sportRating
+        Integer sportRating,
+        LocalDateTime eventDate
 ) {
     public static UserEventResponseDto fromUserEvent(UserEvent userEvent) {
         var user = userEvent.getUser();
@@ -41,7 +43,8 @@ public record UserEventResponseDto(
                 event.getEventId(),
                 event.getEventName(),
                 userEvent.getIsPaid(),
-                sportRating
+                sportRating,
+                event.getEventDate()
         );
     }
 }

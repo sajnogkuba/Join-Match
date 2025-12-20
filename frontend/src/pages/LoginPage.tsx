@@ -4,6 +4,7 @@ import { useAuth } from '../Context/authContext'
 import { useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import axiosInstance from '../Api/axios'
+import type { AxiosError } from 'axios'
 
 const LoginPage = () => {
 	const [email, setEmail] = useState('')
@@ -45,6 +46,12 @@ const LoginPage = () => {
 
 			navigate('/')
 		} catch (err) {
+			const axiosError = err as AxiosError
+			if (axiosError.response?.status === 403) {
+				setError('Twoje konto zostało zablokowane')
+			} else {
+				setError('Nie udało się zalogować przez Google')
+			}
 			console.error('Google login error:', err)
 		}
 	}

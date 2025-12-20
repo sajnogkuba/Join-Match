@@ -4,7 +4,6 @@ import Avatar from "./Avatar";
 import StarRatingDisplay from "./StarRatingDisplay";
 import { parseLocalDate } from "../utils/formatDate";
 import type { UserRatingResponse } from "../Api/types/Rating";
-import { getCookie } from "../utils/cookies";
 import ReportRatingModal from "../components/ReportRatingModal";
 import { Flag } from "lucide-react";
 import { toast } from "sonner";

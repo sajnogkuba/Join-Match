@@ -10,7 +10,6 @@ import {
     UserCheck,
     UsersRound,
     AlertTriangle,
-    Settings2,
     Dumbbell,
 } from "lucide-react";
 
@@ -36,7 +35,7 @@ const tabs = [
         label: "Zgłoszeni użytkownicy",
         icon: <AlertTriangle className="h-4 w-4" />,
     },
-    { key: "settings" as TabKey, label: "Ustawienia", icon: <Settings2 className="h-4 w-4" /> },
+    { key: "settings" as TabKey, label: "Ustawienia", icon: <ShieldCheck className="h-4 w-4" /> },
 ];
 
 const CARD_BG = "bg-black/60";

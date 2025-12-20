@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import api from '../Api/axios'
 import type { User } from '../Api/types/User.ts'
-import { getCookie } from '../utils/cookies'
 import { Upload, MapPin } from 'lucide-react'
 import SportTypeFilter from './SportTypeFilter'
 

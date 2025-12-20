@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "user_team")
+@Table(name = "team_role")
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
-public class UserTeam {
+public class TeamRole {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,16 +19,14 @@ public class UserTeam {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_id", nullable = true)
-    private TeamRole role;
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
+
+    @Column(name = "color", length = 7)
+    private String color;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

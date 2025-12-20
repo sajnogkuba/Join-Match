@@ -1,7 +1,6 @@
 import { useState } from "react";
 import api from "../Api/axios";
 import { Check } from "lucide-react";
-import { getCookie } from "../utils/cookies";
 
 const PasswordSection = () => {
     const [oldPassword, setOldPassword] = useState("");
@@ -29,7 +28,6 @@ const PasswordSection = () => {
         setSubmitting(true);
         try {
             await api.patch("/auth/changePass", {
-                token,
                 oldPassword: oldPassword,
                 newPassword: newPassword
             });

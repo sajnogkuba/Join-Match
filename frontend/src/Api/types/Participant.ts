@@ -24,6 +24,7 @@ export interface UserEventResponseDto {
 	eventName: string
 	isPaid: boolean
 	sportRating: number | null
+	eventDate: string
 }
 
 export interface UserEventPageResponse {

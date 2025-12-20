@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Star, TrendingUp, MapPin, Crown, Loader2, Calendar } from 'lucide-react'
+import { Star, TrendingUp, MapPin, Crown, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import CitySelector from './CitySelector'
-import Avatar from './Avatar'
 import StarRatingDisplay from './StarRatingDisplay'
-import { getRatingEventRanking, getPopularityEventRanking, getLocalEventRanking, getAvailableCities } from '../Api/rankings'
+import { getRatingEventRanking, getPopularityEventRanking, getLocalEventRanking } from '../Api/rankings'
 import type { EventRankingItem } from '../Api/types/Ranking'
 
 type RankingType = 'oceny' | 'popularnosc' | 'lokalny'

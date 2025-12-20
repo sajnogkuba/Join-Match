@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../Api/axios'
 import Avatar from '../components/Avatar'
@@ -11,13 +11,14 @@ import type { UserRatingResponse, OrganizerRatingResponse } from '../Api/types/R
 import type { SportTypeOption } from '../Api/types/Sports'
 import type { UserEventResponseDto, UserEventPageResponse } from '../Api/types/Participant'
 import { toast } from 'sonner'
-import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react'
+import { UserPlus, UserMinus, Users, Trophy, Star, MessageSquare, ChevronLeft, ChevronRight, List, Calendar } from 'lucide-react'
 import RatingCard from '../components/RatingCard'
 import { parseLocalDate } from '../utils/formatDate'
 import { showRatingToast } from '../components/RatingToast'
 import MutualEventsUserProfile from '../components/MutualEventsUserProfile'
 import UserReportForm from '../components/UserReportForm'
 import BadgesSection from '../components/BadgesSection'
+import EventsCalendar from '../components/EventsCalendar'
 import { isSystemUser } from '../utils/isSystemUser'
 
 interface FriendStatus {
@@ -36,6 +37,9 @@ const UserProfilePage = () => {
 	const [userRatings, setUserRatings] = useState<UserRatingResponse[]>([])
 	const [organizerRatings, setOrganizerRatings] = useState<OrganizerRatingResponse[]>([])
 	const [activeTab, setActiveTab] = useState<string>('Informacje')
+	const [eventsView, setEventsView] = useState<'list' | 'calendar'>('list')
+	const [allEventsForCalendar, setAllEventsForCalendar] = useState<UserEventResponseDto[]>([])
+	const [loadingAllEvents, setLoadingAllEvents] = useState(false)
 
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 	const [currentUserName, setCurrentUserName] = useState<string | null>(null)
@@ -95,8 +99,6 @@ const UserProfilePage = () => {
 	const averageRating = userRatings.length ? userRatings.reduce((a, r) => a + r.rating, 0) / userRatings.length : null
 
 	const hasRated = !!(currentUserName && userRatings.some(r => r.raterName === currentUserName))
-	const hasCommonEvent =
-		viewerEvents.length > 0 && events.length > 0 && viewerEvents.some(ve => events.some(e => e.eventId === ve.eventId))
 
 	const handleAddUserRating = async (rating: number, comment: string) => {
 		if (!currentUserId || !id) return
@@ -306,26 +308,29 @@ const UserProfilePage = () => {
 		fetchData()
 	}, [id])
 
+	// Compute mutual events where BOTH users have status 'Zapisany'
 	useEffect(() => {
-		if (!currentUserId || !user?.id) return
-		const fetchMutual = async () => {
-			setIsLoadingMutual(true)
-			try {
-				const mutualRes = await api.get('/event/mutualEvents', {
-					params: {
-						idLogUser: currentUserId,
-						idViewedUser: user.id,
-					},
-				})
-				setMutualEvents(Array.isArray(mutualRes.data) ? mutualRes.data : [])
-			} catch {
-				setMutualEvents([])
-			} finally {
-				setIsLoadingMutual(false)
-			}
+		if (!viewerEvents || !events) {
+			setMutualEvents([])
+			return
 		}
-		fetchMutual()
-	}, [currentUserId, user?.id])
+
+		setIsLoadingMutual(true)
+		try {
+			const mutual = (events || [])
+				.filter(e => e.attendanceStatusName === 'Zapisany')
+				.filter(e => viewerEvents.some(ve => ve.eventId === e.eventId && ve.attendanceStatusName === 'Zapisany'))
+				.map(e => ({ eventId: e.eventId, eventName: e.eventName }))
+
+			setMutualEvents(mutual)
+		} catch (err) {
+			setMutualEvents([])
+		} finally {
+			setIsLoadingMutual(false)
+		}
+	}, [viewerEvents, events])
+
+	const hasCommonEvent = mutualEvents.length > 0
 
 	const fetchEventsPage = useCallback(async (userEmail: string, page: number, size: number) => {
 		setEventsLoading(true)
@@ -340,10 +345,14 @@ const UserProfilePage = () => {
 				},
 			})
 			if (targetEventsRes.data) {
-				setEvents(targetEventsRes.data.content || [])
+				// pokaż tylko wydarzenia, w których użytkownik ma status 'Zapisany'
+				const all = targetEventsRes.data.content || []
+				const confirmed = all.filter(e => e.attendanceStatusName === 'Zapisany')
+				setEvents(confirmed)
 				setEventsPage(targetEventsRes.data.number)
-				setEventsTotalPages(targetEventsRes.data.totalPages)
-				setEventsTotalElements(targetEventsRes.data.totalElements)
+				// Dostosuj paginację lokalnie do przefiltrowanej listy
+				setEventsTotalElements(confirmed.length)
+				setEventsTotalPages(Math.max(1, Math.ceil(confirmed.length / (size || 1))))
 			} else {
 				setEvents([])
 				setEventsPage(0)
@@ -370,6 +379,41 @@ const UserProfilePage = () => {
 			fetchEventsPage(user.email, 0, newSize)
 		}
 	}
+
+	// Pobierz wszystkie wydarzenia dla widoku kalendarza
+	const fetchAllEventsForCalendar = useCallback(async (userEmail: string) => {
+		setLoadingAllEvents(true)
+		try {
+			const targetEventsRes = await api.get<UserEventPageResponse>(`/user-event/by-user-email`, {
+				params: {
+					userEmail,
+					page: 0,
+					size: 1000, // Pobierz dużo wydarzeń dla kalendarza
+					sortBy: 'id',
+					direction: 'ASC',
+				},
+			})
+			if (targetEventsRes.data) {
+				const all = targetEventsRes.data.content || []
+				const confirmed = all.filter(e => e.attendanceStatusName === 'Zapisany')
+				setAllEventsForCalendar(confirmed)
+			} else {
+				setAllEventsForCalendar([])
+			}
+		} catch (error) {
+			console.error('Błąd pobierania wszystkich wydarzeń:', error)
+			setAllEventsForCalendar([])
+		} finally {
+			setLoadingAllEvents(false)
+		}
+	}, [])
+
+	// Pobierz wszystkie wydarzenia gdy przełączamy na widok kalendarza
+	useEffect(() => {
+		if (eventsView === 'calendar' && user?.email && allEventsForCalendar.length === 0 && !loadingAllEvents) {
+			fetchAllEventsForCalendar(user.email)
+		}
+	}, [eventsView, user?.email, allEventsForCalendar.length, loadingAllEvents, fetchAllEventsForCalendar])
 
 	useEffect(() => {
 		if (currentUserId && id && currentUserId === parseInt(id)) {
@@ -570,20 +614,46 @@ const UserProfilePage = () => {
 								<section>
 									<div className='flex items-center justify-between mb-3'>
 										<h3 className='text-lg font-semibold text-white'>Historia wydarzeń</h3>
-										{eventsTotalElements > 0 && (
-											<div className='flex items-center gap-2'>
-												<label className='text-sm text-zinc-400'>Pokaż:</label>
-												<select
-													value={eventsPageSize}
-													onChange={e => handleEventsPageSizeChange(Number(e.target.value))}
-													className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600'>
-													<option value={6}>6</option>
-													<option value={12}>12</option>
-													<option value={24}>24</option>
-													<option value={48}>48</option>
-												</select>
+										<div className='flex items-center gap-3'>
+											{/* Przełącznik widoków */}
+											<div className='flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700'>
+												<button
+													onClick={() => setEventsView('list')}
+													className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+														eventsView === 'list'
+															? 'bg-violet-600 text-white'
+															: 'text-zinc-400 hover:text-white'
+													}`}>
+													<List size={16} />
+													Lista
+												</button>
+												<button
+													onClick={() => setEventsView('calendar')}
+													className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+														eventsView === 'calendar'
+															? 'bg-violet-600 text-white'
+															: 'text-zinc-400 hover:text-white'
+													}`}>
+													<Calendar size={16} />
+													Kalendarz
+												</button>
 											</div>
-										)}
+											{/* Paginacja tylko dla widoku listy */}
+											{eventsView === 'list' && eventsTotalElements > 0 && (
+												<div className='flex items-center gap-2'>
+													<label className='text-sm text-zinc-400'>Pokaż:</label>
+													<select
+														value={eventsPageSize}
+														onChange={e => handleEventsPageSizeChange(Number(e.target.value))}
+														className='bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-600'>
+														<option value={6}>6</option>
+														<option value={12}>12</option>
+														<option value={24}>24</option>
+														<option value={48}>48</option>
+													</select>
+												</div>
+											)}
+										</div>
 									</div>
 									{eventsLoading ? (
 										<div className='text-center py-8'>
@@ -591,44 +661,58 @@ const UserProfilePage = () => {
 										</div>
 									) : events.length ? (
 										<>
-											<ul className='space-y-3'>
-												{events.map(e => (
-													<li key={e.id} className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
-														<span className='text-white'>{e.eventName}</span>
-														<a href={`/event/${e.eventId}`} className='text-violet-400 hover:text-violet-300 text-sm'>
-															Zobacz →
-														</a>
-													</li>
-												))}
-											</ul>
-											{eventsTotalPages > 1 && (
-												<div className='mt-6 flex items-center justify-between'>
-													<div className='text-sm text-zinc-400'>
-														Strona {eventsPage + 1} z {eventsTotalPages} ({eventsTotalElements}{' '}
-														{eventsTotalElements === 1
-															? 'wydarzenie'
-															: eventsTotalElements < 5
-															? 'wydarzenia'
-															: 'wydarzeń'}
-														)
-													</div>
-													<div className='flex items-center gap-2'>
-														<button
-															onClick={() => handleEventsPageChange(eventsPage - 1)}
-															disabled={eventsPage === 0}
-															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
-															<ChevronLeft size={16} />
-															Poprzednia
-														</button>
-														<button
-															onClick={() => handleEventsPageChange(eventsPage + 1)}
-															disabled={eventsPage >= eventsTotalPages - 1}
-															className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
-															Następna
-															<ChevronRight size={16} />
-														</button>
-													</div>
-												</div>
+											{eventsView === 'list' ? (
+												<>
+													<ul className='space-y-3'>
+														{events.map(e => (
+															<li key={e.id} className='flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg'>
+																<span className='text-white'>{e.eventName}</span>
+																<a href={`/event/${e.eventId}`} className='text-violet-400 hover:text-violet-300 text-sm'>
+																	Zobacz →
+																</a>
+															</li>
+														))}
+													</ul>
+													{eventsTotalPages > 1 && (
+														<div className='mt-6 flex items-center justify-between'>
+															<div className='text-sm text-zinc-400'>
+																Strona {eventsPage + 1} z {eventsTotalPages} ({eventsTotalElements}{' '}
+																{eventsTotalElements === 1
+																	? 'wydarzenie'
+																	: eventsTotalElements < 5
+																	? 'wydarzenia'
+																	: 'wydarzeń'}
+																)
+															</div>
+															<div className='flex items-center gap-2'>
+																<button
+																	onClick={() => handleEventsPageChange(eventsPage - 1)}
+																	disabled={eventsPage === 0}
+																	className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
+																	<ChevronLeft size={16} />
+																	Poprzednia
+																</button>
+																<button
+																	onClick={() => handleEventsPageChange(eventsPage + 1)}
+																	disabled={eventsPage >= eventsTotalPages - 1}
+																	className='flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition'>
+																	Następna
+																	<ChevronRight size={16} />
+																</button>
+															</div>
+														</div>
+													)}
+												</>
+											) : (
+												<>
+													{loadingAllEvents ? (
+														<div className='text-center py-8'>
+															<p className='text-sm text-zinc-400'>Ładowanie wydarzeń...</p>
+														</div>
+													) : (
+														<EventsCalendar events={allEventsForCalendar.length > 0 ? allEventsForCalendar : events} />
+													)}
+												</>
 											)}
 										</>
 									) : (
