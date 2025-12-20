@@ -18,7 +18,6 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/pl'
 import { useAuth } from '../Context/authContext'
 import AlertModal from '../components/AlertModal'
-import { getCookie } from '../utils/cookies'
 
 dayjs.locale('pl')
 

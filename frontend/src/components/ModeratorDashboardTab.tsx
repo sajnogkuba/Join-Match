@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {  Star, Ticket, Users, UsersRound, UserCheck, Trophy } from "lucide-react";
+import {  Star, Ticket, Users, UsersRound, UserCheck } from "lucide-react";
 import axiosInstance from "../Api/axios.tsx";
 
 type DashboardStats = {

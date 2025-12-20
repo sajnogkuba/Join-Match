@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Eye, Check, X, Trash2, Star } from "lucide-react";
+import { Eye, Check, X, Trash2, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -66,7 +66,6 @@ type UserRatingReportItem = {
 const PAGE_SIZE = 20;
 
 const ModeratorUserRatingsTab: React.FC = () => {
-    const [query, setQuery] = useState("");
     const [reports, setReports] = useState<UserRatingReportItem[]>([]);
 
     const [loading, setLoading] = useState(true);
@@ -171,7 +170,7 @@ const ModeratorUserRatingsTab: React.FC = () => {
     const filteredReports = useMemo(
         () =>
             reports.filter((r) => {
-                const q = query.toLowerCase();
+                const q = "".toLowerCase();
                 return (
                     (r.ratedUserUsername ?? "").toLowerCase().includes(q) ||
                     (r.reporterUsername ?? "").toLowerCase().includes(q) ||
@@ -179,7 +178,7 @@ const ModeratorUserRatingsTab: React.FC = () => {
                     (r.reporterUserEmail ?? "").toLowerCase().includes(q)
                 );
             }),
-        [query, reports]
+        [reports]
     );
 
     // ==== AKCJE ====

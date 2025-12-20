@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Eye, Check, X, Trash2 } from "lucide-react";
+import { Eye, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -42,7 +42,6 @@ type EventReportItem = {
 const PAGE_SIZE = 20;
 
 const ModeratorEventsTab: React.FC = () => {
-    const [query, setQuery] = useState("");
     const [reports, setReports] = useState<EventReportItem[]>([]);
 
     const [loading, setLoading] = useState(true);
@@ -119,14 +118,14 @@ const ModeratorEventsTab: React.FC = () => {
     const filteredReports = useMemo(
         () =>
             reports.filter((r) => {
-                const q = query.toLowerCase();
+                const q = "".toLowerCase();
                 return (
                     r.eventName.toLowerCase().includes(q) ||
                     r.reporterUsername.toLowerCase().includes(q) ||
                     (r.userEmail ?? "").toLowerCase().includes(q)
                 );
             }),
-        [query, reports]
+        [reports]
     );
 
     const formatDate = (value: string) => {

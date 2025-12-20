@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, User, LogOut, LogIn, UserPlus } from 'lucide-react'
@@ -8,7 +8,6 @@ import Avatar from './Avatar'
 import NotificationBell from './NotificationBell'
 import api from '../Api/axios'
 import ChatBell from './ChatBell'
-import { getCookie } from '../utils/cookies'
 
 type UserDetails = {
 	name: string

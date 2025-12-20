@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
 import type { Participant } from '../Api/types/Participant'
@@ -70,9 +70,7 @@ const EventPage: React.FC = () => {
 	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
 	const isJoined = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zapisany')
 
-	const visibleParticipantsCount = confirmedParticipants.length
-
-	const [joined, setJoined] = useState(false)
+	const [, setJoined] = useState(false)
 	const [saved, setSaved] = useState(false)
 
 	const [showShareModal, setShowShareModal] = useState(false)

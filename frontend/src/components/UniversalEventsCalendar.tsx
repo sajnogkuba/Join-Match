@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import dayjs, { Dayjs } from 'dayjs'
 import 'dayjs/locale/pl'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
-import { parseEventDate } from '../utils/formatDate'
 
 dayjs.locale('pl')
 

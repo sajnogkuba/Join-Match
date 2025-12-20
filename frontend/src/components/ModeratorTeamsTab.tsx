@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Eye, Check, X, Trash2 } from "lucide-react";
+import { Eye, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -60,7 +60,6 @@ type TeamReportItem = {
 const PAGE_SIZE = 20;
 
 const ModeratorTeamsTab: React.FC = () => {
-    const [query, setQuery] = useState("");
     const [reports, setReports] = useState<TeamReportItem[]>([]);
 
     const [loading, setLoading] = useState(true);
@@ -158,7 +157,7 @@ const ModeratorTeamsTab: React.FC = () => {
     }, [hasNext, loadingMore, fetchReports]);
 
     const filteredReports = useMemo(() => {
-        const q = (query ?? "").toLowerCase();
+        const q = "".toLowerCase();
         if (!q) return reports;
 
         return reports.filter((r) => {
@@ -172,7 +171,7 @@ const ModeratorTeamsTab: React.FC = () => {
                 reporterEmail.includes(q)
             );
         });
-    }, [query, reports]);
+    }, [reports]);
 
 
     const handleAccept = async (id: number) => {

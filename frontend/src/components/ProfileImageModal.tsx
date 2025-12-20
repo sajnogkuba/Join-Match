@@ -1,7 +1,6 @@
 import { useState } from "react";
 import api from "../Api/axios";
 import Avatar from "./Avatar";
-import { getCookie } from "../utils/cookies";
 import { Camera, Upload, X } from "lucide-react";
 
 interface ProfileImageModalProps {

@@ -10,7 +10,6 @@ import { useComments } from '../hooks/useComments'
 import { PostItem } from '../components/PostItem'
 import { PostEditorModal } from '../components/PostEditorModal'
 import AlertModal from '../components/AlertModal'
-import { getCookie } from '../utils/cookies'
 
 const PostPage: React.FC = () => {
 	const { id } = useParams<{ id: string }>()

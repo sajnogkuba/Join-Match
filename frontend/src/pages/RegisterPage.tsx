@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import axiosInstance from '../Api/axios'

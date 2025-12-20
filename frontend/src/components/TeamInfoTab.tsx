@@ -19,40 +19,6 @@ import {
 } from 'lucide-react'
 import { parseLocalDate } from '../utils/formatDate'
 
-// Funkcja do konwersji hex na rgba z przezroczystością
-// Używa wyższego alpha dla lepszej widoczności na ciemnym tle
-const hexToRgba = (hexColor: string, alpha: number = 0.7): string => {
-	if (!hexColor) return `rgba(63, 63, 70, ${alpha})`
-	
-	// Obsługa koloru z lub bez #
-	let cleanHex = hexColor.trim()
-	if (!cleanHex.startsWith('#')) {
-		cleanHex = '#' + cleanHex
-	}
-	
-	// Sprawdź czy to poprawny format hex (7 znaków: #RRGGBB)
-	if (cleanHex.length !== 7) {
-		console.warn('Invalid hex color format:', hexColor)
-		return `rgba(63, 63, 70, ${alpha})`
-	}
-	
-	try {
-		const r = parseInt(cleanHex.slice(1, 3), 16)
-		const g = parseInt(cleanHex.slice(3, 5), 16)
-		const b = parseInt(cleanHex.slice(5, 7), 16)
-		
-		if (isNaN(r) || isNaN(g) || isNaN(b)) {
-			console.warn('Invalid hex color values:', hexColor)
-			return `rgba(63, 63, 70, ${alpha})`
-		}
-		
-		return `rgba(${r}, ${g}, ${b}, ${alpha})`
-	} catch (e) {
-		console.warn('Error parsing hex color:', hexColor, e)
-		return `rgba(63, 63, 70, ${alpha})`
-	}
-}
-
 // Funkcja do określenia kontrastowego koloru tekstu (biały/czarny)
 const getContrastColor = (hexColor: string): string => {
 	if (!hexColor || !hexColor.startsWith('#')) return '#d4d4d8'

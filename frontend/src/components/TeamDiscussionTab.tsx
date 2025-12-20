@@ -12,7 +12,6 @@ import { PollModal } from './PollModal'
 import { EventLinkModal } from './EventLinkModal'
 import { PostList } from './PostList'
 import AlertModal from './AlertModal'
-import { getCookie } from '../utils/cookies'
 
 interface TeamDiscussionTabProps {
 	teamMembers: TeamMember[]

@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { X, AlertTriangle, Loader2, Flag } from 'lucide-react'
 import api from '../Api/axios'
-import { getCookie } from '../utils/cookies'
 
 interface ReportTeamModalProps {
     isOpen: boolean
