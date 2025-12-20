@@ -15,6 +15,7 @@ import {
 	LogOut,
 	Trash2,
 	Flag,
+	Settings,
 } from 'lucide-react'
 import { parseLocalDate } from '../utils/formatDate'
 
@@ -33,6 +34,7 @@ interface TeamInfoTabProps {
 	onDeleteTeam: () => void
 	onOpenTeamChat: () => void
 	onReportTeam: () => void
+	onManageRoles: () => void
 }
 
 const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
@@ -47,9 +49,10 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 													 onInviteClick,
 													 onRemoveMember,
 													 onLeaveTeam,
-													 onDeleteTeam,
-													 onOpenTeamChat,
-													 onReportTeam,
+	onDeleteTeam,
+	onOpenTeamChat,
+	onReportTeam,
+	onManageRoles,
 												 }) => {
 	return (
 		<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
@@ -76,12 +79,18 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 						)}
 					</div>
 					{isLeader && (
-						<div className='mb-4'>
+						<div className='mb-4 flex gap-2'>
 							<button
 								onClick={onInviteClick}
 								className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors'>
 								<UserPlus size={16} />
 								Zaproś użytkowników
+							</button>
+							<button
+								onClick={onManageRoles}
+								className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors'>
+								<Settings size={16} />
+								Zarządzaj rolami
 							</button>
 						</div>
 					)}
@@ -113,12 +122,19 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 											<div className='font-medium text-white leading-tight'>
 												{member.userEmail === userEmail ? `${member.userName} (Ty)` : member.userName}
 											</div>
-											{member.userId === team.leaderId && (
-												<div className='mt-0.5 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-violet-500/20 text-violet-300'>
-													<Crown size={10} />
-													Lider
-												</div>
-											)}
+											<div className='mt-0.5 flex flex-wrap items-center gap-1'>
+												{member.userId === team.leaderId && (
+													<div className='inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-violet-500/20 text-violet-300'>
+														<Crown size={10} />
+														Lider
+													</div>
+												)}
+												{member.roleName && (
+													<div className='inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] bg-zinc-700/60 text-zinc-300 border border-zinc-600'>
+														{member.roleName}
+													</div>
+												)}
+											</div>
 										</div>
 									</Link>
 									{isLeader && member.userId !== currentUserId && (

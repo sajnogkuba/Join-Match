@@ -1,8 +1,10 @@
 package com.joinmatch.backend.controller;
 
+import com.joinmatch.backend.dto.UserTeam.AssignRoleRequestDto;
 import com.joinmatch.backend.dto.UserTeam.RemoveMemberRequestDto;
 import com.joinmatch.backend.dto.UserTeam.UserTeamResponseDto;
 import com.joinmatch.backend.service.UserTeamService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,5 +53,15 @@ public class UserTeamController {
         String reason = requestDto != null ? requestDto.reason() : null;
         userTeamService.quitFromTeam(teamId, userId, reason);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{teamId}/members/{userId}/role")
+    public ResponseEntity<UserTeamResponseDto> assignRole(
+            @PathVariable Integer teamId,
+            @PathVariable Integer userId,
+            @RequestBody @Valid AssignRoleRequestDto requestDto
+    ) {
+        UserTeamResponseDto updatedMember = userTeamService.assignRole(teamId, userId, requestDto.roleId());
+        return ResponseEntity.ok(updatedMember);
     }
 }

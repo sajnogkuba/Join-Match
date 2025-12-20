@@ -5,5 +5,7 @@ export interface TeamMember {
 	userEmail: string
 	userAvatarUrl: string | null
 	joinedAt: string
+	roleId?: number | null
+	roleName?: string | null
 }
 
