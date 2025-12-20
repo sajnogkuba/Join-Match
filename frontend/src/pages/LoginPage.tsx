@@ -45,6 +45,11 @@ const LoginPage = () => {
 
 			navigate('/')
 		} catch (err) {
+			if (err.response?.status === 403) {
+				setError('Twoje konto zostało zablokowane')
+			} else {
+				setError('Nie udało się zalogować przez Google')
+			}
 			console.error('Google login error:', err)
 		}
 	}
