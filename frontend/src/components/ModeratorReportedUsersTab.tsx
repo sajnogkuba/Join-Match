@@ -258,18 +258,6 @@ const ModeratorReportedUsersTab: React.FC = () => {
 
     return (
         <section className="p-4 md:p-0">
-            {/* search */}
-            <div className="flex items-center gap-2 mb-4">
-                <div className="relative flex-1">
-                    <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                    <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Szukaj po zgłoszonym użytkowniku, zgłaszającym lub emailu…"
-                        className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-violet-600"
-                    />
-                </div>
-            </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
 
