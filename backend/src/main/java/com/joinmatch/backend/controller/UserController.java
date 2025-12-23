@@ -50,6 +50,8 @@ public class UserController {
         try {
             tokenSupportObject = userService.login(request);
         } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         CookieUtil.setAccessTokenCookie(response, tokenSupportObject.getToken());

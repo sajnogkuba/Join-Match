@@ -23,10 +23,13 @@ const LoginPage = () => {
 			await login(email, password)
 			navigate('/')
 		} catch (err: any) {
-			if (err.response?.status === 403) {
+			if (err.response?.status === 401) {
+				setError('Nieprawidłowy email lub hasło')
+			}
+			else if (err.response?.status === 403) {
 				setError('Twoje konto zostało zablokowane')
 			} else {
-				setError('Nieprawidłowy email lub hasło')
+				setError('Wystąpił błąd podczas logowania')
 			}
 		}
 		setLoading(false)

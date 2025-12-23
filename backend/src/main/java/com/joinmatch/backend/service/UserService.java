@@ -66,15 +66,15 @@ public class UserService {
 
     public TokenSupportObject login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new IllegalArgumentException("Invalid credentials");
         }
         if (!user.getIsVerified()) {
             throw new RuntimeException("Account is not verified. Please check your email for the code.");
         }
         if (user.getIsBlocked()) {
-            throw new IllegalArgumentException("User is blocked");
+            throw new RuntimeException("User is blocked");
         }
         return generateAndSaveTokens(user);
     }
