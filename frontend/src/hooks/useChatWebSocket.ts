@@ -1,39 +1,46 @@
-import { useEffect, useState } from 'react';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { useEffect, useState } from 'react'
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 
 export const useChatWebSocket = () => {
-  const [stompClient, setStompClient] = useState<Client | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+	const [stompClient, setStompClient] = useState<Client | null>(null)
+	const [isConnected, setIsConnected] = useState(false)
 
-  useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
-    const socket = new SockJS(`${baseUrl}/ws`);
+	useEffect(() => {
+		let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 0,
-      debug: (msg) => console.log('💬 CHAT WS:', msg),
-      onConnect: () => {
-        setIsConnected(true);
-      },
-      onDisconnect: () => {
-        setIsConnected(false);
-      },
-      onStompError: (frame) => {
-        console.error('❌ STOMP error', frame);
-      },
-    });
+		// Usuwamy '/api' tylko jeśli jest na samym końcu
+		if (baseUrl.endsWith('/api')) {
+			baseUrl = baseUrl.slice(0, -4)
+		}
 
-    client.activate();
-    setStompClient(client);
+		// Teraz baseUrl to czyste "https://api.join-match.pl"
+		const socket = new SockJS(`${baseUrl}/ws`)
 
-    return () => {
-      client.deactivate();
-      setStompClient(null);
-      setIsConnected(false);
-    };
-  }, []);
+		const client = new Client({
+			webSocketFactory: () => socket,
+			reconnectDelay: 0,
+			debug: msg => console.log('💬 CHAT WS:', msg),
+			onConnect: () => {
+				setIsConnected(true)
+			},
+			onDisconnect: () => {
+				setIsConnected(false)
+			},
+			onStompError: frame => {
+				console.error('❌ STOMP error', frame)
+			},
+		})
 
-  return { stompClient, isConnected };
-};
+		client.activate()
+		setStompClient(client)
+
+		return () => {
+			client.deactivate()
+			setStompClient(null)
+			setIsConnected(false)
+		}
+	}, [])
+
+	return { stompClient, isConnected }
+}
