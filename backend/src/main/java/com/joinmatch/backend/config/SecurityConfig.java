@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/user-saved-event/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

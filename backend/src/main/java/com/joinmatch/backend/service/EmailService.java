@@ -15,7 +15,7 @@ public class EmailService {
 
     @Value("${spring.mail.username}")
     private String fromEmail;
-    @Async
+    //@Async
     public void sendVerificationEmail(String to, String code) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
