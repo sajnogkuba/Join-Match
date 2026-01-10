@@ -13,9 +13,9 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
-    //@Async
+    private String fromEmail = "joinmatchnoreply@gmail.com";
+
+    @Async
     public void sendVerificationEmail(String to, String code) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

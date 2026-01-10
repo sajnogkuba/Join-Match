@@ -8,21 +8,15 @@ spring:
       connection-timeout: 30000
 
   mail:
-    host: smtp.gmail.com
+    host: smtp-relay.brevo.com
     port: 587
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
-    protocol: smtps
     properties:
       mail:
         debug: true
-        transport:
-          protocol: smtps
         smtp:
           auth: true
-          ssl:
-            enable: true
-            trust: smtp.gmail.com
           starttls:
             enable: true
             required: true
