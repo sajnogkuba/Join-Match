@@ -7,9 +7,9 @@ spring:
       minimum-idle: 10
       connection-timeout: 30000
 
-  mail:
+mail:
     host: smtp.gmail.com
-    port: 587
+    port: 465
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
     protocol: smtps
@@ -24,8 +24,8 @@ spring:
             enable: true
             trust: smtp.gmail.com
           starttls:
-            enable: true
-            required: true
+            enable: false
+            required: false
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
