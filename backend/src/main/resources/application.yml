@@ -7,7 +7,7 @@ spring:
       minimum-idle: 10
       connection-timeout: 30000
 
-mail:
+  mail:
     host: smtp.gmail.com
     port: 465
     username: ${MAIL_USERNAME}
@@ -30,7 +30,6 @@ mail:
           timeout: 5000
           writetimeout: 5000
 
-
   servlet:
     multipart:
       max-file-size: 10MB
@@ -39,7 +38,7 @@ mail:
 
   jpa:
     hibernate:
-      ddl-auto: validate   # przy dev możesz dać 'update' jeśli potrzebujesz
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
