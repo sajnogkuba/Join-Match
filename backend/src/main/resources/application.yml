@@ -58,6 +58,10 @@ spring:
 server:
   port: 8080
 
+app:
+  cookie:
+    domain: ${COOKIE_DOMAIN:}
+
 logging:
   level:
     org.springframework.security: DEBUG

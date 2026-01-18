@@ -1,10 +1,13 @@
 package com.joinmatch.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CookieUtil {
 
     private static final int ACCESS_TOKEN_MAX_AGE = 16 * 60;
@@ -13,9 +16,22 @@ public class CookieUtil {
 
     private static final boolean SECURE = true;
     private static final String SAME_SITE = "None";
+    private static String domain;
+
+    @Value("${app.cookie.domain:}")
+    public void setCookieDomain(String cookieDomain) {
+        domain = cookieDomain;
+    }
+
+    private static ResponseCookie.ResponseCookieBuilder withDomain(ResponseCookie.ResponseCookieBuilder builder) {
+        if (domain != null && !domain.isBlank()) {
+            builder.domain(domain);
+        }
+        return builder;
+    }
 
     public static void setAccessTokenCookie(HttpServletResponse response, String token) {
-        ResponseCookie cookie = ResponseCookie.from("accessToken", token)
+        ResponseCookie cookie = withDomain(ResponseCookie.from("accessToken", token))
                 .httpOnly(true)
                 .secure(SECURE)
                 .path("/")
@@ -27,7 +43,7 @@ public class CookieUtil {
     }
 
     public static void setRefreshTokenCookie(HttpServletResponse response, String token) {
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", token)
+        ResponseCookie cookie = withDomain(ResponseCookie.from("refreshToken", token))
                 .httpOnly(true)
                 .secure(SECURE)
                 .path("/")
@@ -39,7 +55,7 @@ public class CookieUtil {
     }
 
     public static void setEmailCookie(HttpServletResponse response, String email) {
-        ResponseCookie cookie = ResponseCookie.from("email", email)
+        ResponseCookie cookie = withDomain(ResponseCookie.from("email", email))
                 .httpOnly(false) // false, żeby JS mógł to odczytać
                 .secure(SECURE)
                 .path("/")
@@ -63,11 +79,11 @@ public class CookieUtil {
     }
 
     public static void clearAllAuthCookies(HttpServletResponse response) {
-        ResponseCookie access = ResponseCookie.from("accessToken", "")
+        ResponseCookie access = withDomain(ResponseCookie.from("accessToken", ""))
                 .httpOnly(true).secure(SECURE).path("/").maxAge(0).sameSite(SAME_SITE).build();
-        ResponseCookie refresh = ResponseCookie.from("refreshToken", "")
+        ResponseCookie refresh = withDomain(ResponseCookie.from("refreshToken", ""))
                 .httpOnly(true).secure(SECURE).path("/").maxAge(0).sameSite(SAME_SITE).build();
-        ResponseCookie email = ResponseCookie.from("email", "")
+        ResponseCookie email = withDomain(ResponseCookie.from("email", ""))
                 .httpOnly(false).secure(SECURE).path("/").maxAge(0).sameSite(SAME_SITE).build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, access.toString());
