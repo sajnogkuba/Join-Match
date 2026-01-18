@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/health").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
