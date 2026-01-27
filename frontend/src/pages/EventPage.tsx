@@ -1449,21 +1449,27 @@ const EventPage: React.FC = () => {
 										Wydarzenie niedostępne
 									</button>
 								)}
-								{currentUserId && event.isForTeam && (
-									<button
-										onClick={() => {
-											fetchLeaderTeams()
-											setShowJoinTeamModal(true)
-										}}
-										disabled={
-											loadingLeaderTeams || myTeamInEvent || event.status === EventStatus.CANCELED || !!isEventPast
-										}
-										className={`mt-3 w-full rounded-2xl px-4 py-3 text-white font-semibold transition
-			${myTeamInEvent ? 'bg-emerald-700/60 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}
+							{currentUserId && event.isForTeam && (
+								<button
+									onClick={() => {
+										fetchLeaderTeams()
+										setShowJoinTeamModal(true)
+									}}
+									disabled={
+										loadingLeaderTeams || myTeamInEvent || event.status === EventStatus.CANCELED || !!isEventPast
+									}
+									className={`mt-3 w-full rounded-2xl px-4 py-3 font-semibold transition
+			${
+				myTeamInEvent
+					? 'bg-emerald-700/60 text-white cursor-not-allowed'
+					: event.status === EventStatus.CANCELED || isEventPast
+					? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
+					: 'bg-indigo-600 hover:bg-indigo-500 text-white'
+			}
 		`}>
-										{myTeamInEvent ? 'Drużyna już dołączyła' : 'Dołącz jako drużyna'}
-									</button>
-								)}
+									{myTeamInEvent ? 'Drużyna już dołączyła' : 'Dołącz jako drużyna'}
+								</button>
+							)}
 							</div>
 
 							<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
