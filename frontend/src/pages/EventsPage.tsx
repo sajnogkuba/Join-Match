@@ -63,6 +63,7 @@ const EventsPage = () => {
 	const [error, setError] = useState<string | null>(null)
 
 	const [joinedEventIds, setJoinedEventIds] = useState<Set<number>>(new Set())
+	const [pendingEventIds, setPendingEventIds] = useState<Set<number>>(new Set())
 	const [savedEventIds, setSavedEventIds] = useState<Set<number>>(new Set())
 	const [confirmedCounts, setConfirmedCounts] = useState<Record<number, number>>({})
 	const [userSports, setUserSports] = useState<Map<string, number>>(new Map())
@@ -124,16 +125,21 @@ const EventsPage = () => {
 					direction: 'ASC',
 				},
 			})
-			.then(({ data }) => {
-				if (data?.content) {
-					const joinedIds = data.content
-						.filter((ue: any) => ue.attendanceStatusName === 'Zapisany')
-						.map((ue: any) => ue.eventId)
+		.then(({ data }) => {
+			if (data?.content) {
+				const joinedIds = data.content
+					.filter((ue: any) => ue.attendanceStatusName === 'Zapisany')
+					.map((ue: any) => ue.eventId)
 
-					setJoinedEventIds(new Set(joinedIds))
-				}
-			})
-			.catch(e => console.error('Nie udało się pobrać dołączonych wydarzeń:', e))
+				const pendingIds = data.content
+					.filter((ue: any) => ue.attendanceStatusName === 'Oczekujący')
+					.map((ue: any) => ue.eventId)
+
+				setJoinedEventIds(new Set(joinedIds))
+				setPendingEventIds(new Set(pendingIds))
+			}
+		})
+		.catch(e => console.error('Nie udało się pobrać dołączonych wydarzeń:', e))
 	}, [userEmail])
 
 	useEffect(() => {
@@ -369,6 +375,7 @@ const EventsPage = () => {
 	const handleJoin = async (eventId: number) => {
 		if (!userEmail) return navigate('/login')
 		const isJoined = joinedEventIds.has(eventId)
+		const isPending = pendingEventIds.has(eventId)
 		const event = events.find(ev => ev.eventId === eventId)
 
 		// Sprawdź czy wydarzenie się zakończyło
@@ -385,23 +392,30 @@ const EventsPage = () => {
 		}
 
 		try {
-			if (isJoined) {
+			if (isJoined || isPending) {
 				await axiosInstance.delete('/user-event', { data: { userEmail, eventId } })
 				setJoinedEventIds(prev => {
 					const s = new Set(prev)
 					s.delete(eventId)
 					return s
 				})
-				// decrement confirmed count
-				setConfirmedCounts(prev => ({
-					...prev,
-					[eventId]: Math.max(0, (prev[eventId] ?? ((event as any).bookedParticipants || 0)) - 1),
-				}))
-				setEvents(prev =>
-					prev.map(ev =>
-						ev.eventId === eventId ? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) } : ev
+				setPendingEventIds(prev => {
+					const s = new Set(prev)
+					s.delete(eventId)
+					return s
+				})
+				// decrement confirmed count tylko jeśli był zapisany
+				if (isJoined) {
+					setConfirmedCounts(prev => ({
+						...prev,
+						[eventId]: Math.max(0, (prev[eventId] ?? ((event as any).bookedParticipants || 0)) - 1),
+					}))
+					setEvents(prev =>
+						prev.map(ev =>
+							ev.eventId === eventId ? { ...ev, bookedParticipants: Math.max(0, (ev as any).bookedParticipants - 1) } : ev
+						)
 					)
-				)
+				}
 			} else {
 				const bookedParticipants = (confirmedCounts[eventId] ?? (event as any)?.bookedParticipants) || 0
 				const numberOfParticipants = event?.numberOfParticipants || 0
@@ -428,18 +442,26 @@ const EventsPage = () => {
 					}
 				}
 
-				await axiosInstance.post('/user-event', { userEmail, eventId })
-				setJoinedEventIds(prev => new Set([...prev, eventId]))
-				// increment confirmed count
-				setConfirmedCounts(prev => ({
-					...prev,
-					[eventId]: (prev[eventId] ?? ((event as any).bookedParticipants || 0)) + 1,
-				}))
-				setEvents(prev =>
-					prev.map(ev =>
-						ev.eventId === eventId ? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 } : ev
+				const response = await axiosInstance.post('/user-event/request', { userEmail, eventId })
+				const attendanceStatusName = response.data?.attendanceStatusName
+				
+				// Jeśli wydarzenie jest prywatne (eventVisibilityId === 2), użytkownik będzie miał status "Oczekujący"
+				// Jeśli publiczne (eventVisibilityId === 1), użytkownik będzie miał status "Zapisany"
+				if (attendanceStatusName === 'Oczekujący' || event?.eventVisibilityId === 2) {
+					setPendingEventIds(prev => new Set([...prev, eventId]))
+				} else {
+					setJoinedEventIds(prev => new Set([...prev, eventId]))
+					// increment confirmed count tylko dla publicznych wydarzeń
+					setConfirmedCounts(prev => ({
+						...prev,
+						[eventId]: (prev[eventId] ?? ((event as any).bookedParticipants || 0)) + 1,
+					}))
+					setEvents(prev =>
+						prev.map(ev =>
+							ev.eventId === eventId ? { ...ev, bookedParticipants: ((ev as any).bookedParticipants || 0) + 1 } : ev
+						)
 					)
-				)
+				}
 			}
 		} catch (e) {
 			console.error('Błąd dołączania/opuszczania:', e)
@@ -738,27 +760,30 @@ const EventsPage = () => {
 															<div className='text-zinc-500 text-sm'>Zablokowane</div>
 														) : (
 															<>
-																{(() => {
-																	const isJoined = joinedEventIds.has(ev.eventId)
-																	const isFull = confirmedCount >= ev.numberOfParticipants && !isJoined
-																	const isEventPast = ev.eventDate && parseEventDate(ev.eventDate).isBefore(dayjs())
-																	return (
-																		<button
-																			onClick={() => handleJoin(ev.eventId)}
-																			disabled={isFull || isEventPast}
-																			className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
-																				isEventPast
-																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
-																					: isJoined
-																					? 'bg-red-600 text-white hover:bg-red-500'
-																					: isFull
-																					? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
-																					: 'bg-violet-600 text-white hover:bg-violet-500'
-																			}`}>
-																			{isEventPast ? 'Zakończone' : isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
-																		</button>
-																	)
-																})()}
+															{(() => {
+																const isJoined = joinedEventIds.has(ev.eventId)
+																const isPending = pendingEventIds.has(ev.eventId)
+																const isFull = confirmedCount >= ev.numberOfParticipants && !isJoined && !isPending
+																const isEventPast = ev.eventDate && parseEventDate(ev.eventDate).isBefore(dayjs())
+																return (
+																	<button
+																		onClick={() => handleJoin(ev.eventId)}
+																		disabled={isFull || isEventPast || isPending}
+																		className={`rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+																			isEventPast
+																				? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																				: isPending
+																				? 'bg-zinc-700 text-zinc-400 cursor-not-allowed'
+																				: isJoined
+																				? 'bg-red-600 text-white hover:bg-red-500'
+																				: isFull
+																				? 'bg-zinc-600 text-zinc-400 cursor-not-allowed'
+																				: 'bg-violet-600 text-white hover:bg-violet-500'
+																		}`}>
+																		{isEventPast ? 'Zakończone' : isPending ? 'Prośba wysłana' : isJoined ? 'Opuść' : isFull ? 'Pełne' : 'Dołącz'}
+																	</button>
+																)
+															})()}
 																<Link
 																	to={`/event/${ev.eventId}`}
 																	className='text-violet-300 hover:text-violet-200 inline-flex items-center gap-1'>
