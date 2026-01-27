@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Eye, Check, X, Trash2, Star } from "lucide-react";
+import { Eye, Check, X, Trash2, Star, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -23,7 +23,7 @@ type PageResponse<T> = {
 
 type EventRatingReportItem = {
     id: number;
-    description: string;      // opis zgłoszenia
+    description: string;
 
     reporterId: number;
     userEmail: string;
@@ -35,8 +35,8 @@ type EventRatingReportItem = {
     eventImageUrl: string | null;
 
     idRater: number;
-    rate: number;             // ocena 1–5
-    commentRate: string;      // komentarz do oceny
+    rate: number;
+    commentRate: string;
 
     viewed: boolean;
     active: boolean;
@@ -58,6 +58,8 @@ const ModeratorEventRatingsTab: React.FC = () => {
     const loggedEmail =
         typeof window !== "undefined" ? getCookie("email") : null;
 
+    const [sortBy, setSortBy] = useState<string>("viewed_desc_id_desc");
+
     const getUserProfileLink = (email: string, id: number) => {
         if (!loggedEmail) return `/profile/${id}`;
         return email === loggedEmail ? `/profile` : `/profile/${id}`;
@@ -76,7 +78,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                     `/moderator/reportEventRatings?page=${pageNum}&size=${PAGE_SIZE}`
                 );
 
-                // na wszelki wypadek rzutujemy active/viewed na bool
                 const mapped = res.data.content.map((item) => ({
                     ...item,
                     active: !!item.active,
@@ -92,10 +93,8 @@ const ModeratorEventRatingsTab: React.FC = () => {
                 setHasNext(!res.data.last);
                 currentPageRef.current = res.data.number;
 
-                // pomocniczo – możesz zobaczyć w konsoli co przychodzi
-                // console.log("REPORTS FROM API:", mapped);
             } catch (e) {
-                setError("Nie udało się załadować zgłoszeń ocen wydarzeń.");
+                console.error("Nie udało się załadować zgłoszeń ocen wydarzeń.");
             } finally {
                 setLoading(false);
                 setLoadingMore(false);
@@ -141,7 +140,70 @@ const ModeratorEventRatingsTab: React.FC = () => {
         [reports]
     );
 
-    // ==== AKCJE ====
+    const sortedAndFilteredReports = useMemo(() => {
+        const result = [...filteredReports];
+
+        result.sort((a, b) => {
+            let comparison = 0;
+
+            if (sortBy.startsWith("viewed_desc")) {
+                if (a.viewed !== b.viewed) {
+                    if (!a.viewed && b.viewed) return -1;
+                    if (a.viewed && !b.viewed) return 1;
+                }
+                return sortBy.includes("desc") ? b.id - a.id : a.id - b.id;
+            }
+
+            switch (sortBy) {
+                case "reporter_asc":
+                    comparison = a.reporterUsername.localeCompare(
+                        b.reporterUsername,
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "reporter_desc":
+                    comparison = b.reporterUsername.localeCompare(
+                        a.reporterUsername,
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "event_asc":
+                    comparison = a.eventName.localeCompare(b.eventName, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                case "event_desc":
+                    comparison = b.eventName.localeCompare(a.eventName, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                case "rate_asc":
+                    comparison = a.rate - b.rate;
+                    break;
+                case "rate_desc":
+                    comparison = b.rate - a.rate;
+                    break;
+                case "status_asc":
+                    if (a.active === b.active) comparison = 0;
+                    else if (a.active && !b.active) comparison = -1;
+                    else comparison = 1;
+                    break;
+                case "status_desc":
+                    if (a.active === b.active) comparison = 0;
+                    else if (!a.active && b.active) comparison = -1;
+                    else comparison = 1;
+                    break;
+                default:
+                    comparison = b.id - a.id;
+            }
+
+            return comparison;
+        });
+
+        return result;
+    }, [filteredReports, sortBy]);
 
     const handleAccept = async (id: number) => {
         try {
@@ -155,7 +217,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
             );
         } catch (e) {
             console.error(e);
-            alert("Nie udało się zaakceptować zgłoszenia.");
+            console.error("Nie udało się zaakceptować zgłoszenia.");
         }
     };
 
@@ -171,7 +233,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
             );
         } catch (e) {
             console.error(e);
-            alert("Nie udało się odrzucić zgłoszenia.");
+            console.error("Nie udało się odrzucić zgłoszenia.");
         }
     };
 
@@ -185,7 +247,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
             setReports((prev) => prev.filter((r) => r.id !== id));
         } catch (e) {
             console.error(e);
-            alert("Nie udało się usunąć zgłoszenia.");
+            console.error("Nie udało się usunąć zgłoszenia.");
         }
     };
 
@@ -214,14 +276,53 @@ const ModeratorEventRatingsTab: React.FC = () => {
             }
         } catch (e) {
             console.error(e);
-            alert("Nie udało się zmienić statusu przeczytania.");
+            console.error("Nie udało się zmienić statusu przeczytania.");
         }
     };
 
     return (
         <section className="p-4 md:p-0">
-            {/* search bez filtrów */}
-
+            <div className="flex items-center gap-2 mb-4 justify-end">
+                <div className="relative">
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200"
+                    >
+                        <option value="viewed_desc_id_desc">
+                            Nieprzeczytane najpierw, potem najnowsze
+                        </option>
+                        <option value="reporter_asc">
+                            Zgłaszający A-Z
+                        </option>
+                        <option value="reporter_desc">
+                            Zgłaszający Z-A
+                        </option>
+                        <option value="event_asc">
+                            Wydarzenie A-Z
+                        </option>
+                        <option value="event_desc">
+                            Wydarzenie Z-A
+                        </option>
+                        <option value="rate_asc">
+                            Ocena (1-5)
+                        </option>
+                        <option value="rate_desc">
+                            Ocena (5-1)
+                        </option>
+                        <option value="status_asc">
+                            Status (Aktywny/Nieaktywny)
+                        </option>
+                        <option value="status_desc">
+                            Status (Nieaktywny/Aktywny)
+                        </option>
+                    </select>
+                    <ArrowUpDown
+                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60"
+                        size={16}
+                    />
+                </div>
+            </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
 
@@ -249,7 +350,7 @@ const ModeratorEventRatingsTab: React.FC = () => {
                         </tr>
                     )}
 
-                    {filteredReports.map((r) => {
+                    {sortedAndFilteredReports.map((r) => {
                         const isUnseen = !r.viewed;
 
                         return (
@@ -257,7 +358,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                 key={r.id}
                                 className="border-t border-zinc-800"
                             >
-                                {/* Zgłaszający */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {r.reporterAvatarUrl && (
@@ -293,7 +393,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Ocena */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {r.eventImageUrl && (
@@ -323,7 +422,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Opis oceny + opis zgłoszenia */}
                                 <td className="px-4 py-3 max-w-xs">
                                     <p
                                         className={
@@ -340,7 +438,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                     </p>
                                 </td>
 
-                                {/* Status */}
                                 <td className="px-4 py-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
@@ -353,7 +450,6 @@ const ModeratorEventRatingsTab: React.FC = () => {
                                         </span>
                                 </td>
 
-                                {/* Akcje */}
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <button

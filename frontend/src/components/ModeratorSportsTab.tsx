@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import type { FormEvent, ChangeEvent } from "react";
 import axios from "axios";
 import axiosInstance from "../Api/axios.tsx";
+import { ArrowUpDown } from "lucide-react";
 
 type Sport = {
     id: number;
@@ -22,6 +23,8 @@ const ModeratorSportsTab: React.FC = () => {
     const [editingName, setEditingName] = useState("");
     const [savingEdit, setSavingEdit] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    const [sortBy, setSortBy] = useState<string>("name_ASC");
 
     const handleError = (e: unknown, fallback: string) => {
         setError(e instanceof Error ? e.message : fallback);
@@ -67,7 +70,6 @@ const ModeratorSportsTab: React.FC = () => {
             setSavingNew(true);
             setError(null);
 
-            // 1) upload obrazka
             const formData = new FormData();
             formData.append("file", newFile);
 
@@ -79,7 +81,6 @@ const ModeratorSportsTab: React.FC = () => {
 
             const imageUrl = uploadRes.data;
 
-            // 2) dodanie sportu
             await axiosInstance.post("/sport-type", {
                 name: newName.trim(),
                 url: imageUrl,
@@ -166,6 +167,28 @@ const ModeratorSportsTab: React.FC = () => {
         }
     };
 
+    const sortedSports = useMemo(() => {
+        const result = [...sports];
+        const [field, direction] = sortBy.split("_");
+
+        result.sort((a, b) => {
+            let comparison = 0;
+
+            switch (field) {
+                case "name":
+                    comparison = a.name.localeCompare(b.name, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                default:
+                    return 0;
+            }
+
+            return direction === "ASC" ? comparison : -comparison;
+        });
+
+        return result;
+    }, [sports, sortBy]);
 
     return (
         <div className="p-4 md:p-6 border-t border-zinc-800">
@@ -180,7 +203,6 @@ const ModeratorSportsTab: React.FC = () => {
                 </div>
             )}
 
-            {/* Formularz dodawania */}
             <div className="mb-8 rounded-2xl bg-black/40 border border-zinc-800 p-4">
                 <h3 className="text-lg font-medium text-white mb-3">Dodaj sport</h3>
 
@@ -236,10 +258,25 @@ const ModeratorSportsTab: React.FC = () => {
                 </form>
             </div>
 
-            {/* Lista sportów */}
             <div className="rounded-2xl bg-black/40 border border-zinc-800 overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-800 text-sm text-zinc-200 font-medium">
-                    Lista sportów
+                <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
+                    <span className="text-sm text-zinc-200 font-medium">
+                        Lista sportów
+                    </span>
+                    <div className="relative">
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200"
+                        >
+                            <option value="name_ASC">Nazwa A-Z</option>
+                            <option value="name_DESC">Nazwa Z-A</option>
+                        </select>
+                        <ArrowUpDown
+                            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60"
+                            size={16}
+                        />
+                    </div>
                 </div>
 
                 {loading ? (
@@ -248,7 +285,7 @@ const ModeratorSportsTab: React.FC = () => {
                     <div className="px-4 py-6 text-zinc-400">Brak sportów.</div>
                 ) : (
                     <div className="divide-y divide-zinc-800">
-                        {sports.map((sport) => (
+                        {sortedSports.map((sport) => (
                             <div key={sport.id} className="flex items-center gap-4 p-4">
                                 <img
                                     src={sport.url}
@@ -267,7 +304,6 @@ const ModeratorSportsTab: React.FC = () => {
                                     <span className="flex-1 text-zinc-200">{sport.name}</span>
                                 )}
 
-                                {/* Buttons */}
                                 {editingId === sport.id ? (
                                     <>
                                         <button

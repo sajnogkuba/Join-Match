@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Eye, Check, X, Trash2 } from "lucide-react";
+import { Eye, Check, X, Trash2, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -54,6 +54,8 @@ const ModeratorEventsTab: React.FC = () => {
 
     const loggedEmail =
         typeof window !== "undefined" ? getCookie("email") : null;
+
+    const [sortBy, setSortBy] = useState<string>("viewed_desc_id_desc");
 
     const getUserProfileLink = (reporterEmail: string, reporterId: number) => {
         if (!loggedEmail) return `/profile/${reporterId}`;
@@ -128,6 +130,81 @@ const ModeratorEventsTab: React.FC = () => {
         [reports]
     );
 
+    const sortedAndFilteredReports = useMemo(() => {
+        const result = [...filteredReports];
+
+        result.sort((a, b) => {
+            let comparison = 0;
+
+            if (sortBy.startsWith("viewed_desc")) {
+                if (a.viewed !== b.viewed) {
+                    if (!a.viewed && b.viewed) return -1;
+                    if (a.viewed && !b.viewed) return 1;
+                }
+                if (sortBy.includes("date")) {
+                    const dateA = new Date(a.eventDate).getTime();
+                    const dateB = new Date(b.eventDate).getTime();
+                    return sortBy.includes("desc") ? dateB - dateA : dateA - dateB;
+                } else {
+                    return sortBy.includes("desc") ? b.id - a.id : a.id - b.id;
+                }
+            }
+
+            switch (sortBy) {
+                case "reporter_asc":
+                    comparison = a.reporterUsername.localeCompare(
+                        b.reporterUsername,
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "reporter_desc":
+                    comparison = b.reporterUsername.localeCompare(
+                        a.reporterUsername,
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "event_asc":
+                    comparison = a.eventName.localeCompare(b.eventName, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                case "event_desc":
+                    comparison = b.eventName.localeCompare(a.eventName, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                case "date_asc":
+                    const dateA_asc = new Date(a.eventDate).getTime();
+                    const dateB_asc = new Date(b.eventDate).getTime();
+                    comparison = dateA_asc - dateB_asc;
+                    break;
+                case "date_desc":
+                    const dateA_desc = new Date(a.eventDate).getTime();
+                    const dateB_desc = new Date(b.eventDate).getTime();
+                    comparison = dateB_desc - dateA_desc;
+                    break;
+                case "status_asc":
+                    if (a.active === b.active) comparison = 0;
+                    else if (a.active && !b.active) comparison = -1;
+                    else comparison = 1;
+                    break;
+                case "status_desc":
+                    if (a.active === b.active) comparison = 0;
+                    else if (!a.active && b.active) comparison = -1;
+                    else comparison = 1;
+                    break;
+                default:
+                    comparison = b.id - a.id;
+            }
+
+            return comparison;
+        });
+
+        return result;
+    }, [filteredReports, sortBy]);
+
     const formatDate = (value: string) => {
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return "-";
@@ -140,8 +217,6 @@ const ModeratorEventsTab: React.FC = () => {
         });
     };
 
-    // ========= AKCJE =========
-
     const handleAccept = async (id: number) => {
         try {
             await axiosInstance.patch(`/moderator/reportEvent/${id}/accept`);
@@ -151,7 +226,7 @@ const ModeratorEventsTab: React.FC = () => {
                 )
             );
         } catch {
-            alert("Nie udało się zaakceptować zgłoszenia.");
+            console.error("Nie udało się zaakceptować zgłoszenia.");
         }
     };
 
@@ -164,7 +239,7 @@ const ModeratorEventsTab: React.FC = () => {
                 )
             );
         } catch {
-            alert("Nie udało się odrzucić zgłoszenia.");
+            console.error("Nie udało się odrzucić zgłoszenia.");
         }
     };
 
@@ -175,7 +250,7 @@ const ModeratorEventsTab: React.FC = () => {
             await axiosInstance.delete(`/moderator/reportEvent/${id}/delete`);
             setReports((prev) => prev.filter((r) => r.id !== id));
         } catch {
-            alert("Nie udało się usunąć zgłoszenia.");
+            console.error("Nie udało się usunąć zgłoszenia.");
         }
     };
 
@@ -186,7 +261,7 @@ const ModeratorEventsTab: React.FC = () => {
             await axiosInstance.delete(`/event/delete/event/${eventId}`);
             setReports((prev) => prev.filter((r) => r.eventId !== eventId));
         } catch {
-            alert("Nie udało się usunąć wydarzenia.");
+            console.error("Nie udało się usunąć wydarzenia.");
         }
     };
 
@@ -206,15 +281,58 @@ const ModeratorEventsTab: React.FC = () => {
                 );
             }
         } catch {
-            alert("Nie udało się zmienić statusu przeczytania.");
+            console.error("Nie udało się zmienić statusu przeczytania.");
         }
     };
 
     return (
         <section className="p-4 md:p-0">
-
-            {/* Search */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 justify-end">
+                <div className="relative">
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200"
+                    >
+                        <option value="viewed_desc_id_desc">
+                            Nieprzeczytane najpierw, potem najnowsze
+                        </option>
+                        <option value="viewed_desc_date_desc">
+                            Nieprzeczytane najpierw, potem data (najnowsze)
+                        </option>
+                        <option value="viewed_desc_date_asc">
+                            Nieprzeczytane najpierw, potem data (najstarsze)
+                        </option>
+                        <option value="reporter_asc">
+                            Zgłaszający A-Z
+                        </option>
+                        <option value="reporter_desc">
+                            Zgłaszający Z-A
+                        </option>
+                        <option value="event_asc">
+                            Wydarzenie A-Z
+                        </option>
+                        <option value="event_desc">
+                            Wydarzenie Z-A
+                        </option>
+                        <option value="date_desc">
+                            Data (najnowsze)
+                        </option>
+                        <option value="date_asc">
+                            Data (najstarsze)
+                        </option>
+                        <option value="status_asc">
+                            Status (Aktywny/Nieaktywny)
+                        </option>
+                        <option value="status_desc">
+                            Status (Nieaktywny/Aktywny)
+                        </option>
+                    </select>
+                    <ArrowUpDown
+                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60"
+                        size={16}
+                    />
+                </div>
             </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
@@ -240,13 +358,12 @@ const ModeratorEventsTab: React.FC = () => {
                         </tr>
                     )}
 
-                    {filteredReports.map((r) => {
+                    {sortedAndFilteredReports.map((r) => {
                         const isUnseen = !r.viewed;
 
                         return (
                             <tr key={r.id} className="border-t border-zinc-800">
 
-                                {/* Zgłaszający */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {r.reporterAvatarUrl && (
@@ -279,7 +396,6 @@ const ModeratorEventsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Wydarzenie */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {r.eventImageUrl && (
@@ -304,7 +420,6 @@ const ModeratorEventsTab: React.FC = () => {
                                                     {r.eventName}
                                                 </Link>
 
-                                                {/* Śmietnik obok wydarzenia */}
                                                 <button
                                                     onClick={() => handleDeleteEvent(r.eventId)}
                                                     className="p-1 rounded-md border border-red-700 hover:bg-red-800/40 transition ml-1"
@@ -326,7 +441,6 @@ const ModeratorEventsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Opis */}
                                 <td className="px-4 py-3 max-w-xs">
                                     <p
                                         className={
@@ -340,7 +454,6 @@ const ModeratorEventsTab: React.FC = () => {
                                     </p>
                                 </td>
 
-                                {/* Status */}
                                 <td className="px-4 py-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
@@ -353,11 +466,9 @@ const ModeratorEventsTab: React.FC = () => {
                                         </span>
                                 </td>
 
-                                {/* Akcje */}
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
 
-                                        {/* Akceptuj */}
                                         <button
                                             onClick={() => handleAccept(r.id)}
                                             className="p-2 rounded-lg border border-emerald-600/60 hover:bg-emerald-600/20 hover:border-emerald-500 transition"
@@ -366,7 +477,6 @@ const ModeratorEventsTab: React.FC = () => {
                                             <Check className="h-4 w-4" />
                                         </button>
 
-                                        {/* Odrzuć */}
                                         <button
                                             onClick={() => handleReject(r.id)}
                                             className="p-2 rounded-lg border border-red-600/60 hover:bg-red-600/20 hover:border-red-500 transition"
@@ -375,7 +485,6 @@ const ModeratorEventsTab: React.FC = () => {
                                             <X className="h-4 w-4" />
                                         </button>
 
-                                        {/* Usuń zgłoszenie */}
                                         <button
                                             onClick={() => handleDeleteReport(r.id)}
                                             className="p-2 rounded-lg border border-zinc-700 hover:bg-zinc-800 transition"
@@ -384,7 +493,6 @@ const ModeratorEventsTab: React.FC = () => {
                                             <Trash2 className="h-4 w-4" />
                                         </button>
 
-                                        {/* toggle read */}
                                         <button
                                             onClick={() => handleToggleViewed(r)}
                                             className={`p-2 rounded-lg border transition ${

@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Search, Filter, Ban, Undo2, Send } from "lucide-react";
+import { Search, Ban, Undo2, Send, ArrowUpDown } from "lucide-react";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
 
@@ -50,9 +50,10 @@ const ModeratorUsersTab: React.FC = () => {
     const currentUsersPageRef = useRef(0);
     const observerTargetUsers = useRef<HTMLDivElement | null>(null);
 
-    // 🔔 MODERATOR WARNING – NOWE
     const [notifyUser, setNotifyUser] = useState<ModeratorUser | null>(null);
     const [sendingNotification, setSendingNotification] = useState(false);
+
+    const [sortBy, setSortBy] = useState<string>("nickname_ASC");
 
     useEffect(() => {
         try {
@@ -96,7 +97,6 @@ const ModeratorUsersTab: React.FC = () => {
         fetchUsers(0, false);
     }, [fetchUsers]);
 
-    // Infinite scroll
     useEffect(() => {
         if (!hasNextUsers) return;
 
@@ -129,6 +129,39 @@ const ModeratorUsersTab: React.FC = () => {
         [qUsers, users]
     );
 
+    const sortedAndFilteredUsers = useMemo(() => {
+        const result = [...filteredUsers];
+        const [field, direction] = sortBy.split("_");
+
+        result.sort((a, b) => {
+            let comparison = 0;
+
+            switch (field) {
+                case "nickname":
+                    comparison = a.nickname.localeCompare(b.nickname, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                case "email":
+                    comparison = a.email.localeCompare(b.email, "pl", {
+                        sensitivity: "base",
+                    });
+                    break;
+                case "status":
+                    if (a.status === b.status) comparison = 0;
+                    else if (a.status === "ACTIVE") comparison = -1;
+                    else comparison = 1;
+                    break;
+                default:
+                    return 0;
+            }
+
+            return direction === "ASC" ? comparison : -comparison;
+        });
+
+        return result;
+    }, [filteredUsers, sortBy]);
+
     const blockUser = async (email: string) => {
         await axiosInstance.patch("/auth/block/user", { email });
         setUsers((prev) =>
@@ -147,7 +180,6 @@ const ModeratorUsersTab: React.FC = () => {
         );
     };
 
-    // 🔔 WYSYŁANIE OSTRZEŻENIA
     const sendNotification = async () => {
         if (!notifyUser) return;
 
@@ -158,7 +190,7 @@ const ModeratorUsersTab: React.FC = () => {
             });
             setNotifyUser(null);
         } catch {
-            alert("Nie udało się wysłać ostrzeżenia");
+            console.error("Nie udało się wysłać ostrzeżenia");
         } finally {
             setSendingNotification(false);
         }
@@ -176,10 +208,24 @@ const ModeratorUsersTab: React.FC = () => {
                         className="w-full rounded-xl bg-zinc-900/60 border border-zinc-800 pl-9 pr-3 py-2 text-sm text-zinc-100"
                     />
                 </div>
-                <button className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-700 hover:bg-zinc-800">
-                    <Filter className="h-4 w-4" />
-                    Filtry
-                </button>
+                <div className="relative">
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200"
+                    >
+                        <option value="nickname_ASC">Nick A-Z</option>
+                        <option value="nickname_DESC">Nick Z-A</option>
+                        <option value="email_ASC">E-mail A-Z</option>
+                        <option value="email_DESC">E-mail Z-A</option>
+                        <option value="status_ASC">Status (Odblokowany/Zablokowany)</option>
+                        <option value="status_DESC">Status (Zablokowany/Odblokowany)</option>
+                    </select>
+                    <ArrowUpDown
+                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60"
+                        size={16}
+                    />
+                </div>
             </div>
 
             {errorUsers && (
@@ -198,7 +244,7 @@ const ModeratorUsersTab: React.FC = () => {
                     </thead>
 
                     <tbody>
-                    {filteredUsers.map((u) => (
+                    {sortedAndFilteredUsers.map((u) => (
                         <tr key={u.id} className="border-t border-zinc-800">
                             <td className="px-4 py-3">{u.nickname}</td>
                             <td className="px-4 py-3">{u.email}</td>
@@ -296,7 +342,6 @@ const ModeratorUsersTab: React.FC = () => {
                             : null}
             </div>
 
-            {/* 🔔 MODAL OSTRZEŻENIA */}
             {notifyUser && (
                 <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
                     <div className="bg-[#1f2632] p-6 rounded-2xl w-full max-w-md border border-zinc-800">

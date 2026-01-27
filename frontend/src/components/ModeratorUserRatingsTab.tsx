@@ -5,7 +5,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Eye, Check, X, Trash2, Star } from "lucide-react";
+import { Eye, Check, X, Trash2, Star, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios.tsx";
 import { getCookie } from "../utils/cookies";
@@ -21,7 +21,6 @@ type PageResponse<T> = {
     empty: boolean;
 };
 
-// dokładnie jak z backendu
 type UserRateReportDto = {
     id: number;
     rateId: number;
@@ -40,7 +39,6 @@ type UserRateReportDto = {
     reviewed: boolean;
 };
 
-// typ używany w FE
 type UserRatingReportItem = {
     id: number;
     description: string;
@@ -59,7 +57,7 @@ type UserRatingReportItem = {
     numberOfStars: number;
     rateDescription: string;
 
-    viewed: boolean; // z reviewed
+    viewed: boolean;
     active: boolean;
 };
 
@@ -78,6 +76,8 @@ const ModeratorUserRatingsTab: React.FC = () => {
 
     const loggedEmail =
         typeof window !== "undefined" ? getCookie("email") : null;
+
+    const [sortBy, setSortBy] = useState<string>("viewed_desc_id_desc");
 
     const getUserProfileLink = (
         email: string | null | undefined,
@@ -181,6 +181,77 @@ const ModeratorUserRatingsTab: React.FC = () => {
         [reports]
     );
 
+    const sortedAndFilteredReports = useMemo(() => {
+        const result = [...filteredReports];
+
+        result.sort((a, b) => {
+            let comparison = 0;
+
+            if (sortBy.startsWith("viewed_desc")) {
+                // Najpierw sortuj po viewed (nieprzeczytane najpierw)
+                if (a.viewed !== b.viewed) {
+                    if (!a.viewed && b.viewed) return -1;
+                    if (a.viewed && !b.viewed) return 1;
+                }
+                // Potem po ID
+                return sortBy.includes("desc") ? b.id - a.id : a.id - b.id;
+            }
+
+            switch (sortBy) {
+                case "reporter_asc":
+                    comparison = a.reporterUsername.localeCompare(
+                        b.reporterUsername,
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "reporter_desc":
+                    comparison = b.reporterUsername.localeCompare(
+                        a.reporterUsername,
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "rated_asc":
+                    comparison = (a.ratedUserUsername ?? "").localeCompare(
+                        b.ratedUserUsername ?? "",
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "rated_desc":
+                    comparison = (b.ratedUserUsername ?? "").localeCompare(
+                        a.ratedUserUsername ?? "",
+                        "pl",
+                        { sensitivity: "base" }
+                    );
+                    break;
+                case "rate_asc":
+                    comparison = a.numberOfStars - b.numberOfStars;
+                    break;
+                case "rate_desc":
+                    comparison = b.numberOfStars - a.numberOfStars;
+                    break;
+                case "status_asc":
+                    if (a.active === b.active) comparison = 0;
+                    else if (a.active && !b.active) comparison = -1;
+                    else comparison = 1;
+                    break;
+                case "status_desc":
+                    if (a.active === b.active) comparison = 0;
+                    else if (!a.active && b.active) comparison = -1;
+                    else comparison = 1;
+                    break;
+                default:
+                    comparison = b.id - a.id;
+            }
+
+            return comparison;
+        });
+
+        return result;
+    }, [filteredReports, sortBy]);
+
     // ==== AKCJE ====
 
     const handleAccept = async (id: number) => {
@@ -260,7 +331,47 @@ const ModeratorUserRatingsTab: React.FC = () => {
 
     return (
         <section className="p-4 md:p-0">
-
+            <div className="flex items-center gap-2 mb-4 justify-end">
+                <div className="relative">
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200"
+                    >
+                        <option value="viewed_desc_id_desc">
+                            Nieprzeczytane najpierw, potem najnowsze
+                        </option>
+                        <option value="reporter_asc">
+                            Zgłaszający A-Z
+                        </option>
+                        <option value="reporter_desc">
+                            Zgłaszający Z-A
+                        </option>
+                        <option value="rated_asc">
+                            Oceniany użytkownik A-Z
+                        </option>
+                        <option value="rated_desc">
+                            Oceniany użytkownik Z-A
+                        </option>
+                        <option value="rate_asc">
+                            Ocena (1-5)
+                        </option>
+                        <option value="rate_desc">
+                            Ocena (5-1)
+                        </option>
+                        <option value="status_asc">
+                            Status (Aktywny/Nieaktywny)
+                        </option>
+                        <option value="status_desc">
+                            Status (Nieaktywny/Aktywny)
+                        </option>
+                    </select>
+                    <ArrowUpDown
+                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60"
+                        size={16}
+                    />
+                </div>
+            </div>
 
             {error && <p className="text-red-400 mb-2">{error}</p>}
 
@@ -290,7 +401,7 @@ const ModeratorUserRatingsTab: React.FC = () => {
                         </tr>
                     )}
 
-                    {filteredReports.map((r) => {
+                    {sortedAndFilteredReports.map((r) => {
                         const isUnseen = !r.viewed;
 
                         return (
@@ -298,7 +409,6 @@ const ModeratorUserRatingsTab: React.FC = () => {
                                 key={r.id}
                                 className="border-t border-zinc-800"
                             >
-                                {/* Zgłaszający */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {r.reporterAvatar && (
@@ -334,7 +444,6 @@ const ModeratorUserRatingsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Oceniany użytkownik */}
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         {r.ratedUserAvatar && (
@@ -367,7 +476,6 @@ const ModeratorUserRatingsTab: React.FC = () => {
                                     </div>
                                 </td>
 
-                                {/* Opis oceny + opis zgłoszenia */}
                                 <td className="px-4 py-3 max-w-xs">
                                     <p
                                         className={
@@ -384,7 +492,6 @@ const ModeratorUserRatingsTab: React.FC = () => {
                                     </p>
                                 </td>
 
-                                {/* Status */}
                                 <td className="px-4 py-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${
@@ -397,7 +504,6 @@ const ModeratorUserRatingsTab: React.FC = () => {
                                         </span>
                                 </td>
 
-                                {/* Akcje */}
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <button
