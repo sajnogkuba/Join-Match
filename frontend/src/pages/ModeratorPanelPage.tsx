@@ -20,7 +20,6 @@ import ModeratorEventRatingsTab from "../components/ModeratorEventRatingsTab.tsx
 import ModeratorUserRatingsTab from "../components/ModeratorUserRatingsTab.tsx";
 import ModeratorTeamsTab from "../components/ModeratorTeamsTab.tsx";
 import ModeratorReportedUsersTab from "../components/ModeratorReportedUsersTab.tsx";
-import ModeratorSettingsTab from "../components/ModeratorSettingsTab.tsx";
 import ModeratorSportsTab from "../components/ModeratorSportsTab.tsx";
 const tabs = [
     { key: "dashboard" as TabKey, label: "Dashboard", icon: <ShieldCheck className="h-4 w-4" /> },
@@ -35,7 +34,6 @@ const tabs = [
         label: "Zgłoszeni użytkownicy",
         icon: <AlertTriangle className="h-4 w-4" />,
     },
-    { key: "settings" as TabKey, label: "Ustawienia", icon: <ShieldCheck className="h-4 w-4" /> },
 ];
 
 const CARD_BG = "bg-black/60";
@@ -168,7 +166,6 @@ const ModeratorPanelPage: React.FC = () => {
                     {tab === "teams" && <ModeratorTeamsTab />}
                     {tab === "sports" && <ModeratorSportsTab />}
                     {tab === "reportedUsers" && <ModeratorReportedUsersTab />}
-                    {tab === "settings" && <ModeratorSettingsTab />}
                 </div>
             </main>
         </div>
