@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import dayjs, { Dayjs } from 'dayjs'
-import { MapPin, CalendarDays, Users, Loader2, AlertTriangle, List, Calendar } from 'lucide-react'
+import { MapPin, CalendarDays, Users, Loader2, AlertTriangle, List, Calendar, ArrowUpDown } from 'lucide-react'
 import api from '../Api/axios'
 import UniversalEventsCalendar from './UniversalEventsCalendar'
 
@@ -57,6 +57,7 @@ const MyParticipationsSection: React.FC = () => {
 	const observerTarget = useRef<HTMLDivElement>(null)
 	const currentPageRef = useRef(0)
 	const [view, setView] = useState<'list' | 'calendar'>('list')
+	const [sortBy, setSortBy] = useState<string>("date_desc")
 
 	const fetchEvents = useCallback(async (pageNum: number, append: boolean = false) => {
 		if (append) {
@@ -85,7 +86,6 @@ const MyParticipationsSection: React.FC = () => {
 			} else {
 				setEvents(sanitized)
 			}
-			// fetch confirmed participant counts for these events
 			;(async () => {
 				try {
 					const promises = sanitized.map(async ev => {
@@ -101,7 +101,8 @@ const MyParticipationsSection: React.FC = () => {
 									const det = await api.get(`/event/${ev.eventId}`)
 									const td = det.data as any
 									if (td?.isForTeam) confirmed += td.teamParticipants ?? 0
-								} catch (_) {}
+								} catch (_) {
+								}
 							} else {
 								confirmed += teamCount
 							}
@@ -124,7 +125,6 @@ const MyParticipationsSection: React.FC = () => {
 			setHasNext(!data.last)
 		} catch (err: any) {
 			if (err?.response?.status === 204) {
-				// No Content - brak wydarzeń
 				if (append) {
 					setHasNext(false)
 				} else {
@@ -147,7 +147,6 @@ const MyParticipationsSection: React.FC = () => {
 		fetchEvents(0, false)
 	}, [fetchEvents])
 
-	// Infinite scroll z IntersectionObserver
 	useEffect(() => {
 		const observer = new IntersectionObserver(
 			entries => {
@@ -172,6 +171,50 @@ const MyParticipationsSection: React.FC = () => {
 		}
 	}, [hasNext, loading, loadingMore, fetchEvents])
 
+	const sortedEvents = useMemo(() => {
+		if (view === 'calendar') return events
+
+		const result = [...events]
+
+		result.sort((a, b) => {
+			let comparison = 0
+
+			switch (sortBy) {
+				case "date_desc":
+					const dateA_desc = normalizeEventDate(a.eventDate).valueOf()
+					const dateB_desc = normalizeEventDate(b.eventDate).valueOf()
+					comparison = dateB_desc - dateA_desc
+					break
+				case "name_asc":
+					comparison = a.eventName.localeCompare(b.eventName, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "name_desc":
+					comparison = b.eventName.localeCompare(a.eventName, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "participants_desc":
+					const countA_desc = confirmedCounts[a.eventId] ?? (a.bookedParticipants ?? 0)
+					const countB_desc = confirmedCounts[b.eventId] ?? (b.bookedParticipants ?? 0)
+					comparison = countB_desc - countA_desc
+					break
+				case "participants_asc":
+					const countA_asc = confirmedCounts[a.eventId] ?? (a.bookedParticipants ?? 0)
+					const countB_asc = confirmedCounts[b.eventId] ?? (b.bookedParticipants ?? 0)
+					comparison = countA_asc - countB_asc
+					break
+				default:
+					return 0
+			}
+
+			return comparison
+		})
+
+		return result
+	}, [events, sortBy, view, confirmedCounts])
+
 	return (
 		<section className='space-y-6'>
 			<header className='flex items-end justify-between'>
@@ -180,27 +223,48 @@ const MyParticipationsSection: React.FC = () => {
 					<p className='text-sm text-zinc-400'>Wydarzenia, w których bierzesz udział.</p>
 				</div>
 				{events.length > 0 && (
-					<div className='flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700'>
-						<button
-							onClick={() => setView('list')}
-							className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-								view === 'list'
-									? 'bg-violet-600 text-white'
-									: 'text-zinc-400 hover:text-white'
-							}`}>
-							<List size={16} />
-							Lista
-						</button>
-						<button
-							onClick={() => setView('calendar')}
-							className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-								view === 'calendar'
-									? 'bg-violet-600 text-white'
-									: 'text-zinc-400 hover:text-white'
-							}`}>
-							<Calendar size={16} />
-							Kalendarz
-						</button>
+					<div className='flex items-center gap-2'>
+						{view === 'list' && (
+							<div className='relative'>
+								<select
+									value={sortBy}
+									onChange={(e) => setSortBy(e.target.value)}
+									className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'
+								>
+									<option value='date_desc'>Data (najnowsze)</option>
+									<option value='name_asc'>Nazwa A-Z</option>
+									<option value='name_desc'>Nazwa Z-A</option>
+									<option value='participants_desc'>Uczestnicy (najwięcej)</option>
+									<option value='participants_asc'>Uczestnicy (najmniej)</option>
+								</select>
+								<ArrowUpDown
+									className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
+									size={16}
+								/>
+							</div>
+						)}
+						<div className='flex items-center gap-1 bg-zinc-800 rounded-lg p-1 border border-zinc-700'>
+							<button
+								onClick={() => setView('list')}
+								className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+									view === 'list'
+										? 'bg-violet-600 text-white'
+										: 'text-zinc-400 hover:text-white'
+								}`}>
+								<List size={16} />
+								Lista
+							</button>
+							<button
+								onClick={() => setView('calendar')}
+								className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+									view === 'calendar'
+										? 'bg-violet-600 text-white'
+										: 'text-zinc-400 hover:text-white'
+								}`}>
+								<Calendar size={16} />
+								Kalendarz
+							</button>
+						</div>
 					</div>
 				)}
 			</header>
@@ -224,7 +288,7 @@ const MyParticipationsSection: React.FC = () => {
 			) : (
 				<>
 					<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
-						{events.map(ev => {
+						{sortedEvents.map(ev => {
 							const d = normalizeEventDate(ev.eventDate)
 							const booked = ev.bookedParticipants ?? 0
 							const hasImage = typeof ev.imageUrl === 'string' && ev.imageUrl.trim() !== ''
@@ -310,7 +374,6 @@ const MyParticipationsSection: React.FC = () => {
 						})}
 					</div>
 
-					{/* Infinite scroll trigger */}
 					{hasNext && (
 						<div ref={observerTarget} className='mt-8 grid place-items-center py-4'>
 							{loadingMore && (

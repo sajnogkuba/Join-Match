@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import type { EventDetails } from '../Api/types'
 import type { Participant } from '../Api/types/Participant'
@@ -35,6 +35,7 @@ import {
 	CheckCircle,
 	XCircle,
 	UserCheck,
+	ArrowUpDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { showRatingToast } from '../components/RatingToast'
@@ -63,8 +64,46 @@ const EventPage: React.FC = () => {
 	const [userEmail, setUserEmail] = useState<string | null>(null)
 
 	const [participants, setParticipants] = useState<Participant[]>([])
-	const confirmedParticipants = participants.filter(p => p.attendanceStatusName === 'Zapisany')
+	const [sortParticipantsBy, setSortParticipantsBy] = useState<string>("name_asc")
+	const confirmedParticipantsRaw = participants.filter(p => p.attendanceStatusName === 'Zapisany')
 	const pendingParticipants = participants.filter(p => p.attendanceStatusName === 'Oczekujący')
+
+	const confirmedParticipants = useMemo(() => {
+		const result = [...confirmedParticipantsRaw]
+
+		result.sort((a, b) => {
+			let comparison = 0
+
+			switch (sortParticipantsBy) {
+				case "name_asc":
+					comparison = a.userName.localeCompare(b.userName, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "name_desc":
+					comparison = b.userName.localeCompare(a.userName, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "rating_desc":
+					const ratingA = a.sportRating ?? 0
+					const ratingB = b.sportRating ?? 0
+					comparison = ratingB - ratingA
+					break
+				case "rating_asc":
+					const ratingA_asc = a.sportRating ?? 0
+					const ratingB_asc = b.sportRating ?? 0
+					comparison = ratingA_asc - ratingB_asc
+					break
+				default:
+					return 0
+			}
+
+			return comparison
+		})
+
+		return result
+	}, [confirmedParticipantsRaw, sortParticipantsBy])
 	const isInvited = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Zaproszony')
 	const isPending = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Oczekujący')
 	const isRejected = participants.some(p => p.userEmail === userEmail && p.attendanceStatusName === 'Odrzucony')
@@ -142,12 +181,11 @@ const EventPage: React.FC = () => {
 		setLoadingLeaderTeams(true)
 		try {
 			const res = await axiosInstance.get('/team/by-leader', {
-				params: { leaderId: currentUserId }, // page/size mogą zostać, ale nie muszą
+				params: { leaderId: currentUserId },
 			})
 
 			const raw: LeaderTeam[] = res.data?.content ?? []
 
-			// NORMALIZACJA do formatu event.teams (czyli teamId)
 			const normalized = raw.map(t => ({
 				teamId: t.idTeam,
 				name: t.name,
@@ -202,14 +240,12 @@ const EventPage: React.FC = () => {
 		} catch (e: any) {
 			console.error('❌ Błąd wysyłania zgłoszenia wydarzenia:', e)
 
-			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie już zaakceptowane
 			if (e?.response?.status === 403) {
 				toast.error('Twoje zgłoszenie zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.')
 				setShowReportModal(false)
 				return
 			}
 
-			// Dalsza obsługa błędów
 			if (e?.response?.status === 400) {
 				toast.error('Nie udało się wysłać zgłoszenia (400).')
 			} else {
@@ -237,7 +273,6 @@ const EventPage: React.FC = () => {
 		} catch (e: any) {
 			console.error('❌ Błąd wysyłania zgłoszenia oceny:', e)
 
-			// 🔥 NOWA OBSŁUGA 403 — aktywne zgłoszenie tej oceny już zaakceptowane
 			if (e?.response?.status === 403) {
 				toast.error('Twoje zgłoszenie tej oceny zostało już zaakceptowane i nie możesz wysłać kolejnych zgłoszeń.')
 				setShowRatingReportModal(false)
@@ -245,7 +280,6 @@ const EventPage: React.FC = () => {
 				return
 			}
 
-			// Obsługa pozostałych błędów
 			if (e?.response?.status === 400) {
 				toast.error('Nie udało się wysłać zgłoszenia oceny (400).')
 			} else {
@@ -889,14 +923,31 @@ const EventPage: React.FC = () => {
 									<h3 className='text-white text-lg font-semibold'>
 										Uczestnicy ({confirmedParticipants.length} + {event.teamParticipants ?? 0})
 									</h3>
-									<button
-										onClick={() => setShowParticipants(s => !s)}
-										className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
-										{showParticipants ? 'Ukryj' : 'Zobacz wszystkich'}
-										<ChevronDown size={16} className={`transition-transform ${showParticipants ? 'rotate-180' : ''}`} />
-									</button>
+									<div className='flex items-center gap-2'>
+										<div className='relative'>
+											<select
+												value={sortParticipantsBy}
+												onChange={(e) => setSortParticipantsBy(e.target.value)}
+												className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'
+											>
+												<option value='name_asc'>Nazwa A-Z</option>
+												<option value='name_desc'>Nazwa Z-A</option>
+												<option value='rating_desc'>Ocena (najwyższa)</option>
+												<option value='rating_asc'>Ocena (najniższa)</option>
+											</select>
+											<ArrowUpDown
+												className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
+												size={16}
+											/>
+										</div>
+										<button
+											onClick={() => setShowParticipants(s => !s)}
+											className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
+											{showParticipants ? 'Ukryj' : 'Zobacz wszystkich'}
+											<ChevronDown size={16} className={`transition-transform ${showParticipants ? 'rotate-180' : ''}`} />
+										</button>
+									</div>
 								</div>
-								{/* ================= DRUŻYNY (EVENT DRUŻYNOWY) ================= */}
 								{event.isForTeam && event.teams && (
 									<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mt-6 mb-6'>
 										<h3 className='text-white text-lg font-semibold mb-4'>Drużyny ({event.teams.length})</h3>
@@ -952,7 +1003,6 @@ const EventPage: React.FC = () => {
 									</button>
 								)}
 
-								{/* Pending participants - visible only to organizer */}
 								{currentUserId === event?.ownerId && pendingParticipants.length > 0 && (
 									<div className='rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 mb-4'>
 										<h4 className='text-white font-semibold mb-3'>
@@ -993,7 +1043,6 @@ const EventPage: React.FC = () => {
 											key={p.id}
 											to={`/profile/${p.userId}`}
 											className='group flex items-center justify-between rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
-											{/* Lewa strona: Avatar i Info */}
 											<div className='flex items-center gap-3'>
 												<Avatar
 													src={p.userAvatarUrl || null}
@@ -1101,13 +1150,11 @@ const EventPage: React.FC = () => {
 							</div>
 
 							<div className='grid grid-cols-2 gap-4'>
-								{/* CENA */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Cena</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{formatPrice(event.cost, event.currency)}</p>
 								</div>
 
-								{/* PŁATNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Płatność</p>
 									<p className='mt-1 text-white text-sm font-semibold wrap-break-word'>
@@ -1119,18 +1166,15 @@ const EventPage: React.FC = () => {
 									</p>
 								</div>
 
-								{/* WIDOCZNOŚĆ */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Widoczność</p>
 									<p className='mt-1 text-white text-lg font-semibold'>{capitalizeFirst(event.eventVisibilityName)}</p>
 								</div>
 
-								{/* POZIOM TRUDNOŚCI */}
 								<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4'>
 									<p className='text-xs text-zinc-400'>Wymagany poziom</p>
 
 									<div className='flex flex-col gap-2 mt-2'>
-										{/* Plakietka z nazwą i kolorem */}
 										<div
 											className={`self-start inline-block rounded px-2 py-1 text-sm font-medium ${getSkillLevelColor(
 												event.skillLevel
@@ -1138,7 +1182,6 @@ const EventPage: React.FC = () => {
 											{event.skillLevel}
 										</div>
 
-										{/* Twój komponent gwiazdek */}
 										<div title={`${getSkillLevelValue(event.skillLevel)}/5`}>
 											<StarRatingDisplay value={getSkillLevelValue(event.skillLevel)} size={18} max={5} />
 										</div>
@@ -1347,7 +1390,7 @@ const EventPage: React.FC = () => {
 											className='w-full rounded-2xl bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/30 px-4 py-3 text-white font-semibold transition text-center block'>
 											Zaloguj się, aby dołączyć
 										</Link>
-									) : // If the current user was invited, show accept/decline UI
+									) :
 									isInvited ? (
 										<div className='space-y-3'>
 											<div className='rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 text-center'>
@@ -1368,14 +1411,14 @@ const EventPage: React.FC = () => {
 												</button>
 											</div>
 										</div>
-									) : // 2. NOWE: Czy ODRZUCONY
+									) :
 									isRejected ? (
 										<div className='w-full rounded-2xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-center'>
 											<p className='text-red-400 text-sm font-medium'>
 												Twoje zgłoszenie zostało odrzucone przez organizatora.
 											</p>
 										</div>
-									) : // 3. Reszta starej logiki (Oczekujący / Dołącz)
+									) :
 									isPending ? (
 										<button disabled className='w-full rounded-2xl bg-zinc-700 px-4 py-3 text-zinc-400'>
 											Twoja prośba oczekuje na akceptację…
@@ -1485,7 +1528,6 @@ const EventPage: React.FC = () => {
 								</div>
 							</div>
 
-							{/* --- SEKCJA KONTROLI OBECNOŚCI --- */}
 							{currentUserId === event.ownerId &&
 								parseEventDate(event.eventDate).isBefore(dayjs()) &&
 								event.status !== EventStatus.CANCELED &&

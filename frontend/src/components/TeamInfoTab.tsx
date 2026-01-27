@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useState, useMemo } from 'react'
 import type { TeamDetails } from '../Api/types/Team'
 import type { TeamMember } from '../Api/types/TeamMember'
 import Avatar from './Avatar'
@@ -16,10 +17,10 @@ import {
 	Trash2,
 	Flag,
 	Settings,
+	ArrowUpDown,
 } from 'lucide-react'
 import { parseLocalDate } from '../utils/formatDate'
 
-// Funkcja do określenia kontrastowego koloru tekstu (biały/czarny)
 const getContrastColor = (hexColor: string): string => {
 	if (!hexColor || !hexColor.startsWith('#')) return '#d4d4d8'
 	
@@ -27,10 +28,8 @@ const getContrastColor = (hexColor: string): string => {
 	const g = parseInt(hexColor.slice(3, 5), 16)
 	const b = parseInt(hexColor.slice(5, 7), 16)
 	
-	// Oblicz jasność koloru (wzór z WCAG)
 	const brightness = (r * 299 + g * 587 + b * 114) / 1000
 	
-	// Jeśli kolor jest jasny, użyj czarnego tekstu, w przeciwnym razie białego
 	return brightness > 128 ? '#000000' : '#ffffff'
 }
 
@@ -69,6 +68,45 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 	onReportTeam,
 	onManageRoles,
 												 }) => {
+	const [sortBy, setSortBy] = useState<string>("name_asc")
+
+	const sortedTeamMembers = useMemo(() => {
+		const result = [...teamMembers]
+
+		result.sort((a, b) => {
+			if (a.userId === team.leaderId && b.userId !== team.leaderId) return -1
+			if (a.userId !== team.leaderId && b.userId === team.leaderId) return 1
+
+			let comparison = 0
+
+			switch (sortBy) {
+				case "name_asc":
+					comparison = a.userName.localeCompare(b.userName, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "name_desc":
+					comparison = b.userName.localeCompare(a.userName, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "role_asc":
+					const roleA = a.roleName || ""
+					const roleB = b.roleName || ""
+					comparison = roleA.localeCompare(roleB, "pl", {
+						sensitivity: "base",
+					})
+					break
+				default:
+					return 0
+			}
+
+			return comparison
+		})
+
+		return result
+	}, [teamMembers, sortBy, team.leaderId])
+
 	return (
 		<div className='grid grid-cols-1 gap-8 lg:grid-cols-3'>
 			<section className='lg:col-span-2 space-y-6'>
@@ -84,14 +122,31 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 				<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 					<div className='mb-4 flex items-center justify-between'>
 						<h3 className='text-white text-lg font-semibold'>Członkowie drużyny ({teamMembers.length})</h3>
-						{teamMembers.length > 8 && (
-							<button
-								onClick={() => setShowAllMembers(s => !s)}
-								className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
-								{showAllMembers ? 'Ukryj' : 'Zobacz wszystkich'}
-								<ChevronDown size={16} className={`transition-transform ${showAllMembers ? 'rotate-180' : ''}`} />
-							</button>
-						)}
+						<div className='flex items-center gap-2'>
+							<div className='relative'>
+								<select
+									value={sortBy}
+									onChange={(e) => setSortBy(e.target.value)}
+									className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'
+								>
+									<option value='name_asc'>Nazwa A-Z</option>
+									<option value='name_desc'>Nazwa Z-A</option>
+									<option value='role_asc'>Rola (alfabetycznie)</option>
+								</select>
+								<ArrowUpDown
+									className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
+									size={16}
+								/>
+							</div>
+							{teamMembers.length > 8 && (
+								<button
+									onClick={() => setShowAllMembers(s => !s)}
+									className='inline-flex items-center gap-2 text-sm text-violet-300 hover:text-violet-200'>
+									{showAllMembers ? 'Ukryj' : 'Zobacz wszystkich'}
+									<ChevronDown size={16} className={`transition-transform ${showAllMembers ? 'rotate-180' : ''}`} />
+								</button>
+							)}
+						</div>
 					</div>
 					{isLeader && (
 						<div className='mb-4 flex gap-2'>
@@ -122,7 +177,7 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 						</div>
 					) : (
 						<div className='flex flex-wrap gap-2'>
-							{teamMembers.slice(0, showAllMembers ? teamMembers.length : 8).map(member => (
+							{sortedTeamMembers.slice(0, showAllMembers ? sortedTeamMembers.length : 8).map(member => (
 								<div
 									key={member.id}
 									className='group flex items-center justify-between gap-3 rounded-lg bg-zinc-800/60 px-3 py-2 hover:bg-zinc-800 transition'>
@@ -177,8 +232,8 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 						</div>
 					)}
 
-					{!showAllMembers && teamMembers.length > 8 && (
-						<p className='text-center text-xs text-zinc-400 mt-4'>i {teamMembers.length - 8} więcej…</p>
+					{!showAllMembers && sortedTeamMembers.length > 8 && (
+						<p className='text-center text-xs text-zinc-400 mt-4'>i {sortedTeamMembers.length - 8} więcej…</p>
 					)}
 				</div>
 			</section>
@@ -237,7 +292,6 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 					</div>
 				</div>
 
-				{/* 🔴 Zgłaszanie drużyny – POD informacjami */}
 				<div className='rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5'>
 					<button
 						onClick={onReportTeam}
@@ -259,7 +313,6 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 					</div>
 				)}
 
-				{/* Przycisk opuszczania drużyny - tylko dla zwykłych członków */}
 				{currentUserId && !isLeader && teamMembers.some(m => m.userId === currentUserId) && (
 					<div className='rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5'>
 						<button
@@ -271,7 +324,6 @@ const TeamInfoTab: React.FC<TeamInfoTabProps> = ({
 					</div>
 				)}
 
-				{/* Przycisk usuwania drużyny - tylko dla lidera */}
 				{isLeader && (
 					<div className='rounded-2xl border border-red-500/30 bg-red-500/10 p-5'>
 						<button

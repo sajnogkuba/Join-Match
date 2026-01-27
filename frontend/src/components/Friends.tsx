@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Search, UserMinus, X, UserPlus, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Search, UserMinus, X, UserPlus, Loader2, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../Api/axios";
 import type { User } from "../Api/types/User";
@@ -143,6 +143,8 @@ const Friends = () => {
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [friendToDelete, setFriendToDelete] = useState<Friend | null>(null);
+    const [sortByFriends, setSortByFriends] = useState<string>("name_asc");
+    const [sortByPending, setSortByPending] = useState<string>("name_asc");
 
     useEffect(() => {
         axiosInstance.get<User>('/auth/user').then(response => {
@@ -310,6 +312,34 @@ const Friends = () => {
         friend.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const sortedFriends = useMemo(() => {
+        const result = [...filteredFriends]
+
+        result.sort((a, b) => {
+            const comparison = a.name.localeCompare(b.name, "pl", {
+                sensitivity: "base",
+            })
+
+            return sortByFriends === "name_asc" ? comparison : -comparison
+        })
+
+        return result
+    }, [filteredFriends, sortByFriends])
+
+    const sortedPendingRequests = useMemo(() => {
+        const result = [...pendingRequests]
+
+        result.sort((a, b) => {
+            const comparison = a.senderName.localeCompare(b.senderName, "pl", {
+                sensitivity: "base",
+            })
+
+            return sortByPending === "name_asc" ? comparison : -comparison
+        })
+
+        return result
+    }, [pendingRequests, sortByPending])
+
     if (loading) {
         return (
             <div className="space-y-4">
@@ -366,6 +396,28 @@ const Friends = () => {
                     </button>
                 </div>
 
+                <div className="mb-4 flex items-center justify-end">
+                    <div className="relative">
+                        <select
+                            value={activeTab === "friends" ? sortByFriends : sortByPending}
+                            onChange={(e) => {
+                                if (activeTab === "friends") {
+                                    setSortByFriends(e.target.value)
+                                } else {
+                                    setSortByPending(e.target.value)
+                                }
+                            }}
+                            className="appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200"
+                        >
+                            <option value="name_asc">Nazwa A-Z</option>
+                            <option value="name_desc">Nazwa Z-A</option>
+                        </select>
+                        <ArrowUpDown
+                            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60"
+                            size={16}
+                        />
+                    </div>
+                </div>
                 <div className="space-y-3 max-h-96 overflow-y-auto dark-scrollbar">
                     {isInitialLoading ? (
                         <div className="grid place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-10">
@@ -374,7 +426,7 @@ const Friends = () => {
                             </div>
                         </div>
                     ) : activeTab === "friends" ? (
-                        filteredFriends.length === 0 ? (
+                        sortedFriends.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">
@@ -387,7 +439,7 @@ const Friends = () => {
                                 )}
                             </div>
                         ) : (
-                            filteredFriends.map(friend => (
+                            sortedFriends.map(friend => (
                                 <FriendCard
                                     key={friend.id}
                                     friend={friend}
@@ -396,7 +448,7 @@ const Friends = () => {
                             ))
                         )
                     ) : (
-                        pendingRequests.length === 0 ? (
+                        sortedPendingRequests.length === 0 ? (
                             <div className="text-center py-8">
                                 <Search size={48} className="mx-auto text-zinc-600 mb-4" />
                                 <p className="text-zinc-400">Brak oczekujących zaproszeń</p>
@@ -405,7 +457,7 @@ const Friends = () => {
                                 </p>
                             </div>
                         ) : (
-                            pendingRequests.map(request => (
+                            sortedPendingRequests.map(request => (
                                 <PendingRequestCard
                                     key={request.requestId}
                                     request={request}

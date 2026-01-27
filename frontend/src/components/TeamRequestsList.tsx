@@ -1,9 +1,9 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import api from '../Api/axios'
 import type { TeamRequestResponseDto } from '../Api/types/TeamRequest'
 import type { TeamDetails } from '../Api/types/Team'
 import TeamRequestCard from './TeamRequestCard'
-import { Loader2, Clock } from 'lucide-react'
+import { Loader2, Clock, ArrowUpDown } from 'lucide-react'
 
 type TeamRequestPageResponse = {
 	content: TeamRequestResponseDto[]
@@ -34,6 +34,7 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 	const [hasNext, setHasNext] = useState(false)
 	const observerTarget = useRef<HTMLDivElement>(null)
 	const currentPageRef = useRef(0)
+	const [sortBy, setSortBy] = useState<string>("date_desc")
 
 	const fetchTeamDetails = async (teamId: number): Promise<TeamDetails | null> => {
 		try {
@@ -171,7 +172,6 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 	const handleAccept = async (requestId: number) => {
 		try {
 			await api.patch(`/team-request/${requestId}/accept`)
-			// Po akceptacji usunąć zaproszenie z listy
 			setRequests(prev => prev.filter(req => req.requestId !== requestId))
 		} catch (error: any) {
 			console.error('Error accepting team request:', error)
@@ -182,7 +182,6 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 	const handleReject = async (requestId: number) => {
 		try {
 			await api.delete(`/team-request/${requestId}`)
-			// Po odrzuceniu usunąć zaproszenie z listy
 			setRequests(prev => prev.filter(req => req.requestId !== requestId))
 		} catch (error: any) {
 			console.error('Error rejecting team request:', error)
@@ -190,10 +189,69 @@ const TeamRequestsList: React.FC<TeamRequestsListProps> = ({ receiverId }) => {
 		}
 	}
 
+	const sortedRequests = useMemo(() => {
+		const result = [...requests]
+
+		result.sort((a, b) => {
+			let comparison = 0
+
+			switch (sortBy) {
+				case "date_desc":
+					const dateA = new Date(a.createdAt).getTime()
+					const dateB = new Date(b.createdAt).getTime()
+					comparison = dateB - dateA
+					break
+				case "date_asc":
+					const dateA_asc = new Date(a.createdAt).getTime()
+					const dateB_asc = new Date(b.createdAt).getTime()
+					comparison = dateA_asc - dateB_asc
+					break
+				case "team_asc":
+					const teamNameA = a.team?.name || ""
+					const teamNameB = b.team?.name || ""
+					comparison = teamNameA.localeCompare(teamNameB, "pl", {
+						sensitivity: "base",
+					})
+					break
+				case "team_desc":
+					const teamNameA_desc = a.team?.name || ""
+					const teamNameB_desc = b.team?.name || ""
+					comparison = teamNameB_desc.localeCompare(teamNameA_desc, "pl", {
+						sensitivity: "base",
+					})
+					break
+				default:
+					return 0
+			}
+
+			return comparison
+		})
+
+		return result
+	}, [requests, sortBy])
+
 	return (
 		<>
+			<div className='mb-4 flex items-center justify-end'>
+				<div className='relative'>
+					<select
+						value={sortBy}
+						onChange={(e) => setSortBy(e.target.value)}
+						className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'
+					>
+						<option value='date_desc'>Data (najnowsze)</option>
+						<option value='date_asc'>Data (najstarsze)</option>
+						<option value='team_asc'>Nazwa drużyny A-Z</option>
+						<option value='team_desc'>Nazwa drużyny Z-A</option>
+					</select>
+					<ArrowUpDown
+						className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
+						size={16}
+					/>
+				</div>
+			</div>
 			<div className='space-y-3'>
-				{requests.map(request => (
+				{sortedRequests.map(request => (
 					<TeamRequestCard
 						key={request.requestId}
 						request={request}

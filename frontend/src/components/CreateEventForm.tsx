@@ -9,6 +9,7 @@ import type { SportObject } from '../Api/types/SportObject.ts'
 import { motion } from 'framer-motion'
 import { Upload, CalendarDays, MapPin, DollarSign, Users, AlignLeft } from 'lucide-react'
 import PlaceAutocomplete from './PlaceAutocomplete'
+import SportObjectSelector from './SportObjectSelector'
 import { getCookie } from '../utils/cookies'
 
 const inputBase =
@@ -462,17 +463,13 @@ export default function CreateEventForm() {
 
                         {!useCustomPlace ? (
                             <>
-                                <select
+                                <SportObjectSelector
                                     value={placeId}
-                                    onChange={e => setPlaceId(Number(e.target.value))}
-                                    className={`${inputBase} ${errors.placeId ? 'border-red-500' : ''}`}>
-                                    <option value={0}>Wybierz obiekt</option>
-                                    {sportObjects.map(obj => (
-                                        <option key={obj.id} value={obj.id}>
-                                            {obj.name}, {obj.city}, {obj.street} {obj.number}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={setPlaceId}
+                                    sportObjects={sportObjects}
+                                    error={!!errors.placeId}
+                                    placeholder='Wybierz obiekt'
+                                />
 
                                 <div className='mt-3'>
                                     <Checkbox

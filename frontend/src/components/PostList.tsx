@@ -1,4 +1,5 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, ArrowUpDown } from 'lucide-react'
+import { useState, useMemo } from 'react'
 import type { TeamPostResponseDto } from '../Api/types/TeamPost'
 import { PostItem } from './PostItem'
 import type { TeamPostCommentResponseDto } from '../Api/types/TeamPostComment'
@@ -83,6 +84,25 @@ export const PostList = ({
 	onDeleteComment,
 	onRestoreComment,
 }: PostListProps) => {
+	const [sortBy, setSortBy] = useState<string>("date_desc")
+
+	const sortedPosts = useMemo(() => {
+		const result = [...posts]
+
+		result.sort((a, b) => {
+			const dateA = new Date(a.createdAt).getTime()
+			const dateB = new Date(b.createdAt).getTime()
+
+			if (sortBy === "date_desc") {
+				return dateB - dateA
+			} else {
+				return dateA - dateB
+			}
+		})
+
+		return result
+	}, [posts, sortBy])
+
 	if (loadingPosts && posts.length === 0) {
 		return (
 			<div className='flex items-center justify-center py-8'>
@@ -102,7 +122,23 @@ export const PostList = ({
 
 	return (
 		<>
-			{posts.map((post) => (
+			<div className='mb-4 flex items-center justify-end'>
+				<div className='relative'>
+					<select
+						value={sortBy}
+						onChange={(e) => setSortBy(e.target.value)}
+						className='appearance-none rounded-xl border border-zinc-700 bg-zinc-900/60 px-3 py-2 pr-8 text-sm text-zinc-200'
+					>
+						<option value='date_desc'>Data (najnowsze)</option>
+						<option value='date_asc'>Data (najstarsze)</option>
+					</select>
+					<ArrowUpDown
+						className='pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 opacity-60'
+						size={16}
+					/>
+				</div>
+			</div>
+			{sortedPosts.map((post) => (
 				<PostItem
 					key={post.postId}
 					post={post}
