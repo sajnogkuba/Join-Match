@@ -92,6 +92,11 @@ const EventPage: React.FC = () => {
 	const [showJoinTeamModal, setShowJoinTeamModal] = useState(false)
 	const [leaderTeams, setLeaderTeams] = useState<any[]>([])
 	const [loadingLeaderTeams, setLoadingLeaderTeams] = useState(false)
+	const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+		isOpen: false,
+		title: '',
+		message: '',
+	})
 
 	const teamParticipantsCount = event?.teamParticipants ?? 0
 
@@ -567,7 +572,7 @@ const EventPage: React.FC = () => {
 
 	const handleJoinEvent = async () => {
 		if (!userEmail || !id) return
-		if (isEventPast) return // Nie można dołączać/opuszczać zakończonych wydarzeń
+		if (isEventPast) return
 		try {
 			if (isJoined || isPending) {
 				await axiosInstance.delete(`/user-event`, {
@@ -581,8 +586,27 @@ const EventPage: React.FC = () => {
 			}
 
 			await fetchParticipants(Number(id))
-		} catch (err) {
-			console.error('❌ Błąd przy dołączaniu/opuszczaniu wydarzenia:', err)
+		} catch (err: any) {
+			
+
+			const errorMessage = err?.response?.data?.message || err?.message || ''
+			if (errorMessage.includes('Nie spełniasz minimalnego poziomu zaawansowania')) {
+				const minLevel = event?.minLevel
+				const sportTypeName = event?.sportTypeName || 'sport'
+				
+				const modalMessage = minLevel
+					? `To wydarzenie wymaga poziomu ${minLevel} w ${sportTypeName}. Dodaj ten sport do swojego profilu, aby dołączyć.`
+					: `Nie spełniasz wymaganego poziomu zaawansowania dla tego wydarzenia. Zaktualizuj swój profil, aby dołączyć.`
+				
+				setAlertModal({ 
+					isOpen: true, 
+					title: 'Niewystarczający poziom', 
+					message: modalMessage 
+				})
+				return
+			}
+			
+			toast.error(errorMessage || 'Nie udało się dołączyć do wydarzenia')
 		}
 	}
 
@@ -591,7 +615,7 @@ const EventPage: React.FC = () => {
 
 		try {
 			await axiosInstance.delete(`/event/${id}/leave-team`, {
-				params: { teamId }, // ⬅⬅⬅ TO JEST KLUCZOWE
+				params: { teamId },
 			})
 
 			toast.success('Drużyna została wypisana z wydarzenia')
@@ -1647,6 +1671,15 @@ const EventPage: React.FC = () => {
 					setEvent(data)
 				}}
 			/>
+
+			{alertModal.isOpen && (
+				<AlertModal
+					isOpen={alertModal.isOpen}
+					onClose={() => setAlertModal({ isOpen: false, title: '', message: '' })}
+					title={alertModal.title}
+					message={alertModal.message}
+				/>
+			)}
 		</>
 	)
 }

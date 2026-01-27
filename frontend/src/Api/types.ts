@@ -69,6 +69,7 @@ export type EventDetails = {
 	ownerAvatarUrl?: string
 
 	skillLevel: string
+	minLevel?: number
 	paymentMethods: string[]
 	imageUrl?: string
 

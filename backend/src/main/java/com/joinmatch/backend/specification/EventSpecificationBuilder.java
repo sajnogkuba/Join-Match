@@ -66,12 +66,12 @@ public class EventSpecificationBuilder {
 
     private static Specification<Event> dateAfterOrEqual(LocalDate from) {
         return (root, query, cb) ->
-                cb.greaterThanOrEqualTo(root.get("eventDate"), from);
+                cb.greaterThanOrEqualTo(root.get("eventDate"), from.atStartOfDay());
     }
 
     private static Specification<Event> dateBeforeOrEqual(LocalDate to) {
         return (root, query, cb) ->
-                cb.lessThanOrEqualTo(root.get("eventDate"), to);
+                cb.lessThanOrEqualTo(root.get("eventDate"), to.atTime(23, 59, 59, 999999999));
     }
 
     private static Specification<Event> isFree() {

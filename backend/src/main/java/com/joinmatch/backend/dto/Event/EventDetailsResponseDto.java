@@ -39,6 +39,7 @@ public record EventDetailsResponseDto (
      String ownerAvatarUrl,
 
      String skillLevel,
+     Integer minLevel,
      String paymentMethod,
      String imageUrl,
 

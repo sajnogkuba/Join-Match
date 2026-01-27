@@ -180,6 +180,7 @@ public class EventService {
                 e.getOwner().getUrlOfPicture(),
 
                 mapSkillLevelToString(e.getMinLevel()),
+                e.getMinLevel(),
                 String.join(", ", e.getPaymentMethods()),
                 e.getImageUrl(),
 
