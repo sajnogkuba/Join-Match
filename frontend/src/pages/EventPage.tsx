@@ -173,6 +173,7 @@ const EventPage: React.FC = () => {
 		leaderId: number
 		leaderName?: string | null
 		photoUrl?: string | null
+		isBanned?: boolean
 	}
 
 	const fetchLeaderTeams = async () => {
@@ -186,14 +187,16 @@ const EventPage: React.FC = () => {
 
 			const raw: LeaderTeam[] = res.data?.content ?? []
 
-			const normalized = raw.map(t => ({
-				teamId: t.idTeam,
-				name: t.name,
-				city: t.city ?? null,
-				leaderId: t.leaderId,
-				leaderName: t.leaderName ?? '',
-				photoUrl: t.photoUrl ?? null,
-			}))
+			const normalized = raw
+				.filter(t => !t.isBanned)
+				.map(t => ({
+					teamId: t.idTeam,
+					name: t.name,
+					city: t.city ?? null,
+					leaderId: t.leaderId,
+					leaderName: t.leaderName ?? '',
+					photoUrl: t.photoUrl ?? null,
+				}))
 
 			setLeaderTeams(normalized)
 		} catch (e) {
