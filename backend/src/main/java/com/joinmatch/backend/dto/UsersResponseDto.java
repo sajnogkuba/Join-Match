@@ -11,7 +11,8 @@ public record UsersResponseDto(
         String urlOfPicture,
         List<SportInfo> sports,
         List<FriendInfo> friends,
-        String relationStatus
+        String relationStatus,
+        Boolean isBlocked
 ) {
     public record SportInfo(Integer id, String name, String level) {}
     public record FriendInfo(Integer id, String name, String email, String urlOfPicture) {}

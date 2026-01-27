@@ -26,8 +26,10 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @Query("""
     SELECT u FROM User u
-    WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%'))
-       OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))
+    WHERE (LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%'))
+       OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))
+       AND u.isBlocked = false
+       AND u.isVerified = true
 """)
     List<User> searchByNameOrEmail(@Param("query") String query);
 }

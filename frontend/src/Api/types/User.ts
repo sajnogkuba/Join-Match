@@ -26,5 +26,6 @@ export interface User {
     urlOfPicture: string;
     sports: SportInfo[];
     friends: FriendInfo[];
+    isBlocked?: boolean;
   }
   

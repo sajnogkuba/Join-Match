@@ -20,6 +20,7 @@ import UserReportForm from '../components/UserReportForm'
 import BadgesSection from '../components/BadgesSection'
 import EventsCalendar from '../components/EventsCalendar'
 import { isSystemUser } from '../utils/isSystemUser'
+import AlertModal from '../components/AlertModal'
 
 interface FriendStatus {
 	isFriend: boolean
@@ -483,6 +484,24 @@ const UserProfilePage = () => {
 	if (loading) return <div className='p-10 text-center text-zinc-400'>Ładowanie profilu...</div>
 	if (errorMsg) return <div className='p-10 text-center text-red-400'>{errorMsg}</div>
 	if (!user) return null
+
+	// Jeśli użytkownik jest zablokowany, pokaż tylko komunikat
+	if (user.isBlocked) {
+		return (
+			<>
+				<div className='min-h-screen bg-[#1f2632]' />
+				<AlertModal
+					isOpen={true}
+					onClose={() => {
+						navigate(-1)
+					}}
+					title='Użytkownik zablokowany'
+					message='Niestety ten użytkownik został zablokowany, więc nie można wyświetlić jego profilu.'
+					variant='error'
+				/>
+			</>
+		)
+	}
 
 	return (
 		<div className='min-h-screen bg-[#1f2632] text-zinc-300'>

@@ -285,7 +285,8 @@ public class UserService {
                 targetUser.getUrlOfPicture(),
                 sports,
                 friends,
-                relationStatus
+                relationStatus,
+                targetUser.getIsBlocked()
         );
     }
 

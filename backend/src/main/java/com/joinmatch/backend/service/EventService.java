@@ -147,6 +147,9 @@ public class EventService {
                         .sum();
         int bookedParticipants = individualCount + teamCount;
 
+        boolean isBanned = e.getReportEvents().stream()
+                .anyMatch(report -> Boolean.TRUE.equals(report.getActive()));
+
         return new EventDetailsResponseDto(
                 e.getEventId(),
                 e.getEventName(),
@@ -187,6 +190,7 @@ public class EventService {
                 e.getSportObject().getLatitude(),
                 e.getSportObject().getLongitude(),
                 e.getIsAttendanceChecked() != null ? e.getIsAttendanceChecked() : false,
+                isBanned,
                 teams
         );
     }

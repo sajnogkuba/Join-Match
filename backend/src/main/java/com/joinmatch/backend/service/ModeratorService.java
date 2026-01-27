@@ -56,8 +56,8 @@ public class ModeratorService {
                 r.getReportedEvent().getImageUrl(),
                 r.getReportedEvent().getEventDate(),
 
-                r.getActive(),
-                r.getReviewed()
+                r.getReviewed(),
+                r.getActive()
         ));
     }
 
@@ -279,15 +279,25 @@ public class ModeratorService {
     public void acceptReportUser(Integer idReportUser) {
         ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
         referenceById.setActive(true);
+        
+        // Zablokuj użytkownika
+        User suspectUser = referenceById.getSuspectUser();
+        suspectUser.setIsBlocked(true);
+        
         reportUserRepository.save(referenceById);
-
+        userRepository.save(suspectUser);
     }
 
     public void rejectReportUser(Integer idReportUser) {
         ReportUser referenceById = reportUserRepository.findById(idReportUser).orElseThrow(()-> new IllegalArgumentException());
         referenceById.setActive(false);
+        
+        // Odblokuj użytkownika
+        User suspectUser = referenceById.getSuspectUser();
+        suspectUser.setIsBlocked(false);
+        
         reportUserRepository.save(referenceById);
-
+        userRepository.save(suspectUser);
     }
 
     public void markAsViewedReportUser(Integer idReportUser) {

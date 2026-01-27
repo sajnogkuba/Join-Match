@@ -46,6 +46,7 @@ public record EventDetailsResponseDto (
      Double latitude,
      Double longitude,
         Boolean isAttendanceChecked,
+        Boolean isBanned,
         List<EventTeamResponseDto> teams
 
 )
